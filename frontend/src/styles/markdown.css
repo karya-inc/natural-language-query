@@ -1,0 +1,10 @@
+.markdown-body {
+  background-color: transparent !important;
+  font-family: "Lato", sans-serif;
+}
+
+.markdown-body pre {
+  background-color: transparent !important;
+  padding: 0px;
+}
+
