@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
