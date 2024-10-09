@@ -5,6 +5,9 @@ from sqlglot import exp, errors as sqlglot_errors
 
 
 class Role:
+    """
+    This class represents a Role in the system. Each role has an id, a description, and a database role.
+    """
 
     def __init__(
         self,
@@ -37,6 +40,10 @@ class RoleTablePrivileges:
 
 
 class ErrorCode(Enum):
+    """
+    This Enum represents the various error codes that can be returned when checking for privileges.
+    """
+
     ROLE_NOT_FOUND = "The specified role was not found."
     INVALID_SQL_QUERY = "The provided SQL query is invalid."
     CTE_ERROR = "The provided CTE is either invalid, not supported or is not allowed for the role."
@@ -51,6 +58,10 @@ class ErrorCode(Enum):
 
 
 class PrivilageCheckResult:
+    """
+    This class represents the result of a privilege check. It includes whether the query is allowed, the error code if
+    the query is not allowed, and additional context about the check.
+    """
 
     def __init__(
         self,
@@ -81,6 +92,10 @@ def check_table_privilages_for_role(
     role_id: str,
     query: str,
 ) -> Tuple[Optional[RoleTablePrivileges], Optional[PrivilageCheckResult]]:
+    """
+    This function checks the privileges for a role on a table. It returns the privileges the role has on the table and
+    a PrivilageCheckResult which contains error information.
+    """
     if table.name not in table_privilages_map:
         return (
             None,
@@ -112,6 +127,9 @@ def check_table_privilages_for_role(
 
 
 def find_role_by_id(roles: List[Role], role_id: str) -> Optional[Role]:
+    """
+    This function finds a role by its id in a list of roles.
+    """
     for role in roles:
         if role.id == role_id:
             return role
