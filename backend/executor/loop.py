@@ -15,7 +15,12 @@ def agentic_loop(
         if config.update_callback:
             config.update_callback(status)
 
+    turns = 0
     while True:
+        if turns > 10:
+            raise Exception("Agentic loop did not converge")
+        turns += 1
+
         if not state.relevant_catalogs:
             send_update(AgentStatus.CATALOGING)
             state.relevant_catalogs = tools.analyze_catalogs(state.nlq, catalogs)

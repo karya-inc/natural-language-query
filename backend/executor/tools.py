@@ -1,12 +1,13 @@
 from typing import List, Any
 
+from .storage import EphemeralTools, dict_to_create_table
 from .catalog import Catalog
 from .query import Query
 from .result import Result
 from .state import AgentState
 
 
-class AgentTools:
+class AgentTools(EphemeralTools):
     def analyze_catalogs(self, nlq: str, catalogs: List[Catalog]) -> List[Catalog]:
         raise NotImplementedError
 
@@ -16,11 +17,28 @@ class AgentTools:
     def execute_queries(self, queries: List[Query]) -> List[Result]:
         raise NotImplementedError
 
-    def store_intermediate_results(self, results: List[Result]) -> Catalog:
-        raise NotImplementedError
+    def store_intermediate_results(self, results: List[Result]) -> List[Catalog]:
+        db = self.get_ephemeral_storage()
+
+        catalogs = []
+        for result in results:
+            stmt = db.cursor.execute(dict_to_create_table(result.id, result.data))
+            print(stmt)
+            raise Exception("stop")
+            db.cursor.execute(stmt)
+            catalogs.append(
+                Catalog(
+                    name=result.id,
+                    schema=result.data,
+                    provider="sqlite",
+                    connection_params={"db": db},
+                )
+            )
+
+        return catalogs
 
     def generate_aggregate_query(
-        self, results: List[Result], intermediate_catalog: Catalog
+        self, results: List[Result], intermediate_catalogs: List[Catalog]
     ) -> Query:
         raise NotImplementedError
 
@@ -37,7 +55,7 @@ class AgentTools:
 import os
 import json
 from openai import OpenAI
-import psycopg2
+import psycopg2.extras
 
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
@@ -121,7 +139,6 @@ class GPTAgentTools(AgentTools):
         for query in queries:
             if query.catalog.provider == "postgres":
                 connection_params = query.catalog.connection_params
-                print({"connection_params": connection_params})
 
                 with psycopg2.connect(
                     dbname=connection_params["dbname"],
@@ -130,13 +147,36 @@ class GPTAgentTools(AgentTools):
                     host=connection_params["host"],
                     port=connection_params["port"],
                 ) as conn:
-                    with conn.cursor() as cursor:
+                    with conn.cursor(
+                        cursor_factory=psycopg2.extras.DictCursor
+                    ) as cursor:
                         cursor.execute(query.sql)
                         result = cursor.fetchall()
-                        results.append(result)
+
+                        dict_result = [dict(row) for row in result]
+
+                        results.append(
+                            Result(
+                                query=query,
+                                source_catalogs=[query.catalog],
+                                data=dict_result,
+                            )
+                        )
             else:
                 raise ValueError(f"Unsupported provider: {query.catalog.provider}")
 
-        print({"results": results})
-
         return results
+
+    # def generate_aggregate_query(
+    #     self, results: List[Result], intermediate_catalogs: List[Catalog]
+    # ) -> Query:
+    #     raise NotImplementedError
+
+    def is_result_sufficient(self, results: List[Result], nlq: str) -> bool:
+        raise NotImplementedError
+
+    def format_result(self, results: List[Result]) -> Any:
+        raise NotImplementedError
+
+    def refine_query(self, state: AgentState) -> AgentState:
+        raise NotImplementedError
