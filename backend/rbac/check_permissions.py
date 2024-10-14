@@ -284,6 +284,9 @@ def check_scope_privilages(
     column_scopes: list[ColumnScope] = [],
     alias_table_map: dict[str, str] = {},
 ) -> PrivilageCheckResult:
+    """
+    This function checks if the scopes for a given table is satisfied.
+    """
     select_query = reference_table.find_ancestor(exp.Select)
     assert select_query is not None
 
@@ -448,7 +451,7 @@ def check_query_privilages(
     ctes = parsed_query.find_all(exp.CTE)
     valid_query_aliases = allowed_aliases
     for cte in ctes:
-        cte_query = list(cte.find_all(exp.Select))[0]
+        cte_query = next(cte.find_all(exp.Select))
         cte_result = check_query_privilages(
             table_privilages_map, roles, role_id, cte_query.sql(), table_scopes
         )
@@ -470,7 +473,7 @@ def check_query_privilages(
     # Check each subquery in the subqueries
     subqueries = parsed_query.find_all(exp.Subquery)
     for subquery in subqueries:
-        select = list(subquery.find_all(exp.Select))[0]
+        select = next(subquery.find_all(exp.Select))
         subquery_result = check_query_privilages(
             table_privilages_map,
             roles,
