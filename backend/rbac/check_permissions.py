@@ -57,7 +57,15 @@ ComparisionOperator = Literal[
 
 class ColumnScope:
     """
-    This class represents the scopes for a table. It includes the table name and the scopes for the table.
+    Represents a scope for a column in a table.
+    A scope is a restriction on the column that must be satisfied for a query to be allowed.
+
+    Attributes:
+        table: Name of the table
+        column: Name of the column
+        operator: The operator symbol to be used for the comparison. Can be one of "=", "!=", ">", "<", ">=", "<=", "IN", "NOT IN", "IS", "IS NOT", "LIKE", "NOT LIKE"
+        value: The value to be compared against
+        value_type: The type of the value. Can be one of "string", "literal", "list", "string_array", "null"
     """
 
     def __init__(
@@ -129,11 +137,16 @@ def check_table_privilages_for_role(
     table: exp.Table,
     table_privilages_map: dict[str, list[RoleTablePrivileges]],
     role_id: str,
-    query: str,
 ) -> Tuple[Optional[RoleTablePrivileges], Optional[PrivilageCheckResult]]:
     """
-    This function checks the privileges for a role on a table. It returns the privileges the role has on the table and
-    a PrivilageCheckResult which contains error information.
+    Check if the table meets the user's privilages
+
+    Args:
+        table: The table expression that has to be checked for privilages
+        table_privilages_map: List of privilages for the role
+        role_id:
+
+    Returns: A tuple of RoleTablePrivileges
     """
     if table.name not in table_privilages_map:
         return (
@@ -141,7 +154,7 @@ def check_table_privilages_for_role(
             PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.TABLE_NOT_IN_PRIVILAGES,
-                context={"table": table.name, "role": role_id, "query": query},
+                context={"table": table.name, "role": role_id},
             ),
         )
 
@@ -158,7 +171,7 @@ def check_table_privilages_for_role(
             PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.ROLE_NO_TABLE_ACCESS,
-                context={"table": table.name, "role": role_id, "query": query},
+                context={"table": table.name, "role": role_id},
             ),
         )
 
@@ -176,6 +189,19 @@ def find_role_by_id(roles: list[Role], role_id: str) -> Optional[Role]:
 
 
 def match_operator_to_exp(operator: str) -> tuple[exp._Expression, bool]:
+    """
+    Match the operator symbol to the metaclass representing the operator in the AST
+
+    Args:
+        operator: symbol representing the operator
+
+    Raises:
+        ValueError: If the operator is invalid or not supported
+
+    Returns:
+        If the operator is valid, returns a tuple of the operator and a boolean representing if the operator is negated
+
+    """
     match operator:
         case "=":
             return exp.EQ, False
@@ -213,6 +239,16 @@ def invert_comparision_direction(comparator: exp._Expression) -> exp._Expression
 def check_expression_matches_scope(
     column_scope: ColumnScope, operator: exp.Expression
 ) -> bool:
+    """
+    Check if the operator rooted subtree matches the required column scope
+
+    Args:
+        column_scope: Scope that needs to be checked
+        operator: The node representing the operator within the AST
+
+    Returns:
+        True if the column, operator, value and value_type of the scope match the operator expression
+    """
     column: exp.Column
     value: exp.Expression
 
@@ -286,6 +322,14 @@ def check_scope_privilages(
 ) -> PrivilageCheckResult:
     """
     This function checks if the scopes for a given table is satisfied.
+
+    Args:
+        reference_table: Table for which scope requirement need to be verified
+        column_scopes: List of all the scopes that are applicable to the table
+        alias_table_map: Dictionary containing the mappings between table aliases to actual table names
+
+    Returns:
+        PrivilageCheckResult representing weather or not the required scopes are present for the table
     """
     select_query = reference_table.find_ancestor(exp.Select)
     assert select_query is not None
@@ -395,6 +439,16 @@ def check_query_privilages(
     """
     Given a query and a role, this function checks if the role has access to the tables and columns in the query
 
+    Args:
+        table_privilages_map: Dictionary mapping table names to a list of privilages for the table
+        roles: List of available roles
+        role_id: Id of the current role
+        query: SQL query to be checked for privilages
+        table_scopes: Dictionary mapping table names to list of ColumnScopes
+        allowed_aliases: List of allowed_aliases for CTEs and Subqueries. No checks are performed on columns in these aliases
+
+    Returns: PrivilageCheckResult representing weather or not the query is allowed
+
     A query is allowed if:
         - The role has access to the table in the query
         - The role has access to the columns in the query
@@ -412,6 +466,7 @@ def check_query_privilages(
     SELECT name FROM employees # This query is rejected
     SELECT employees.name FROM employees # This query is accepted
     ```
+
     """
     active_role = find_role_by_id(roles, role_id)
 
@@ -511,10 +566,11 @@ def check_query_privilages(
             continue
 
         table_privilages, table_check_result = check_table_privilages_for_role(
-            table, table_privilages_map, role_id, query
+            table, table_privilages_map, role_id
         )
 
         if table_check_result and not table_check_result.query_allowed:
+            table_check_result.context["query"] = query
             return table_check_result
 
         assert table_privilages is not None
@@ -536,6 +592,8 @@ def check_query_privilages(
         )
 
         if not scope_check_result.query_allowed:
+            scope_check_result.context["table"] = table.name
+            scope_check_result.context["query"] = query
             return scope_check_result
 
         if table_privilages:
