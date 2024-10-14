@@ -2,24 +2,21 @@ from typing import Any, Literal, Optional, Tuple, Union
 from enum import Enum
 import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
+from dataclasses import dataclass, field
 
 
+@dataclass
 class Role:
     """
     This class represents a Role in the system. Each role has an id, a description, and a database role.
     """
 
-    def __init__(
-        self,
-        id: str,
-        description: str,
-        db_role: str,
-    ):
-        self.id = id
-        self.description = description
-        self.db_role = db_role
+    id: str
+    description: str
+    db_role: str
 
 
+@dataclass
 class RoleTablePrivileges:
     """
     Access control list that defines the tables, columns and scopes a role can access
@@ -30,13 +27,6 @@ class RoleTablePrivileges:
     table: str
     columns: list[str]
     scoped_columns: list[str]
-
-    def __init__(self, id, role_id, table, columns, scoped_columns) -> None:
-        self.id = id
-        self.role_id = role_id
-        self.table = table
-        self.columns = columns
-        self.scoped_columns = scoped_columns
 
 
 ComparisionOperator = Literal[
@@ -55,6 +45,7 @@ ComparisionOperator = Literal[
 ]
 
 
+@dataclass
 class ColumnScope:
     """
     Represents a scope for a column in a table.
@@ -68,21 +59,13 @@ class ColumnScope:
         value_type: The type of the value. Can be one of "string", "literal", "list", "string_array", "null"
     """
 
-    def __init__(
-        self,
-        table: str,
-        column: str,
-        value: Union[str, list[str], None],
-        operator: ComparisionOperator = "=",
-        value_type: Literal[
-            "string", "literal", "list", "string_array", "null"
-        ] = "literal",
-    ) -> None:
-        self.table = table
-        self.column = column
-        self.operator = operator
-        self.value = value
-        self.value_type = value_type
+    table: str
+    column: str
+    value: Union[str, list[str], None] = field(default=None)
+    operator: ComparisionOperator = field(default="=")
+    value_type: Literal["string", "literal", "list", "string_array", "null"] = field(
+        default="literal"
+    )
 
 
 class ErrorCode(Enum):
@@ -104,33 +87,16 @@ class ErrorCode(Enum):
     WILDCARD_STAR_NOT_ALLOWED = "The wildcard star is not allowed."
 
 
+@dataclass
 class PrivilageCheckResult:
     """
     This class represents the result of a privilege check. It includes whether the query is allowed, the error code if
     the query is not allowed, and additional context about the check.
     """
 
-    def __init__(
-        self,
-        query_allowed: bool,
-        err_code: Optional[ErrorCode] = None,
-        context: Optional[dict[str, Any]] = None,
-    ) -> None:
-        self.query_allowed = query_allowed
-        self.err_code = err_code
-        self.context = context or {}
-
-    def __eq__(self, other):
-        if isinstance(other, PrivilageCheckResult):
-            return (
-                self.query_allowed == other.query_allowed
-                and self.err_code == other.err_code
-                and self.context == other.context
-            )
-        return False
-
-    def __str__(self):
-        return f"PrivilageCheckResult(query_allowed={self.query_allowed}, err_code={self.err_code}, context={self.context})"
+    query_allowed: bool
+    err_code: Optional[ErrorCode] = field(default=None)
+    context: Optional[dict[str, Any]] = field(default=None)
 
 
 def check_table_privilages_for_role(
@@ -570,6 +536,7 @@ def check_query_privilages(
         )
 
         if table_check_result and not table_check_result.query_allowed:
+            assert table_check_result.context is not None
             table_check_result.context["query"] = query
             return table_check_result
 
@@ -592,6 +559,7 @@ def check_query_privilages(
         )
 
         if not scope_check_result.query_allowed:
+            assert scope_check_result.context is not None
             scope_check_result.context["table"] = table.name
             scope_check_result.context["query"] = query
             return scope_check_result
