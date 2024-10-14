@@ -282,9 +282,20 @@ def check_scope_privilages(
             scoping_expresssions_by_column[column.name].append(operator)
 
     for column_scope in column_scopes:
-        scoping_expressions = scoping_expresssions_by_column[column_scope.column]
-        scope_matched = False
+        scoping_expressions = scoping_expresssions_by_column.get(column_scope.column)
 
+        if scoping_expressions is None:
+            return PrivilageCheckResult(
+                query_allowed=False,
+                err_code=ErrorCode.ROLE_NO_ROWS_ACCESS,
+                context={
+                    "reason": "No where clauses found for column in the query segment",
+                    "column": column_scope.column,
+                    "query_segment": select_query.sql(),
+                },
+            )
+
+        scope_matched = False
         for operator in scoping_expressions:
             column: exp.Column
             value: exp.Expression
