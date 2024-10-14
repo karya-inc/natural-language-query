@@ -2,7 +2,7 @@ from check_permissions import check_query_privilages, Role, RoleTablePrivileges
 import unittest
 
 
-class TestRBAC(unittest.TestCase):
+class TestColumnSecurity(unittest.TestCase):
 
     def setUp(self):
         self.roles = [
@@ -24,15 +24,13 @@ class TestRBAC(unittest.TestCase):
                     "admin",
                     "employees",
                     ["name", "salary", "department_id"],
-                    ["name"],
+                    [],
                 )
             ],
             "departments": [
+                RoleTablePrivileges("id2", "admin", "departments", ["name", "id"], []),
                 RoleTablePrivileges(
-                    "id2", "admin", "departments", ["name", "id"], ["name"]
-                ),
-                RoleTablePrivileges(
-                    "id2", "read_only_user", "departments", ["name"], ["name"]
+                    "id2", "read_only_user", "departments", ["name"], []
                 ),
             ],
         }
