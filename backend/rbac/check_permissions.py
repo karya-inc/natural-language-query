@@ -9,6 +9,11 @@ from dataclasses import dataclass, field
 class Role:
     """
     This class represents a Role in the system. Each role has an id, a description, and a database role.
+
+    Attributes:
+        id:
+        description:
+        db_role:
     """
 
     id: str
@@ -19,7 +24,14 @@ class Role:
 @dataclass
 class RoleTablePrivileges:
     """
-    Access control list that defines the tables, columns and scopes a role can access
+    Defines the privilages that a role has for a table
+
+    Attributes:
+        id: Unique identifier for the privilage entry
+        role_id: id of the role that owns the privilages
+        table: name of the table which the privilages apply to
+        columns: list of columns within the table that the role has access to
+        scoped_columns: list of columns that define row level restrictions. The role can only access rows where the column satisfies the scoping restrictions
     """
 
     id: str
@@ -90,8 +102,12 @@ class ErrorCode(Enum):
 @dataclass
 class PrivilageCheckResult:
     """
-    This class represents the result of a privilege check. It includes whether the query is allowed, the error code if
-    the query is not allowed, and additional context about the check.
+    Represents the result of a privilage check for an SQL query
+
+    Attributes:
+        query_allowed: Weather or not a query is allowed for the role
+        err_code: ErrorCode for when the query is not allowed
+        context: Additional context about the check, and the reason for the check result
     """
 
     query_allowed: bool
@@ -151,7 +167,6 @@ def find_role_by_id(roles: list[Role], role_id: str) -> Optional[Role]:
     for role in roles:
         if role.id == role_id:
             return role
-    return
 
 
 def match_operator_to_exp(operator: str) -> tuple[exp._Expression, bool]:
@@ -198,6 +213,14 @@ def match_operator_to_exp(operator: str) -> tuple[exp._Expression, bool]:
 
 
 def invert_comparision_direction(comparator: exp._Expression) -> exp._Expression:
+    """
+    Inverts the direction of a comparision operator in the AST.
+
+    Args:
+        comparator: Metaclass representing the comparision operator in the AST
+
+    Returns: The inverted comparision operator if it is invertible, else returns the same operator
+    """
     mappings = {exp.GT: exp.LT, exp.LT: exp.GT, exp.LTE: exp.GTE, exp.GTE: exp.LTE}
     return mappings.get(comparator, comparator)
 
@@ -215,17 +238,21 @@ def check_expression_matches_scope(
     Returns:
         True if the column, operator, value and value_type of the scope match the operator expression
     """
+    # Get the column and value from the operator expressions in the AST
     column: exp.Column
     value: exp.Expression
-
-    expected_operator, expected_negation = match_operator_to_exp(column_scope.operator)
-
     is_comparision_negated = False
     comparision_operator: exp.Expression = operator
+
+    # expected operator information extracted from the column scope
+    expected_operator, expected_negation = match_operator_to_exp(column_scope.operator)
+
+    # Handle queries with NOT operator
     if isinstance(operator, exp.Not):
         comparision_operator = operator.this
         is_comparision_negated = True
 
+    # Extract the column and value from the AST node
     if isinstance(comparision_operator.this, exp.Column):
         column = comparision_operator.this
         value = comparision_operator.expression
@@ -234,6 +261,7 @@ def check_expression_matches_scope(
         value = comparision_operator.this
         expected_operator = invert_comparision_direction(expected_operator)
 
+    # Check if the actual values for the operator match the values in the column scope
     is_comparision_value_matches = False
     if isinstance(comparision_operator, exp.In):
         assert column_scope.value_type == "list" and isinstance(
@@ -247,10 +275,12 @@ def check_expression_matches_scope(
         is_comparision_value_matches = len(missing_values) == 0
     else:
         is_comparision_value_matches = column_scope.value == value.this
+
     is_column_matches = column_scope.column == column.name
     is_negation_matches = is_comparision_negated == expected_negation
     operator_type_matches = isinstance(comparision_operator, expected_operator)
 
+    # Check if the value type matches the expected value type
     is_value_type_matches = False
     match column_scope.value_type:
         case "string":
