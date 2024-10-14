@@ -398,6 +398,94 @@ class TestRowSecurity(unittest.TestCase):
         )
         self.assertTrue(result.query_allowed)
 
+    def test_scope_value_is_string_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
+            {
+                "projects": [ColumnScope("projects", "id", "1", value_type="string")],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_value_is_string_not_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
+            {
+                "projects": [ColumnScope("projects", "id", "2", value_type="string")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_scope_value_is_string_invalid(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
+            {
+                "projects": [ColumnScope("projects", "id", "1", value_type="string")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_scope_in_operator_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IN (1, 2)",
+            {
+                "projects": [
+                    ColumnScope(
+                        "projects", "id", ["1", "2"], operator="IN", value_type="list"
+                    )
+                ],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_not_in_operator_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id NOT IN (1, 2)",
+            {
+                "projects": [
+                    ColumnScope(
+                        "projects", "id", ["1", "2"], operator="NOT IN", value_type="list"
+                    )
+                ],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_is_null_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IS NULL",
+            {"projects": [ColumnScope("projects", "id", None, "IS", "null")]},
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_is_not_null_satisfied(self):
+        unittest.result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IS NOT NULL",
+            {"projects": [ColumnScope("projects", "id", None, "IS NOT", "null")]},
+        )
+
+
 
 if __name__ == "__main__":
     unittest.main()
