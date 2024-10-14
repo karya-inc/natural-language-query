@@ -470,18 +470,33 @@ def check_query_privilages(
         if table.name in valid_query_aliases:
             continue
 
-        table_privilages, error = check_table_privilages_for_role(
+        table_privilages, table_check_result = check_table_privilages_for_role(
             table, table_privilages_map, role_id, query
         )
 
-        if error:
-            return error
+        if table_check_result and not table_check_result.query_allowed:
+            return table_check_result
 
+        assert table_privilages is not None
+
+        # Ensure all hte required scopes are available
         scopes_for_table = table_scopes.get(table.name, [])
-        error = check_scope_privilages(table, scopes_for_table, alias_table_map)
+        column_scopes_available: set[str] = set()
+        for column_scope in scopes_for_table:
+            column_scopes_available.add(column_scope.column)
 
-        if error:
-            return error
+        required_scopes = set(table_privilages.scoped_columns)
+        missing_scopes = required_scopes - column_scopes_available
+        assert (
+            len(missing_scopes) == 0
+        ), f"Missing scopes: {missing_scopes} for role '{role_id}' on table '{table.name}'"
+
+        scope_check_result = check_scope_privilages(
+            table, scopes_for_table, alias_table_map
+        )
+
+        if not scope_check_result.query_allowed:
+            return scope_check_result
 
         if table_privilages:
             table_privilages_for_role[table.name] = table_privilages
