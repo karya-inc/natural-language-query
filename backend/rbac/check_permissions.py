@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple, Union
 from enum import Enum
 import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
@@ -49,7 +49,7 @@ ComparisionOperator = Literal[
     "IN",
     "NOT IN",
     "IS",
-    "Is Not",
+    "IS NOT",
     "LIKE",
     "NOT LIKE",
 ]
@@ -60,25 +60,21 @@ class ColumnScope:
     This class represents the scopes for a table. It includes the table name and the scopes for the table.
     """
 
-    table: str
-    column: str
-    operator: ComparisionOperator
-    value: str
-    is_string: bool
-
     def __init__(
         self,
         table: str,
         column: str,
-        value: str,
+        value: Union[str, list[str], None],
         operator: ComparisionOperator = "=",
-        is_string: bool = False,
+        value_type: Literal[
+            "string", "literal", "list", "string_array", "null"
+        ] = "literal",
     ) -> None:
         self.table = table
         self.column = column
         self.operator = operator
         self.value = value
-        self.is_string = is_string
+        self.value_type = value_type
 
 
 class ErrorCode(Enum):
@@ -214,6 +210,75 @@ def invert_comparision_direction(comparator: exp._Expression) -> exp._Expression
     return mappings.get(comparator, comparator)
 
 
+def check_expression_matches_scope(
+    column_scope: ColumnScope, operator: exp.Expression
+) -> bool:
+    column: exp.Column
+    value: exp.Expression
+
+    expected_operator, expected_negation = match_operator_to_exp(column_scope.operator)
+
+    is_comparision_negated = False
+    comparision_operator: exp.Expression = operator
+    if isinstance(operator, exp.Not):
+        comparision_operator = operator.this
+        is_comparision_negated = True
+
+    if isinstance(comparision_operator.this, exp.Column):
+        column = comparision_operator.this
+        value = comparision_operator.expression
+    else:
+        column = comparision_operator.expression
+        value = comparision_operator.this
+        expected_operator = invert_comparision_direction(expected_operator)
+
+    is_comparision_value_matches = False
+    if isinstance(comparision_operator, exp.In):
+        assert column_scope.value_type == "list" and isinstance(
+            column_scope.value, list
+        ), "Value type must always be list for IN operators"
+
+        expetced_values = set(column_scope.value)
+        actual_values = set([val.this for val in comparision_operator.expressions])
+        missing_values = expetced_values - actual_values
+
+        is_comparision_value_matches = len(missing_values) == 0
+    else:
+        is_comparision_value_matches = column_scope.value == value.this
+    is_column_matches = column_scope.column == column.name
+    is_negation_matches = is_comparision_negated == expected_negation
+    operator_type_matches = isinstance(comparision_operator, expected_operator)
+
+    is_value_type_matches = False
+    match column_scope.value_type:
+        case "string":
+            is_value_type_matches = value.is_string
+        case "list":
+            is_value_type_matches = len(comparision_operator.expressions) > 0
+        case "string_array":
+            if len(comparision_operator.expressions) > 0:
+                is_string_array = all(
+                    [val.is_string for val in comparision_operator.expressions]
+                )
+                is_value_type_matches = is_string_array
+            else:
+                is_value_type_matches = False
+        case "literal":
+            is_value_type_matches = value.is_string == False
+        case "null":
+            is_value_type_matches = isinstance(value, exp.Null)
+
+    is_expression_matches_scope = (
+        is_column_matches
+        and is_negation_matches
+        and operator_type_matches
+        and is_comparision_value_matches
+        and is_value_type_matches
+    )
+
+    return is_expression_matches_scope
+
+
 def check_scope_privilages(
     reference_table: exp.Table,
     column_scopes: list[ColumnScope] = [],
@@ -240,13 +305,13 @@ def check_scope_privilages(
         expressions = where_clause.dfs(prune_or_subtrees)
 
         # Identify potential expressions which can satisfy the scopes for the table
-        for operator in expressions:
-            is_not_operator = isinstance(operator, exp.Not)
-            is_valid_comparision_predicate = isinstance(operator, exp.Predicate)
+        for operator_symbol in expressions:
+            is_not_operator = isinstance(operator_symbol, exp.Not)
+            is_valid_comparision_predicate = isinstance(operator_symbol, exp.Predicate)
             if not is_not_operator and not is_valid_comparision_predicate:
                 continue
 
-            columns = list(operator.find_all(exp.Column))
+            columns = list(operator_symbol.find_all(exp.Column))
 
             # Comparisions between two columns or two literals won't be considered for scope checks
             if len(columns) != 1:
@@ -279,7 +344,7 @@ def check_scope_privilages(
                 scoping_expresssions_by_column.get(column.name, [])
             )
 
-            scoping_expresssions_by_column[column.name].append(operator)
+            scoping_expresssions_by_column[column.name].append(operator_symbol)
 
     for column_scope in column_scopes:
         scoping_expressions = scoping_expresssions_by_column.get(column_scope.column)
@@ -296,39 +361,11 @@ def check_scope_privilages(
             )
 
         scope_matched = False
-        for operator in scoping_expressions:
-            column: exp.Column
-            value: exp.Expression
-
-            expected_operator, expected_negation = match_operator_to_exp(
-                column_scope.operator
+        for operator_expression in scoping_expressions:
+            scope_matched = check_expression_matches_scope(
+                column_scope, operator_expression
             )
-
-            comparision_negated = False
-            comparision_operator: exp.Expression = operator
-            if isinstance(operator, exp.Not):
-                comparision_operator = operator.this
-                comparision_negated = True
-
-            if isinstance(comparision_operator.this, exp.Column):
-                column = comparision_operator.this
-                value = comparision_operator.expression
-            else:
-                column = comparision_operator.expression
-                value = comparision_operator.this
-                expected_operator = invert_comparision_direction(expected_operator)
-
-            # Ensure the used operator matches the requirement
-            if comparision_negated != expected_negation or not isinstance(
-                comparision_operator, expected_operator
-            ):
-                continue
-
-            if (
-                column_scope.value == value.this
-                and column_scope.is_string == value.is_string
-            ):
-                scope_matched = True
+            if scope_matched:
                 break
 
         if not scope_matched:
