@@ -257,7 +257,7 @@ def check_scope_privilages(
             is_valid_table_name_for_column = (
                 column.table is not None and column.table != ""
             )
-            if is_valid_table_name_for_column:
+            if not is_valid_table_name_for_column:
                 return PrivilageCheckResult(
                     query_allowed=False,
                     err_code=ErrorCode.UNSUPPORTED_SQL_QUERY,
