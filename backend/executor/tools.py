@@ -37,6 +37,7 @@ class AgentTools:
 import os
 import json
 from openai import OpenAI
+import psycopg2
 
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
@@ -90,11 +91,10 @@ class GPTAgentTools(AgentTools):
         queries = []
 
         for catalog in catalogs:
-            provider = (
-                "SQL"
-                if catalog.provider == "postgres"
-                else "MongoDB (so use MongoDB Aggregation Pipeline)"
-            )
+            if catalog.provider == "postgres":
+                provider = "SQL"
+            else:
+                raise ValueError(f"Unsupported provider: {catalog.provider}")
             message_content = f"Convert the following natural language query to {provider} for the given catalog. Only return the SQL and nothing else (not even markdown or code blocks):\n\nNLQ: {nlq}\n\nCatalog: {catalog}"
 
             chat_completion = client.chat.completions.create(
@@ -108,7 +108,35 @@ class GPTAgentTools(AgentTools):
             )
 
             response = chat_completion.choices[0].message.content
+            if response.startswith("```sql") and response.endswith("```"):
+                response = response[6:-3].strip()
+
             print(f"response({catalog.provider}): {response}")
             queries.append(Query(nlq=nlq, sql=response, catalog=catalog))
 
         return queries
+
+    def execute_queries(self, queries: List[Query]) -> List[Result]:
+        results = []
+        for query in queries:
+            if query.catalog.provider == "postgres":
+                connection_params = query.catalog.connection_params
+                print({"connection_params": connection_params})
+
+                with psycopg2.connect(
+                    dbname=connection_params["dbname"],
+                    user=connection_params["user"],
+                    password=connection_params["password"],
+                    host=connection_params["host"],
+                    port=connection_params["port"],
+                ) as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(query.sql)
+                        result = cursor.fetchall()
+                        results.append(result)
+            else:
+                raise ValueError(f"Unsupported provider: {query.catalog.provider}")
+
+        print({"results": results})
+
+        return results
