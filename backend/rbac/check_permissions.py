@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple
 from enum import Enum
 import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
@@ -28,15 +28,57 @@ class RoleTablePrivileges:
     id: str
     role_id: str
     table: str
-    columns: List[str]
-    columns_to_scope: List[str]
+    columns: list[str]
+    scoped_columns: list[str]
 
-    def __init__(self, id, role_id, table, columns, columns_to_scope) -> None:
+    def __init__(self, id, role_id, table, columns, scoped_columns) -> None:
         self.id = id
         self.role_id = role_id
         self.table = table
         self.columns = columns
-        self.columns_to_scope = columns_to_scope
+        self.scoped_columns = scoped_columns
+
+
+ComparisionOperator = Literal[
+    "=",
+    "!=",
+    ">",
+    "<",
+    ">=",
+    "<=",
+    "IN",
+    "NOT IN",
+    "IS",
+    "Is Not",
+    "LIKE",
+    "NOT LIKE",
+]
+
+
+class ColumnScope:
+    """
+    This class represents the scopes for a table. It includes the table name and the scopes for the table.
+    """
+
+    table: str
+    column: str
+    operator: ComparisionOperator
+    value: str
+    is_string: bool
+
+    def __init__(
+        self,
+        table: str,
+        column: str,
+        value: str,
+        operator: ComparisionOperator = "=",
+        is_string: bool = False,
+    ) -> None:
+        self.table = table
+        self.column = column
+        self.operator = operator
+        self.value = value
+        self.is_string = is_string
 
 
 class ErrorCode(Enum):
@@ -54,6 +96,7 @@ class ErrorCode(Enum):
     TABLE_NOT_IN_PRIVILAGES = "The specified table is not found in the privileges map."
     ROLE_NO_TABLE_ACCESS = "The role does not have access to the specified table."
     ROLE_NO_COLUMN_ACCESS = "The role does not have access to the specified column."
+    ROLE_NO_ROWS_ACCESS = "The query is trying to access rows which don't"
     WILDCARD_STAR_NOT_ALLOWED = "The wildcard star is not allowed."
 
 
@@ -67,7 +110,7 @@ class PrivilageCheckResult:
         self,
         query_allowed: bool,
         err_code: Optional[ErrorCode] = None,
-        context: Optional[Dict[str, Any]] = None,
+        context: Optional[dict[str, Any]] = None,
     ) -> None:
         self.query_allowed = query_allowed
         self.err_code = err_code
@@ -88,7 +131,7 @@ class PrivilageCheckResult:
 
 def check_table_privilages_for_role(
     table: exp.Table,
-    table_privilages_map: dict[str, List[RoleTablePrivileges]],
+    table_privilages_map: dict[str, list[RoleTablePrivileges]],
     role_id: str,
     query: str,
 ) -> Tuple[Optional[RoleTablePrivileges], Optional[PrivilageCheckResult]]:
@@ -126,7 +169,7 @@ def check_table_privilages_for_role(
     return (privilages_for_role, None)
 
 
-def find_role_by_id(roles: List[Role], role_id: str) -> Optional[Role]:
+def find_role_by_id(roles: list[Role], role_id: str) -> Optional[Role]:
     """
     This function finds a role by its id in a list of roles.
     """
@@ -136,12 +179,167 @@ def find_role_by_id(roles: List[Role], role_id: str) -> Optional[Role]:
     return
 
 
+def match_operator_to_exp(operator: str) -> tuple[exp._Expression, bool]:
+    match operator:
+        case "=":
+            return exp.EQ, False
+        case "!=":
+            return exp.NEQ, False
+        case ">":
+            return exp.GT, False
+        case "<":
+            return exp.LT, False
+        case ">=":
+            return exp.GTE, False
+        case "<=":
+            return exp.LTE, False
+        case "IN":
+            return exp.In, False
+        case "NOT IN":
+            return exp.In, True
+        case "IS":
+            return exp.Is, False
+        case "IS NOT":
+            return exp.Is, True
+        case "LIKE":
+            return exp.Like, False
+        case "NOT LIKE":
+            return exp.Like, True
+
+    raise ValueError(f"Invalid / Unsupported operator - {operator}")
+
+
+def invert_comparision_direction(comparator: exp._Expression) -> exp._Expression:
+    mappings = {exp.GT: exp.LT, exp.LT: exp.GT, exp.LTE: exp.GTE, exp.GTE: exp.LTE}
+    return mappings.get(comparator, comparator)
+
+
+def check_scope_privilages(
+    reference_table: exp.Table,
+    column_scopes: list[ColumnScope] = [],
+    alias_table_map: dict[str, str] = {},
+) -> PrivilageCheckResult:
+    select_query = reference_table.find_ancestor(exp.Select)
+    assert select_query is not None
+
+    where_clauses = list(select_query.find_all(exp.Where))
+    if len(where_clauses) == 0 and len(column_scopes) > 0:
+        return PrivilageCheckResult(
+            query_allowed=False,
+            err_code=ErrorCode.ROLE_NO_ROWS_ACCESS,
+            context={
+                "reason": "No where clauses found for table in the query segment",
+                "table": reference_table,
+                "query_segment": select_query.sql(),
+            },
+        )
+
+    scoping_expresssions_by_column: dict[str, list[exp.Expression]] = {}
+    prune_or_subtrees = lambda node: node == exp.Or
+    for where_clause in where_clauses:
+        expressions = where_clause.dfs(prune_or_subtrees)
+
+        # Identify potential expressions which can satisfy the scopes for the table
+        for operator in expressions:
+            is_not_operator = isinstance(operator, exp.Not)
+            is_valid_comparision_predicate = isinstance(operator, exp.Predicate)
+            if not is_not_operator and not is_valid_comparision_predicate:
+                continue
+
+            columns = list(operator.find_all(exp.Column))
+
+            # Comparisions between two columns or two literals won't be considered for scope checks
+            if len(columns) != 1:
+                continue
+
+            column = columns[0]
+
+            is_valid_table_name_for_column = (
+                column.table is not None and column.table != ""
+            )
+            if is_valid_table_name_for_column:
+                return PrivilageCheckResult(
+                    query_allowed=False,
+                    err_code=ErrorCode.UNSUPPORTED_SQL_QUERY,
+                    context={
+                        "reason": "No table name for column in where clause",
+                        "column": column.sql(),
+                        "where_clause": where_clause.sql(),
+                    },
+                )
+
+            # Get the unaliased table name
+            table_name = alias_table_map.get(column.table, column.table)
+
+            if table_name is not reference_table.name:
+                continue
+
+            # Initialize index for column in table
+            scoping_expresssions_by_column[column.name] = (
+                scoping_expresssions_by_column.get(column.name, [])
+            )
+
+            scoping_expresssions_by_column[column.name].append(operator)
+
+    for column_scope in column_scopes:
+        scoping_expressions = scoping_expresssions_by_column[column_scope.column]
+        scope_matched = False
+
+        for operator in scoping_expressions:
+            column: exp.Column
+            value: exp.Expression
+
+            expected_operator, expected_negation = match_operator_to_exp(
+                column_scope.operator
+            )
+
+            comparision_negated = False
+            comparision_operator: exp.Expression = operator
+            if isinstance(operator, exp.Not):
+                comparision_operator = operator.this
+                comparision_negated = True
+
+            if isinstance(comparision_operator.this, exp.Column):
+                column = comparision_operator.this
+                value = comparision_operator.expression
+            else:
+                column = comparision_operator.expression
+                value = comparision_operator.this
+                expected_operator = invert_comparision_direction(expected_operator)
+
+            # Ensure the used operator matches the requirement
+            if comparision_negated != expected_negation or not isinstance(
+                comparision_operator, expected_operator
+            ):
+                continue
+
+            if (
+                column_scope.value == value.this
+                and column_scope.is_string == value.is_string
+            ):
+                scope_matched = True
+                break
+
+        if not scope_matched:
+            return PrivilageCheckResult(
+                query_allowed=False,
+                err_code=ErrorCode.ROLE_NO_ROWS_ACCESS,
+                context={
+                    "reason": "Column scope is not fulfilled for one of the selects",
+                    "scope": column_scope,
+                },
+            )
+
+    return PrivilageCheckResult(query_allowed=True)
+
+
 def check_query_privilages(
-    table_privilages_map: dict[str, List[RoleTablePrivileges]],
-    roles: List[Role],
+    table_privilages_map: dict[str, list[RoleTablePrivileges]],
+    roles: list[Role],
     role_id: str,
     query: str,
-    allowed_aliases: List[str] = [],
+    table_scopes: dict[str, list[ColumnScope]] = {},
+    allowed_aliases: list[str] = [],
 ) -> PrivilageCheckResult:
     """
     Given a query and a role, this function checks if the role has access to the tables and columns in the query
@@ -174,7 +372,7 @@ def check_query_privilages(
         )
 
     # Try to parse the query
-    parsed_query = None
+    parsed_query: exp.Expression
     try:
         parsed_query = sqlglot.parse_one(query)
     except sqlglot_errors.ParseError as e:
@@ -194,8 +392,8 @@ def check_query_privilages(
             context={"role": role_id, "query": query},
         )
 
-    alias_table_map: Dict[str, str] = {}
-    table_privilages_for_role: Dict[str, RoleTablePrivileges] = {}
+    alias_table_map: dict[str, str] = {}
+    table_privilages_for_role: dict[str, RoleTablePrivileges] = {}
 
     # Check eash subquery in the CTEs
     # A cte is allowed if all the subqueries are allowed
@@ -204,7 +402,7 @@ def check_query_privilages(
     for cte in ctes:
         cte_query = list(cte.find_all(exp.Select))[0]
         cte_result = check_query_privilages(
-            table_privilages_map, roles, role_id, cte_query.sql()
+            table_privilages_map, roles, role_id, cte_query.sql(), table_scopes
         )
         if not cte_result.query_allowed:
             return PrivilageCheckResult(
@@ -230,6 +428,7 @@ def check_query_privilages(
             roles,
             role_id,
             select.sql(),
+            table_scopes,
             valid_query_aliases,
         )
 
@@ -263,6 +462,12 @@ def check_query_privilages(
         table_privilages, error = check_table_privilages_for_role(
             table, table_privilages_map, role_id, query
         )
+
+        if error:
+            return error
+
+        scopes_for_table = table_scopes.get(table.name, [])
+        error = check_scope_privilages(table, scopes_for_table, alias_table_map)
 
         if error:
             return error
