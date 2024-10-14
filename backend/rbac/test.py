@@ -124,7 +124,6 @@ class TestColumnSecurity(unittest.TestCase):
             SELECT employee_departments.name, employee_departments.department FROM employee_departments
             """,
         )
-        print(result)
         self.assertTrue(result.query_allowed)
 
     def test_cte_query_no_table_access(self):
@@ -334,7 +333,6 @@ class TestRowSecurity(unittest.TestCase):
                 "projects": [ColumnScope("projects", "id", "1")],
             },
         )
-        print(result)
         self.assertTrue(result.query_allowed)
 
     def test_joined_table_scopes_not_satisfied(self):
