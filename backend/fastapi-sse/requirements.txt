@@ -1,0 +1,6 @@
+pip install fastapi
+pip install uvicorn
+pip install aiohttp    
+pip install requests      
+pip install python-dotenv  
+pip install google-generativeai --quiet
