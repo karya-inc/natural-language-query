@@ -3,6 +3,8 @@ import logging
 from typing import Optional, Generator
 from fastapi import HTTPException
 import json
+from starlette.responses import StreamingResponse
+import uuid
 
 # Set up logging configuration
 log_format = '%(asctime)s - %(levelname)s - %(message)s'
@@ -71,8 +73,38 @@ def generate_sql_query_responses(
         logger.error(f"Error while processing query: {query}. Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error while generating SQL queries.")
     
-    
+
 @app.get("/chat")
-async def stream_sql_query_responses(query: str):
-    logger.info(f"Received query: {query}")
-    return {"message": "This is a placeholder response."}
+async def stream_sql_query_responses(query: str,
+    session_id: Optional[str] = None
+) -> StreamingResponse:
+    """
+    Endpoint to stream SQL query responses as Server-Sent Events (SSE).
+    If session_id is not provided, a new one will be generated.
+    
+    Args:
+        query: The natural language query to process.
+        session_id: Optional session identifier; if not provided, one will be generated.
+    
+    Returns:
+        StreamingResponse: The response streamed as Server-Sent Events.
+    """
+    try:
+        # If no session_id is provided, generate a new UUID for the session
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            logger.info(f"Generated new session_id: {session_id}")
+
+        # Returning the StreamingResponse with the proper media type for SSE
+        logger.info(f"Started streaming SQL responses for query: {query}")
+        response = StreamingResponse(
+            generate_sql_query_responses(query, session_id),
+            media_type="text/event-stream"
+        )
+
+        logger.info("Streaming response successfully started.")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error while processing query: {query} with session_id: {session_id}. Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to stream SQL query responses.")
