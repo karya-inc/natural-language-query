@@ -5,6 +5,7 @@ from fastapi import HTTPException
 import json
 from starlette.responses import StreamingResponse
 import uuid
+from text_to_sql import sql_generator
 
 # Set up logging configuration
 log_format = '%(asctime)s - %(levelname)s - %(message)s'
@@ -50,8 +51,7 @@ def generate_sql_query_responses(
     try:
         logger.info(f"Started processing query: {query}")
 
-        # Placeholder for sql_generator (to be replaced later)
-        sql_query_responses = ["SELECT * FROM table", "ANOTHER SQL QUERY"]
+        sql_query_responses = sql_generator(query)
 
         for response in sql_query_responses:
             # Creating structured data to be sent in the event stream
