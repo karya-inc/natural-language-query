@@ -4,6 +4,13 @@ import uuid
 import logging
 from typing import Optional
 
+
+# def disable_logging():
+#     logging.disable(logging.CRITICAL)
+
+# disable_logging()
+
+
 # Set up logging configuration
 log_format = '%(asctime)s - %(levelname)s - %(message)s'
 
@@ -12,6 +19,7 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter(log_format))
 console_handler.setLevel(logging.INFO)
 
+# Create file handlers for success and error logs
 success_handler = logging.FileHandler('success_test.log')
 success_handler.setFormatter(logging.Formatter(log_format))
 success_handler.setLevel(logging.INFO)
@@ -30,6 +38,7 @@ logger.addHandler(error_handler)
 
 # URL for the chat API
 URL = "http://127.0.0.1:8000/chat"
+
 
 async def async_get_event(user_query: str, session_id: Optional[str] = None) -> None:
     """
@@ -64,3 +73,20 @@ async def async_get_event(user_query: str, session_id: Optional[str] = None) -> 
     except Exception as e:
         # Log any other unexpected errors to error log with stack trace
         logger.exception(f"Unexpected error occurred: {e}")
+
+
+async def main() -> None:
+    """
+    Main function to run the query and handle the session.
+    """
+    user_query = "What is the total sales for last month?"
+    
+    # Generate a new session ID
+    session_id = str(uuid.uuid4())
+    
+    # Perform the API request and handle exceptions gracefully
+    await async_get_event(user_query, session_id=session_id)
+
+# Run the main function
+if __name__ == "__main__":
+    asyncio.run(main())
