@@ -7,6 +7,13 @@ from starlette.responses import StreamingResponse
 import uuid
 from text_to_sql import sql_generator
 
+
+# def disable_logging():
+#     logging.disable(logging.CRITICAL)
+
+# disable_logging()
+
+
 # Set up logging configuration
 log_format = '%(asctime)s - %(levelname)s - %(message)s'
 
