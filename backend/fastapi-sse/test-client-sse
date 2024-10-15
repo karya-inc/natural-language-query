@@ -26,3 +26,41 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(console_handler)
 logger.addHandler(success_handler)
 logger.addHandler(error_handler)
+
+
+# URL for the chat API
+URL = "http://127.0.0.1:8000/chat"
+
+async def async_get_event(user_query: str, session_id: Optional[str] = None) -> None:
+    """
+    Asynchronously sends a query to the chat API and processes the server-sent events (SSE).
+    
+    Args:
+        user_query (str): The query to be sent to the API.
+        session_id (Optional[str]): Optional session identifier; if not provided, one will be generated.
+    
+    Logs the server-sent events received in response to the query.
+    """
+    # Prepare the request parameters
+    params = {'query': user_query}
+    if session_id:
+        params['session_id'] = session_id
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(URL, params=params) as response:
+                # Check for valid response status and content type
+                if response.status == 200 and 'text/event-stream' in response.headers.get('Content-Type', ''):
+                    async for line in response.content:
+                        # Decode and log non-empty lines
+                        if line.strip():
+                            logger.info(f"Received event: {line.decode('utf-8')}")
+                else:
+                    # Log unexpected response status and content type to error log
+                    logger.error(f"Unexpected response: {response.status} - {response.headers.get('Content-Type')}")
+    except aiohttp.ClientError as e:
+        # Log network or request-related errors to error log
+        logger.error(f"AIOHTTP error occurred: {e}")
+    except Exception as e:
+        # Log any other unexpected errors to error log with stack trace
+        logger.exception(f"Unexpected error occurred: {e}")
