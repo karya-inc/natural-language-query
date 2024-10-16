@@ -1,11 +1,10 @@
-from fastapi import FastAPI
-import logging
-from typing import Optional, Generator
-from fastapi import HTTPException
-import json
+from fastapi import FastAPI, HTTPException
 from starlette.responses import StreamingResponse
-import uuid
+from typing import Optional, Generator
 from text_to_sql import sql_generator
+import json
+import uuid
+import logging
 
 
 # def disable_logging():
@@ -65,12 +64,12 @@ def generate_sql_query_responses(
             response_data = {
                 'response': {
                     'type': 'reply',
-                    'payload': response
+                    'payload': response.text
                 },
                 'session_id': session_id
             }
 
-            logger.info(f"Sending intermediate response: {response}")
+            logger.info(f"Sending intermediate response: {response.text}")
 
             yield f"{json.dumps(response_data)}\n\n"
 
@@ -82,7 +81,8 @@ def generate_sql_query_responses(
     
 
 @app.get("/chat")
-async def stream_sql_query_responses(query: str,
+async def stream_sql_query_responses(
+    query: str,
     session_id: Optional[str] = None
 ) -> StreamingResponse:
     """
