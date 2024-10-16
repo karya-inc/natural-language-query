@@ -1,5 +1,10 @@
 # FastAPI SSE Endpoint 
 
+Change directory:
+```
+cd natural-language-query\backend\fastapi-sse
+```
+
 Install the dependencies:
 ```
 pip install -r requirements.txt
