@@ -1,0 +1,140 @@
+[
+  {
+    "id": "1",
+    "message": "Hello! How can I assist you today?",
+    "role": "bot",
+    "timestamp": 1672531199000
+  },
+  {
+    "id": "2",
+    "message": "I need help with my account.",
+    "role": "user",
+    "timestamp": 1672531299000
+  },
+  {
+    "id": "3",
+    "message": "Sure, I can help with that. What seems to be the problem?",
+    "role": "bot",
+    "timestamp": 1672531399000
+  },
+  {
+    "id": "4",
+    "message": "I forgot my password and can't log in.",
+    "role": "user",
+    "timestamp": 1672531499000
+  },
+  {
+    "id": "5",
+    "message": "No worries, I can help you reset your password.",
+    "role": "bot",
+    "timestamp": 1672531599000
+  },
+  {
+    "id": "6",
+    "message": "Please click on the 'Forgot Password' link on the login page.",
+    "role": "bot",
+    "timestamp": 1672531699000
+  },
+  {
+    "id": "7",
+    "message": "I did that, but I didn't receive any email.",
+    "role": "user",
+    "timestamp": 1672531799000
+  },
+  {
+    "id": "8",
+    "message": "Have you checked your spam folder?",
+    "role": "bot",
+    "timestamp": 1672531899000
+  },
+  {
+    "id": "9",
+    "message": "Yes, I checked everywhere.",
+    "role": "user",
+    "timestamp": 1672531999000
+  },
+  {
+    "id": "10",
+    "message": "Let me verify your email address. What is your email?",
+    "role": "bot",
+    "timestamp": 1672532099000
+  },
+  {
+    "id": "11",
+    "message": "It's user@example.com.",
+    "role": "user",
+    "timestamp": 1672532199000
+  },
+  {
+    "id": "12",
+    "message": "Thank you. I will resend the password reset email.",
+    "role": "bot",
+    "timestamp": 1672532299000
+  },
+  {
+    "id": "13",
+    "message": "Please check your inbox now.",
+    "role": "bot",
+    "timestamp": 1672532399000
+  },
+  {
+    "id": "14",
+    "message": "I got the email. Thank you!",
+    "role": "user",
+    "timestamp": 1672532499000
+  },
+  {
+    "id": "15",
+    "message": "You're welcome! Is there anything else I can help you with?",
+    "role": "bot",
+    "timestamp": 1672532599000
+  },
+  {
+    "id": "16",
+    "message": "No, that's all for now. Thanks!",
+    "role": "user",
+    "timestamp": 1672532699000
+  },
+  {
+    "id": "17",
+    "message": "Have a great day!",
+    "role": "bot",
+    "timestamp": 1672532799000
+  },
+  {
+    "id": "18",
+    "message": "Hi, I need help with my order.",
+    "role": "user",
+    "timestamp": 1672532899000
+  },
+  {
+    "id": "19",
+    "message": "Sure, can you provide your order number?",
+    "role": "bot",
+    "timestamp": 1672532999000
+  },
+  {
+    "id": "20",
+    "message": "It's 123456.",
+    "role": "user",
+    "timestamp": 1672533099000
+  },
+  {
+    "id": "21",
+    "message": "Thank you. Let me check the status of your order.",
+    "role": "bot",
+    "timestamp": 1672533199000
+  },
+  {
+    "id": "22",
+    "message": "Your order is on the way and should arrive by tomorrow.",
+    "role": "bot",
+    "timestamp": 1672533299000
+  },
+  {
+    "id": "23",
+    "message": "Great, thank you!",
+    "role": "user",
+    "timestamp": 1672533399000
+  }
+]
