@@ -40,7 +40,7 @@ logger.addHandler(error_handler)
 URL = "http://127.0.0.1:8000/chat"
 
 
-async def async_get_event(user_query: str, session_id: Optional[str] = None) -> None:
+async def async_get_event(user_query: str, session_id: Optional[str] = None, type: Optional[str] = None) -> None:
     """
     Asynchronously sends a query to the chat API and processes the server-sent events (SSE).
     
@@ -54,6 +54,8 @@ async def async_get_event(user_query: str, session_id: Optional[str] = None) -> 
     params = {'query': user_query}
     if session_id:
         params['session_id'] = session_id
+    if type:
+        params['type'] = type
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -67,9 +69,11 @@ async def async_get_event(user_query: str, session_id: Optional[str] = None) -> 
                 else:
                     # Log unexpected response status and content type to error log
                     logger.error(f"Unexpected response: {response.status} - {response.headers.get('Content-Type')}")
+
     except aiohttp.ClientError as e:
         # Log network or request-related errors to error log
         logger.error(f"AIOHTTP error occurred: {e}")
+
     except Exception as e:
         # Log any other unexpected errors to error log with stack trace
         logger.exception(f"Unexpected error occurred: {e}")
@@ -79,13 +83,17 @@ async def main() -> None:
     """
     Main function to run the query and handle the session.
     """
+    # Simulate user-query provided by the user at frontend
     user_query = "What is the total sales for last month?"
     
-    # Generate a new session ID
-    session_id = str(uuid.uuid4())
+    # Simulate session-id provided by system at frontend, which will be None as the session starts 
+    session_id = None
+
+    # Simulate type provided by the system at frontend
+    type = "reply" # None or "report" or "reply"
     
     # Perform the API request and handle exceptions gracefully
-    await async_get_event(user_query, session_id=session_id)
+    await async_get_event(user_query, session_id, type)
 
 # Run the main function
 if __name__ == "__main__":
