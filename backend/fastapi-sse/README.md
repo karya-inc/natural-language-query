@@ -10,6 +10,13 @@ Install the dependencies:
 pip install -r requirements.txt
 ```
 
+Create .env file and add following details:
+```
+GEMINI_API_KEY="YOUR_API_KEY_HERE"
+LLM_MODEL_NAME="LLM_MODEL_NAME"
+ENDPOINT="http://YOUR_SERVER_ADDRESS/chat"
+```
+
 To run the FastAPI based server, use:
 ```
 python -m uvicorn server-sse:app --reload
