@@ -97,6 +97,8 @@ class TestBasic(unittest.TestCase):
         )
 
         self.assertIsNotNone(result)
+        self.assertIn("October 1, 2023", result)
+        self.assertIn("10:00 AM UTC", result)
 
 
 if __name__ == "__main__":

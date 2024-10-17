@@ -13,4 +13,4 @@ class AgentState:
     relevant_catalogs: List[Catalog] = None
     queries: List[Query] = None
     results: List[Result] = None
-    final_result: Any = None
+    final_formatted_result: str = None

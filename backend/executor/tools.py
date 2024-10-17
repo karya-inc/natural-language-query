@@ -1,4 +1,5 @@
-from typing import List, Any
+from datetime import datetime
+from typing import List, Any, Tuple
 
 from .storage import EphemeralTools, dict_to_create_table
 from .catalog import Catalog
@@ -42,10 +43,12 @@ class AgentTools(EphemeralTools):
     ) -> Query:
         raise NotImplementedError
 
-    def is_result_sufficient(self, results: List[Result], nlq: str) -> bool:
-        raise NotImplementedError
+    def is_result_sufficient(
+        self, results: List[Result], nlq: str
+    ) -> Tuple[bool, Result]:
+        return len(results) == 1, results[0]  # simple check for now
 
-    def format_result(self, results: List[Result]) -> Any:
+    def format_result(self, nlq: str, results: List[Result]) -> Any:
         raise NotImplementedError
 
     def refine_query(self, state: AgentState) -> AgentState:
@@ -126,8 +129,13 @@ class GPTAgentTools(AgentTools):
             )
 
             response = chat_completion.choices[0].message.content
-            if response.startswith("```sql") and response.endswith("```"):
-                response = response[6:-3].strip()
+            if response.startswith("```sql"):
+                response = response[6:].strip()
+            elif response.startswith("```"):
+                response = response[3:].strip()
+
+            if response.endswith("```"):
+                response = response[:-3].strip()
 
             print(f"response({catalog.provider}): {response}")
             queries.append(Query(nlq=nlq, sql=response, catalog=catalog))
@@ -167,16 +175,27 @@ class GPTAgentTools(AgentTools):
 
         return results
 
-    # def generate_aggregate_query(
-    #     self, results: List[Result], intermediate_catalogs: List[Catalog]
-    # ) -> Query:
-    #     raise NotImplementedError
+    def format_result(self, nlq: str, result: Result) -> str:
+        def default_serializer(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Type {type(obj)} not serializable")
 
-    def is_result_sufficient(self, results: List[Result], nlq: str) -> bool:
-        raise NotImplementedError
+        formatted_result = json.dumps(result.data, indent=2, default=default_serializer)
+        message_content = f"Based on the natural language query: {nlq}\n\nFormat the following SQL query results generated from that query in natural language:\n\n{formatted_result}"
 
-    def format_result(self, results: List[Result]) -> Any:
-        raise NotImplementedError
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": message_content,
+                }
+            ],
+        )
+
+        formatted_result = response.choices[0].message.content
+        return formatted_result
 
     def refine_query(self, state: AgentState) -> AgentState:
         raise NotImplementedError

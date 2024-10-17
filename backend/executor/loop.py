@@ -42,7 +42,8 @@ def agentic_loop(
             state.results = tools.execute_queries([aggregate_query])
 
         send_update(AgentStatus.EVALUATING_RESULTS)
-        if tools.is_result_sufficient(state.results, state.nlq):
-            state.final_result = tools.format_result(state.results)
+        is_sufficient, result = tools.is_result_sufficient(state.results, state.nlq)
+        if is_sufficient:
+            state.final_formatted_result = tools.format_result(state.nlq, result)
             send_update(AgentStatus.TASK_COMPLETED)
-            return state.final_result
+            return state.final_formatted_result
