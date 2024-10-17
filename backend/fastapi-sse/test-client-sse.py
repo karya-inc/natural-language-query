@@ -1,43 +1,21 @@
 import aiohttp
 import asyncio
 import uuid
-import logging
 from typing import Optional
+from logger import setup_logging, disable_logging
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-# def disable_logging():
-#     logging.disable(logging.CRITICAL)
+# URL for the chat API
+URL = os.getenv("ENDPOINT")  # "http://127.0.0.1:8000/chat"
+
 
 # disable_logging()
 
-
 # Set up logging configuration
-log_format = '%(asctime)s - %(levelname)s - %(message)s'
-
-# Create two handlers: one for console output and one for file output
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter(log_format))
-console_handler.setLevel(logging.INFO)
-
-# Create file handlers for success and error logs
-success_handler = logging.FileHandler('success_test.log')
-success_handler.setFormatter(logging.Formatter(log_format))
-success_handler.setLevel(logging.INFO)
-
-error_handler = logging.FileHandler('error_test.log')
-error_handler.setFormatter(logging.Formatter(log_format))
-error_handler.setLevel(logging.ERROR)
-
-# Create a logger and add the handlers
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.addHandler(success_handler)
-logger.addHandler(error_handler)
-
-
-# URL for the chat API
-URL = "http://127.0.0.1:8000/chat"
+logger = setup_logging('success.log', 'error.log')
 
 
 async def async_get_event(user_query: str, session_id: Optional[str] = None, type: Optional[str] = None) -> None:
