@@ -15,7 +15,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   HiArrowUp,
   HiCheck,
@@ -53,26 +53,37 @@ export type ChatBotProps = {
 
 export function ChatBot({ pastMessages = [] }: ChatBotProps) {
   const [input, setInput] = useState<string>("");
-  const [messages, _setMessages] = useState<Message[]>(pastMessages);
-  const [isFetching, _setIsFetching] = useState<boolean>(false);
-  const [error, _setError] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>(pastMessages);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     console.log(messages);
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      // handle form submission
+    },
+    []
+  );
 
   return (
-    <Container maxW="4xl" py={20} mb={20} position="relative" minH="100%">
+    <Container
+      bg="gray.900"
+      centerContent
+      alignItems="center"
+      justifyContent="center"
+      maxW="100vw"
+      h="100%"
+    >
       <Flex gap={2}>
         <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
         <Heading color="gray.500" fontWeight="normal">
@@ -88,13 +99,11 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
           help you today?
         </Heading>
       </Flex>
-      <VStack py={8} w="full" pb={12}>
-        {messages.map((msg) => {
-          return (
-            <Message key={msg.id} msg={msg} scrollToBottom={scrollToBottom} />
-          );
-        })}
-        {isFetching ? (
+      <VStack w="full" pb={12}>
+        {messages.map((msg) => (
+          <Message key={msg.id} msg={msg} scrollToBottom={scrollToBottom} />
+        ))}
+        {isFetching && (
           <Box my={1} color="gray.50" w="full" gap={4} display="flex">
             <Avatar size="sm" bg={"gray.700"} src={"/og-image.jpg"} />
             <Box w="full" pt={1}>
@@ -108,17 +117,13 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
                 w="full"
               >
                 {[0, 1, 2].map((num) => (
-                  <Skeleton
-                    key={num}
-                    //animation={`${expandWidth} 1s infinite ease-in-out ${num * 50}ms`}
-                    height="15px"
-                  />
+                  <Skeleton key={num} height="15px" />
                 ))}
               </VStack>
             </Box>
           </Box>
-        ) : null}
-        {error !== "" ? (
+        )}
+        {error && (
           <Box
             my={1}
             color="gray.50"
@@ -150,22 +155,18 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
               </Button>
             </Box>
           </Box>
-        ) : null}
+        )}
         <div ref={messagesEndRef} />
       </VStack>
-      <Container
-        position="fixed"
-        bottom={0}
-        pb={10}
-        pt={5}
+      <VStack
+        pb={6}
+        w="full"
         bg="gray.900"
         maxW="4xl"
-        right={0}
-        left={0}
         display="flex"
         flexDirection="column"
         alignItems="center"
-        gap={1}
+        gap={2}
         zIndex={10}
       >
         <form onSubmit={handleSubmit} style={{ flex: 1, width: "100%" }}>
@@ -208,94 +209,94 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
         <Text color="gray.500" fontSize="sm">
           &copy; Copyright Karya 2024 — Present
         </Text>
-      </Container>
+      </VStack>
     </Container>
   );
 }
 
-const Message = ({
-  msg,
-  scrollToBottom,
-}: {
-  msg: Message;
-  scrollToBottom: () => void;
-}) => {
-  const { message, role, newMessage } = msg;
-  const [copyLabel, setCopyLabel] = useState<string>("Copy");
-  const [copyIcon, setCopyIcon] = useState<React.ReactElement>(
-    <Icon as={HiOutlineClipboard} />,
-  );
-  const [text] = useTypewriter({
-    words: [message],
-    loop: 1,
-    typeSpeed: 20,
-    onType(count) {
-      if (count % 10 === 0) scrollToBottom();
-    },
-    onLoopDone() {
-      scrollToBottom();
-    },
-  });
+const Message = React.memo(
+  ({ msg, scrollToBottom }: { msg: Message; scrollToBottom: () => void }) => {
+    const { message, role, newMessage } = msg;
+    const [copyLabel, setCopyLabel] = useState<string>("Copy");
+    const [copyIcon, setCopyIcon] = useState<React.ReactElement>(
+      <Icon as={HiOutlineClipboard} />
+    );
+    const [text] = useTypewriter({
+      words: [message],
+      loop: 1,
+      typeSpeed: 20,
+      onType: useCallback(
+        (count: number) => {
+          if (count % 10 === 0) scrollToBottom();
+        },
+        [scrollToBottom]
+      ),
+      onLoopDone: useCallback(() => {
+        scrollToBottom();
+      }, [scrollToBottom]),
+    });
 
-  return (
-    <Box my={2} color="gray.50" display="flex" w="full" gap={4}>
-      <Avatar
-        size="sm"
-        bg={role === "bot" ? "gray.700" : "impactGreen"}
-        icon={
-          role === "user" ? (
-            <Icon as={HiUser} boxSize={5} color="gray.900" />
-          ) : undefined
-        }
-        src={role === "bot" ? "/og-image.jpg" : undefined}
-      />
-      <Box
-        display="flex"
-        flexDirection="column"
-        w="full"
-        pt={1}
-        gap={1.5}
-        role="group"
-        position="relative"
-      >
-        <Heading size="sm">{role === "user" ? "You" : BOT_NAME}</Heading>
-        {/* {role === 'bot' && newMessage ? <Text>{text}</Text> : <Text>{message}</Text>} */}
-        {role === "bot" ? (
-          <Box className="markdown-body">
-            <Markdown
-              children={newMessage ? text : message}
-              remarkPlugins={[remarkGfm]}
-            />
-          </Box>
-        ) : (
-          <Text>{message}</Text>
-        )}
-        <Button
-          size="xs"
-          w="min"
-          variant="ghost"
-          color="gray.500"
-          border="solid 1.5px"
-          borderColor="gray.500"
-          _hover={{
-            bg: "gray.800",
-          }}
-          opacity={0}
-          leftIcon={copyIcon}
-          _groupHover={{ opacity: 1 }}
-          onClick={() => {
-            navigator.clipboard.writeText(message);
-            setCopyIcon(<Icon as={HiCheck} />);
-            setCopyLabel("Copied");
-            setTimeout(() => {
-              setCopyLabel("Copy");
-              setCopyIcon(<Icon as={HiOutlineClipboard} />);
-            }, 1000);
-          }}
+    const handleCopy = useCallback(() => {
+      navigator.clipboard.writeText(message);
+      setCopyIcon(<Icon as={HiCheck} />);
+      setCopyLabel("Copied");
+      setTimeout(() => {
+        setCopyLabel("Copy");
+        setCopyIcon(<Icon as={HiOutlineClipboard} />);
+      }, 1000);
+    }, [message]);
+
+    return (
+      <Box my={2} color="gray.50" display="flex" w="full" gap={4}>
+        <Avatar
+          size="sm"
+          bg={role === "bot" ? "gray.700" : "impactGreen"}
+          icon={
+            role === "user" ? (
+              <Icon as={HiUser} boxSize={5} color="gray.900" />
+            ) : undefined
+          }
+          src={role === "bot" ? "/og-image.jpg" : undefined}
+        />
+        <Box
+          display="flex"
+          flexDirection="column"
+          w="full"
+          pt={1}
+          gap={1.5}
+          role="group"
+          position="relative"
         >
-          {copyLabel}
-        </Button>
+          <Heading size="sm">{role === "user" ? "You" : BOT_NAME}</Heading>
+          {role === "bot" ? (
+            <Box className="markdown-body">
+              <Markdown
+                children={newMessage ? text : message}
+                remarkPlugins={[remarkGfm]}
+              />
+            </Box>
+          ) : (
+            <Text>{message}</Text>
+          )}
+          <Button
+            size="xs"
+            w="min"
+            variant="ghost"
+            color="gray.500"
+            border="solid 1.5px"
+            borderColor="gray.500"
+            _hover={{
+              bg: "gray.800",
+            }}
+            opacity={0}
+            leftIcon={copyIcon}
+            _groupHover={{ opacity: 1 }}
+            onClick={handleCopy}
+          >
+            {copyLabel}
+          </Button>
+        </Box>
       </Box>
-    </Box>
-  );
-};
+    );
+  }
+);
