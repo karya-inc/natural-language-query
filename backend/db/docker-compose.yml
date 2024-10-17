@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: nlqx_test
+      POSTGRES_USER: nlqx_user
+      POSTGRES_PASSWORD: nlqx_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pg:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
