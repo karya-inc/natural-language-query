@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import { ChatBot } from "../screens/Chat";
 import RootLayout from "../layouts/RootLayout";
+import { CheckUserAuth } from "../components/CheckUserAuth";
 
 export const router = createBrowserRouter([
   {
@@ -9,7 +10,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <ChatBot />,
+        element: <CheckUserAuth forComponent={<ChatBot />} />,
       },
     ],
   },
