@@ -15,7 +15,7 @@ URL = os.getenv("ENDPOINT")  # "http://127.0.0.1:8000/chat"
 # disable_logging()
 
 # Set up logging configuration
-logger = setup_logging('success.log', 'error.log')
+logger = setup_logging('client_success.log', 'client_error.log')
 
 
 async def async_get_event(user_query: str, session_id: Optional[str] = None, type: Optional[str] = None) -> None:

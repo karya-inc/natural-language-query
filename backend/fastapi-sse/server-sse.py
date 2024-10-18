@@ -1,62 +1,20 @@
 from fastapi import FastAPI, HTTPException
 from starlette.responses import StreamingResponse
 from typing import Optional, Generator
-from text_to_sql import sql_generator
 import json
 import uuid
 from logger import setup_logging, disable_logging
+from response_generator import generate_response
 
 
 # disable_logging()
 
 # Set up logging configuration
-logger = setup_logging('success.log', 'error.log')
+logger = setup_logging('server_success.log', 'server_error.log')
 
 
 # Create the FastAPI app
 app = FastAPI()
-
-
-def generate_sql_query_responses(
-    query: str,
-    session_id: str,
-    type: str
-) -> Generator[str, None, None]:
-    """
-    Generates SQL query responses in a server-sent events format.
-    
-    Args:
-        query: The natural language query to be processed.
-        session_id: Optional session identifier for tracking the query session.
-        type: Optional type of query response.
-        
-    Yields:
-        A formatted string containing the SQL query response as an event stream.
-    """
-    try:
-        logger.info(f"Started processing query: {query}")
-
-        sql_query_responses = sql_generator(query)
-
-        for response in sql_query_responses:
-            # Creating structured data to be sent in the event stream
-            response_data = {
-                'response': {
-                    'type': type,
-                    'payload': response.text
-                },
-                'session_id': session_id
-            }
-
-            logger.info(f"Sending intermediate response: {response.text}")
-
-            yield f"{json.dumps(response_data)}\n\n"
-
-        logger.info("Completed processing the query.")
-
-    except Exception as e:
-        logger.error(f"Error while processing query: {query}. Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Server Error while generating SQL queries.")
     
 
 @app.get("/chat")
@@ -91,7 +49,7 @@ async def stream_sql_query_responses(
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {query}")
         response = StreamingResponse(
-            generate_sql_query_responses(query, session_id, type),
+            generate_response(query, session_id, type),
             media_type="text/event-stream"
         )
 
