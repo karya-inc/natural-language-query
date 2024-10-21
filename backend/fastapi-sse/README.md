@@ -14,7 +14,8 @@ Create .env file and add following details:
 ```
 GEMINI_API_KEY="YOUR_API_KEY_HERE"
 LLM_MODEL_NAME="LLM_MODEL_NAME"
-ENDPOINT="http://YOUR_SERVER_ADDRESS/chat"
+CHAT_ENDPOINT="http://YOUR_SERVER_ADDRESS/chat"
+HISTORY_ENDPOINT="http://YOUR_SERVER_ADDRESS/fetch_history"
 ```
 
 To run the FastAPI based server, use:
