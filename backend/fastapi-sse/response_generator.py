@@ -3,12 +3,13 @@ from logger import setup_logging, disable_logging
 from typing import Generator
 from fastapi import HTTPException
 import json
+from chat_history import store_chat_history
 
 
 # disable_logging()
 
 # Set up logging configuration
-logger = setup_logging('response_generator_success.log', 'response_generator_error.log')
+logger = setup_logging('response_generator', 'response_generator_success.log', 'response_generator_error.log')
 
 
 def generate_response(
@@ -33,6 +34,9 @@ def generate_response(
         sql_query_responses = sql_generator(query)
 
         for response in sql_query_responses:
+
+            store_chat_history(session_id, query, response.text)
+
             # Creating structured data to be sent in the event stream
             response_data = {
                 'response': {
