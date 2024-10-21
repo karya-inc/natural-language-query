@@ -81,3 +81,25 @@ async def fetch_chat_history(session_id: str) -> None:
         logger.error(f"AIOHTTP error occurred while fetching history: {e}")
     except Exception as e:
         logger.exception(f"Unexpected error while fetching history: {e}")
+
+async def main() -> None:
+    """
+    Main function to run multiple queries and retrieve chat history for the same session.
+    """
+    # Generate or provide a session ID for multiple queries
+    session_id = str(uuid.uuid4())  # Reuse this session ID for multiple queries
+
+    # First query
+    user_query1 = "What is the total sales for last month?"
+    await fetch_chat_response(user_query1, session_id, type="reply")
+
+    # Second query
+    user_query2 = "How many users signed up last week?"
+    await fetch_chat_response(user_query2, session_id, type="reply")
+
+    # Fetch chat history after queries
+    await fetch_chat_history(session_id)
+
+# Run the main function
+if __name__ == "__main__":
+    asyncio.run(main())
