@@ -1,8 +1,8 @@
-from check_permissions import check_query_privilages, Role, RoleTablePrivileges
+from check_permissions import ColumnScope, check_query_privilages, Role, RoleTablePrivileges
 import unittest
 
 
-class TestRBAC(unittest.TestCase):
+class TestColumnSecurity(unittest.TestCase):
 
     def setUp(self):
         self.roles = [
@@ -24,15 +24,13 @@ class TestRBAC(unittest.TestCase):
                     "admin",
                     "employees",
                     ["name", "salary", "department_id"],
-                    ["name"],
+                    [],
                 )
             ],
             "departments": [
+                RoleTablePrivileges("id2", "admin", "departments", ["name", "id"], []),
                 RoleTablePrivileges(
-                    "id2", "admin", "departments", ["name", "id"], ["name"]
-                ),
-                RoleTablePrivileges(
-                    "id2", "read_only_user", "departments", ["name"], ["name"]
+                    "id2", "read_only_user", "departments", ["name"], []
                 ),
             ],
         }
@@ -126,7 +124,6 @@ class TestRBAC(unittest.TestCase):
             SELECT employee_departments.name, employee_departments.department FROM employee_departments
             """,
         )
-        print(result)
         self.assertTrue(result.query_allowed)
 
     def test_cte_query_no_table_access(self):
@@ -241,6 +238,253 @@ class TestRBAC(unittest.TestCase):
             """,
         )
         self.assertFalse(result.query_allowed)
+
+
+class TestRowSecurity(unittest.TestCase):
+
+    def setUp(self):
+        self.roles = [
+            Role("project_manager", "Project Manager", "db_project_manager"),
+            Role("department_manager", "Department Manager", "db_department_manager"),
+        ]
+
+        self.table_privilages_map = {
+            "projects": [
+                RoleTablePrivileges(
+                    "1",
+                    "project_manager",
+                    "projects",
+                    [
+                        "id",
+                        "name",
+                        "description",
+                        "start_date",
+                        "end_date",
+                    ],
+                    ["id"],
+                ),
+                RoleTablePrivileges(
+                    "2",
+                    "department_manager",
+                    "projects",
+                    [
+                        "id",
+                        "name",
+                        "description",
+                        "department_id",
+                    ],
+                    ["department_id"],
+                ),
+            ],
+            "departments": [
+                RoleTablePrivileges(
+                    "id2",
+                    "department_manager",
+                    "departments",
+                    ["id", "name", "description"],
+                    ["id"],
+                )
+            ],
+        }
+
+    def test_no_where_clause(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p",
+            {
+                "projects": [ColumnScope("projects", "id", "1")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_missing_scopes_for_role(self):
+        try:
+            _result = check_query_privilages(
+                self.table_privilages_map,
+                self.roles,
+                "department_manager",
+                "SELECT p.id, p.name FROM projects as p where p.department_id = 1",
+            )
+            self.fail("Expected exception due to missing scopes for role")
+        except:
+            pass
+
+    def test_where_clause_not_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
+            table_scopes={
+                "projects": [ColumnScope("projects", "id", "2")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_where_clause_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
+            table_scopes={
+                "projects": [ColumnScope("projects", "id", "1")],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_joined_table_scopes_not_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "department_manager",
+            "SELECT p.id, p.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.id = 1",
+            table_scopes={
+                "projects": [ColumnScope("projects", "department_id", "2")],
+                "departments": [ColumnScope("departments", "id", "2")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_joined_table_scopes_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "department_manager",
+            "SELECT p.id, p.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.department_id = 1 and d.id = 1",
+            table_scopes={
+                "projects": [ColumnScope("projects", "department_id", "1")],
+                "departments": [ColumnScope("departments", "id", "1")],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_joined_table_scopes_partially_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "department_manager",
+            "SELECT p.id, p.name, d.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.department_id = 1",
+            table_scopes={
+                "projects": [ColumnScope("projects", "department_id", "1")],
+                "departments": [ColumnScope("departments", "id", "1")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_subquery_scope_not_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM (SELECT q.id, q.name FROM projects q) p",
+            table_scopes={
+                "projects": [ColumnScope("projects", "id", "1")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_subquery_scope_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM (SELECT q.id, q.name FROM projects q WHERE q.id = 1) p",
+            table_scopes={
+                "projects": [ColumnScope("projects", "id", "1")],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_value_is_string_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
+            {
+                "projects": [ColumnScope("projects", "id", "1", value_type="string")],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_value_is_string_not_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
+            {
+                "projects": [ColumnScope("projects", "id", "2", value_type="string")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_scope_value_is_string_invalid(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
+            {
+                "projects": [ColumnScope("projects", "id", "1", value_type="string")],
+            },
+        )
+        self.assertFalse(result.query_allowed)
+
+    def test_scope_in_operator_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IN (1, 2)",
+            {
+                "projects": [
+                    ColumnScope(
+                        "projects", "id", ["1", "2"], operator="IN", value_type="list"
+                    )
+                ],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_not_in_operator_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id NOT IN (1, 2)",
+            {
+                "projects": [
+                    ColumnScope(
+                        "projects", "id", ["1", "2"], operator="NOT IN", value_type="list"
+                    )
+                ],
+            },
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_is_null_satisfied(self):
+        result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IS NULL",
+            {"projects": [ColumnScope("projects", "id", None, "IS", "null")]},
+        )
+        self.assertTrue(result.query_allowed)
+
+    def test_scope_is_not_null_satisfied(self):
+        unittest.result = check_query_privilages(
+            self.table_privilages_map,
+            self.roles,
+            "project_manager",
+            "SELECT p.id, p.name FROM projects as p WHERE p.id IS NOT NULL",
+            {"projects": [ColumnScope("projects", "id", None, "IS NOT", "null")]},
+        )
+
 
 
 if __name__ == "__main__":
