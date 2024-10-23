@@ -26,16 +26,17 @@ async def fetch_chat_response(user_query: str, session_id: Optional[str] = None,
     
     Logs the server-sent events received in response to the query.
     """
-    # Prepare the request parameters
-    params = {'query': user_query}
-    if session_id:
-        params['session_id'] = session_id
-    if type:
-        params['type'] = type
+
+    # Prepare the request body as JSON
+    params = {
+        'query': user_query,
+        'session_id': session_id,
+        'type': type
+    }
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(CHAT_URL, params=params) as response:
+            async with session.post(CHAT_URL, json=params) as response:
                 # Check for valid response status and content type
                 if response.status == 200 and 'text/event-stream' in response.headers.get('Content-Type', ''):
                     async for line in response.content:
@@ -64,11 +65,12 @@ async def fetch_chat_history(session_id: str) -> None:
     
     Logs the retrieved chat history from the SSE stream.
     """
+
     params = {'session_id': session_id}
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(HISTORY_URL, params=params) as response:
+            async with session.post(HISTORY_URL, json=params) as response:
                 if response.status == 200:
                     async for line in response.content:
                         # SSE sends empty lines between events, so skip them
