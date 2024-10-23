@@ -6,11 +6,38 @@ export type CheckUserAuthProps = {
   forComponent: ReactNode;
 };
 
+type LoginResponse =
+  | {
+    action: "OAUTH2_AUTH_CODE" | "OAUTH2_IMPLICIT" | "REDIRECT_COOKIE";
+    /** url to redirect to */
+    payload: string;
+  }
+  | {
+    action: "OAUTH2_TOKEN_RESPONSE";
+    /** OAuth2 authentication_code reponse with token */
+    payload: {
+      token_type: "Bearer";
+      expires_in: number;
+      access_token: string;
+      refresh_token: string;
+    };
+  };
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 export function CheckUserAuth(props: CheckUserAuthProps) {
   const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
   const toast = useToast();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+
+  // Manage access token
+  const [accessToken, setAccessToken] = useState<string | null>(
+    localStorage.getItem("access_token"),
+  );
+
+  useEffect(() => {
+    if (accessToken) {
+      localStorage.setItem("access_token", accessToken);
+    }
+  }, [accessToken]);
 
   /** Show a toast for login error */
   const toastLoginError = (reason?: string) =>
@@ -24,9 +51,19 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
   /** Check if the token is valid
    * TODO: Update function after API is implemented
    */
-  const checkToken = async (token: string) => {
+  const checkToken = async (token?: string | null) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/verify?token=${token}`);
+      const headers = new Headers();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      const res = await fetch(`${BACKEND_URL}/auth/verify`, {
+        headers,
+        method: "GET",
+        credentials: "include",
+      });
+
       const data = await res.json();
       if (!data?.is_valid) {
         setIsTokenValid(false);
@@ -45,17 +82,25 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
       const loginStratergyResponse = await fetch(
         `${BACKEND_URL}/auth/login_stratergy`,
       );
-      const loginStratergy = await loginStratergyResponse.json();
+      const loginStratergy: LoginResponse | null =
+        await loginStratergyResponse.json();
       if (!loginStratergy) {
         toastLoginError();
         return;
       }
 
       const action = loginStratergy.action;
-      if (action === "redirect") {
-        const url = loginStratergy.payload;
-        window.location.replace(url);
-        return;
+      switch (action) {
+        case "REDIRECT_COOKIE":
+        case "OAUTH2_AUTH_CODE":
+        case "OAUTH2_IMPLICIT":
+          const url = loginStratergy.payload;
+          window.location.replace(url);
+          break;
+
+        case "OAUTH2_TOKEN_RESPONSE":
+          setAccessToken(loginStratergy.payload.access_token);
+          break;
       }
 
       console.error(
@@ -67,27 +112,47 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
     }
   };
 
+  /** Exchange auth code for token */
+  const exchangeCodeForToken = async (code: string) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/exchange_code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+      const token_response: LoginResponse = await res.json();
+      if (token_response.action !== "OAUTH2_TOKEN_RESPONSE") {
+        toastLoginError("Invalid response from server");
+        return;
+      }
+
+      setAccessToken(token_response.payload.access_token);
+    } catch (e: any) {
+      toastLoginError(e.toString());
+    }
+  };
+
   useEffect(() => {
-    if (urlSearchParams.get("auth_token")) {
-      localStorage.setItem(
-        "token",
-        urlSearchParams.get("auth_token") as string,
-      );
-      urlSearchParams.delete("auth_token");
+    const access_token = urlSearchParams.get("access_token");
+    if (access_token) {
+      setAccessToken(access_token);
       setUrlSearchParams(urlSearchParams);
+      urlSearchParams.delete("access_token");
+    }
+
+    const auth_code = urlSearchParams.get("code");
+    if (auth_code) {
+      exchangeCodeForToken(auth_code);
+      urlSearchParams.delete("code");
     }
   }, [urlSearchParams]);
 
   /** Check if the token is valid */
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setIsTokenValid(false);
-      return;
-    }
-
-    checkToken(token);
-  }, []);
+    checkToken(accessToken);
+  }, [accessToken]);
 
   /** Login the user if the token is invalid */
   useEffect(() => {
