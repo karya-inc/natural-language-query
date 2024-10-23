@@ -9,7 +9,7 @@ ResponsePayload = TypeVar("ResponsePayload")
 
 @dataclass
 class LoginResponse(Generic[ResponsePayload]):
-    action: Literal["REDIRECT", "LOGIN"]
+    action: Literal["OAUTH2_AUTH_CODE", "OAUTH2_TOKEN_RESPONSE", "OAUTH2_IMPLICIT", "REDIRECT_COOKIE"]
     payload: ResponsePayload
 
 
@@ -99,7 +99,7 @@ class AuthProvider(ABC):
         if not payload:
             raise IncompatibleTokenError(IncompatibleTokenErrorCodes.EMPTY_PAYLOAD)
 
-        if "__nlq_role" not in payload:
+        if "nlq_role" not in payload:
             raise IncompatibleTokenError(IncompatibleTokenErrorCodes.NLQ_ROLE_NOT_FOUND)
 
         return payload
