@@ -1,27 +1,9 @@
-from dataclasses import dataclass
-from typing import Any, Literal, Optional, override
-
 import requests
+from dataclasses import dataclass, field
+from typing import Any, Literal, Optional, override
 from backend.auth.auth_provider import AuthProvider, LoginResponse
-from urllib.parse import urlencode
+from backend.auth.utils import make_url
 
-
-def make_url(base_url: str, **params):
-    """
-    Create a URL with the given base URL and query parameters
-
-    Args:
-        base_url:
-        **params: Query parameters passed as named arguments
-
-    Returns:
-        URL with query parameters
-    """
-
-    url = base_url.rstrip("/")
-    if params:
-        url = "{}?{}".format(url, urlencode(params))
-    return url
 
 @dataclass
 class OAuth2Phase2Payload:
@@ -33,7 +15,7 @@ class OAuth2Phase2Payload:
 class OAuth2Provider(AuthProvider):
     """
     Implementation of OAuth2 authentication provider
-    
+
     Currently supports the Implicit and Authorization Code grant types
 
     Attributes:
