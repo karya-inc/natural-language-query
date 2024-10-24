@@ -1,8 +1,10 @@
+from dataclasses import dataclass
 from typing import Any
 from backend.auth.auth_provider import AuthProvider, LoginResponse
 from backend.auth.utils import make_url
 
 
+@dataclass
 class RedirectAuthProvider(AuthProvider):
     """
     Auth Provider that redirects the user to another URL on the same domain for authentication
