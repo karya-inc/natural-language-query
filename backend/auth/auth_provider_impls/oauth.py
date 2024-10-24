@@ -8,7 +8,7 @@ from backend.auth.utils import make_url
 @dataclass
 class OAuth2Phase2Payload:
     code: str
-    state: str
+    state: Optional[str]
 
 
 @dataclass
