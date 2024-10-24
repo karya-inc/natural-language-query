@@ -49,7 +49,7 @@ class AuthProvider(ABC):
     """
 
     decode_key: str
-    algorithm: str
+    jwt_algorithm: str
 
     @abstractmethod
     def login(self, payload: Any) -> LoginResponse[Any]:
@@ -94,7 +94,7 @@ class AuthProvider(ABC):
             IncompatibleTokenError: If the token payload doesn't fit the requirements for the application
         """
 
-        payload = jwt.decode(token, self.decode_key, algorithms=[self.algorithm])
+        payload = jwt.decode(token, self.decode_key, algorithms=[self.jwt_algorithm])
 
         if not payload:
             raise IncompatibleTokenError(IncompatibleTokenErrorCodes.EMPTY_PAYLOAD)
