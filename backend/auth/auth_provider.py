@@ -2,14 +2,20 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Literal, TypeVar
+from pydantic import BaseModel
 import jwt
 
 ResponsePayload = TypeVar("ResponsePayload")
 
 
 @dataclass
-class LoginResponse(Generic[ResponsePayload]):
-    action: Literal["OAUTH2_AUTH_CODE", "OAUTH2_TOKEN_RESPONSE", "OAUTH2_IMPLICIT", "REDIRECT_COOKIE"]
+class LoginResponse(Generic[ResponsePayload], BaseModel):
+    action: Literal[
+        "OAUTH2_AUTH_CODE",
+        "OAUTH2_TOKEN_RESPONSE",
+        "OAUTH2_IMPLICIT",
+        "REDIRECT_COOKIE",
+    ]
     payload: ResponsePayload
 
 

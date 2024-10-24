@@ -45,13 +45,15 @@ class OAuth2Provider(AuthProvider):
 
     login_url: str
     nlq_url: str
-    token_url: Optional[str]
     client_id: str
-    client_secret: Optional[str]
     response_type: Literal["code", "token"]
+    token_url: Optional[str] = field(default=None)
+    client_secret: Optional[str] = field(default=None)
 
     @override
-    def login(self, payload: Optional[OAuth2Phase2Payload] = None) -> LoginResponse[Any]:
+    def login(
+        self, payload: Optional[OAuth2Phase2Payload] = None
+    ) -> LoginResponse[Any]:
         if self.response_type == "token":
             return LoginResponse(
                 action="OAUTH2_IMPLICIT",
@@ -59,7 +61,7 @@ class OAuth2Provider(AuthProvider):
                     base_url=self.login_url,
                     redirect_uri=self.nlq_url,
                     response_type="token",
-                    client_id=self.client_id
+                    client_id=self.client_id,
                 ),
             )
 
@@ -72,7 +74,7 @@ class OAuth2Provider(AuthProvider):
                         base_url=self.login_url,
                         redirect_uri=self.nlq_url,
                         response_type="code",
-                        client_id=self.client_id
+                        client_id=self.client_id,
                     ),
                 )
 
@@ -87,13 +89,12 @@ class OAuth2Provider(AuthProvider):
                         "code": code,
                         "redirect_uri": self.nlq_url,
                         "client_id": self.client_id,
-                        "client_secret": self.client_secret
-                    }
+                        "client_secret": self.client_secret,
+                    },
                 )
                 response.raise_for_status()
                 return LoginResponse(
-                    action="OAUTH2_TOKEN_RESPONSE",
-                    payload=response.json()
+                    action="OAUTH2_TOKEN_RESPONSE", payload=response.json()
                 )
 
         raise Exception("Invalid / Unsupported response_type for oauth")
