@@ -1,8 +1,8 @@
 import requests
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, override
-from backend.auth.auth_provider import AuthProvider, LoginResponse
-from backend.auth.utils import make_url
+from auth_provider import AuthProvider, LoginResponse
+from utils.url import make_url
 
 
 @dataclass

@@ -1,28 +1,9 @@
-from urllib.parse import urlencode
-
 from google.generativeai.client import os
 
-from backend.auth.auth_provider import AuthProvider
-from backend.auth.auth_provider_impls.oauth import OAuth2Provider
-from backend.auth.auth_provider_impls.redirect import RedirectAuthProvider
+from auth_provider import AuthProvider
+from oauth import OAuth2Provider
+from redirect import RedirectAuthProvider
 
-
-def make_url(base_url: str, **params):
-    """
-    Create a URL with the given base URL and query parameters
-
-    Args:
-        base_url:
-        **params: Query parameters passed as named arguments
-
-    Returns:
-        URL with query parameters
-    """
-
-    url = base_url.rstrip("/")
-    if params:
-        url = "{}?{}".format(url, urlencode(params))
-    return url
 
 
 def get_auth_provider() -> AuthProvider:

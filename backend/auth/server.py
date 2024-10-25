@@ -1,15 +1,26 @@
 import os
 from typing import Annotated
 from fastapi import Body, Cookie, FastAPI, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from backend.auth.auth_provider_impls.oauth import OAuth2Phase2Payload
-from backend.auth.utils import get_auth_provider
+from oauth import OAuth2Phase2Payload
+from utils.auth import get_auth_provider
 
 load_dotenv()
 
 auth_handler = get_auth_provider()
 
 app = FastAPI()
+
+
+allowed_origin = os.environ.get("CORS_ORIGINS", "").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origin,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 access_token_cookie = os.environ.get("TOKEN_COOKIE_NAME", "access_token")
 
