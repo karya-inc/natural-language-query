@@ -3,7 +3,13 @@ from typing import Generator
 from fastapi import HTTPException
 import json
 from logger import setup_logging, disable_logging
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Path to the SQLite database
+DB_PATH = os.getenv("DB_PATH")  # e.g., "chat_history.db"
 
 # disable_logging()
 
@@ -15,7 +21,7 @@ def create_chat_history_table():
     """
     Creates the chat history table in SQLite if it doesn't exist.
     """
-    conn = sqlite3.connect('chat_history.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS chat_history (
@@ -39,7 +45,7 @@ def store_chat_history(session_id: str, query: str, response: str) -> None:
         query: The user's query.
         response: The generated response.
     """
-    conn = sqlite3.connect('chat_history.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
     INSERT INTO chat_history (session_id, query, response)
