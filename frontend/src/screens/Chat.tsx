@@ -1,50 +1,47 @@
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  memo,
+} from "react";
 import {
-  Avatar,
-  Box,
-  Button,
-  Container,
   Flex,
-  Heading,
-  Icon,
-  IconButton,
   Image,
-  Input,
-  InputGroup,
-  InputRightElement,
-  Skeleton,
-  Text,
+  Heading,
   VStack,
+  HStack,
+  Box,
+  InputGroup,
+  Input,
+  InputRightElement,
+  IconButton,
+  Text,
+  Icon,
+  SkeletonCircle,
 } from "@chakra-ui/react";
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import {
-  HiArrowUp,
-  HiCheck,
-  HiOutlineClipboard,
-  HiUser,
-} from "react-icons/hi2";
+import { HiArrowUp } from "react-icons/hi";
 import Markdown from "react-markdown";
-import { useTypewriter } from "react-simple-typewriter";
 import remarkGfm from "remark-gfm";
-import "../styles/markdown.css";
-import "github-markdown-css";
 
+// Constants
 const BOT_NAME = "Kalai";
 
 export type Message = {
-  id: string; // uuid string
+  id: string;
   message: string;
   role: "user" | "bot";
-  timestamp: number; // epoch timestamp Date.now()
+  timestamp: number;
   components?: MessageComponent[];
   newMessage?: boolean;
+  session_id?: string;
 };
 
 export type MessageComponent = {
   type: "button" | "spec";
   label: string;
-  content: {
-    [key: string]: any;
-  };
+  content: { [key: string]: string | number | boolean | object };
 };
 
 export type ChatBotProps = {
@@ -52,10 +49,12 @@ export type ChatBotProps = {
 };
 
 export function ChatBot({ pastMessages = [] }: ChatBotProps) {
-  const [input, setInput] = useState<string>("");
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(pastMessages);
-  const [isFetching, setIsFetching] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
+  const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState("");
+  const [conversationStarted, setConversationStarted] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -63,27 +62,11 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
   }, []);
 
   useEffect(() => {
-    console.log(messages);
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      // handle form submission
-    },
-    []
-  );
-
-  return (
-    <Container
-      bg="gray.900"
-      centerContent
-      alignItems="center"
-      justifyContent="center"
-      maxW="100vw"
-      h="100%"
-    >
+  const botGreeting = useMemo(
+    () => (
       <Flex gap={2}>
         <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
         <Heading color="gray.500" fontWeight="normal">
@@ -99,72 +82,118 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
           help you today?
         </Heading>
       </Flex>
-      <VStack w="full" pb={12}>
-        {messages.map((msg) => (
-          <Message key={msg.id} msg={msg} scrollToBottom={scrollToBottom} />
-        ))}
-        {isFetching && (
-          <Box my={1} color="gray.50" w="full" gap={4} display="flex">
-            <Avatar size="sm" bg={"gray.700"} src={"/og-image.jpg"} />
-            <Box w="full" pt={1}>
-              <Heading size="sm" mb={1.5}>
-                {BOT_NAME}
-              </Heading>
-              <VStack
-                align="start"
-                spacing={1.5}
-                flexDirection={"column"}
-                w="full"
-              >
-                {[0, 1, 2].map((num) => (
-                  <Skeleton key={num} height="15px" />
-                ))}
-              </VStack>
-            </Box>
-          </Box>
-        )}
-        {error && (
-          <Box
-            my={1}
-            color="gray.50"
-            w="full"
-            gap={4}
-            display="flex"
-            role="group"
-          >
-            <Avatar size="sm" bg={"gray.700"} src={"/og-image.jpg"} />
-            <Box w="full" pt={1}>
-              <Heading size="sm" mb={1.5}>
-                {BOT_NAME}
-              </Heading>
-              <Text color="red.400">{error}</Text>
-              <Button
-                size="xs"
-                w="min"
-                variant="ghost"
-                color="gray.500"
-                border="solid 1.5px"
-                borderColor="gray.500"
-                _hover={{
-                  bg: "gray.800",
-                }}
-                opacity={0}
-                _groupHover={{ opacity: 1 }}
-              >
-                Retry
-              </Button>
-            </Box>
-          </Box>
-        )}
-        <div ref={messagesEndRef} />
-      </VStack>
+    ),
+    []
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInput(e.target.value);
+    },
+    []
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!input.trim()) return;
+
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        message: input,
+        role: "user",
+        timestamp: Date.now(),
+        session_id: sessionId,
+      };
+
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setInput("");
+      setError("");
+      setIsFetching(true);
+      setConversationStarted(true);
+
+      try {
+        let collectedPayload = "";
+        let updatedSessionId = sessionId;
+
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: input,
+            session_id: sessionId,
+          }),
+        });
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+
+        while (!done) {
+          if (!reader) throw new Error("Reader is undefined");
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+
+          if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            try {
+              const parsedChunk = JSON.parse(chunk);
+              updatedSessionId = parsedChunk.session_id;
+              collectedPayload += parsedChunk.response.payload;
+            } catch {
+              console.error("Failed to parse JSON");
+            }
+          }
+        }
+
+        const botMessage: Message = {
+          id: Date.now().toString(),
+          message: collectedPayload,
+          role: "bot",
+          timestamp: Date.now(),
+          session_id: updatedSessionId,
+        };
+
+        setMessages((prevMessages) => [...prevMessages, botMessage]);
+        setSessionId(updatedSessionId);
+      } catch (error) {
+        console.error("Failed to fetch response", error);
+        setError("Failed to fetch response");
+      } finally {
+        setIsFetching(false);
+      }
+    },
+    [input, sessionId]
+  );
+
+  return (
+    <VStack
+      bg="gray.900"
+      align="center"
+      justify="center"
+      gap={8}
+      w="100%"
+      h="100%"
+    >
+      {!conversationStarted && botGreeting}
+      {conversationStarted && (
+        <VStack w="full" flex={1} overflowY="auto" px={80} py={12} gap={10}>
+          {messages.map((msg) => (
+            <MemoizedMessage key={msg.id} msg={msg} />
+          ))}
+          {isFetching && <FetchingSkeleton />}
+          {error && <ErrorMessage error={error} />}
+          <div ref={messagesEndRef} />
+        </VStack>
+      )}
+
       <VStack
         pb={6}
         w="full"
         bg="gray.900"
         maxW="4xl"
-        display="flex"
-        flexDirection="column"
         alignItems="center"
         gap={2}
         zIndex={10}
@@ -180,24 +209,17 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
               border="solid 1px"
               borderColor="gray.700"
               pr="3rem"
-              _hover={{
-                borderColor: "gray.600",
-              }}
-              color="gray.50"
-              _focus={{
-                boxShadow: "none",
-                borderColor: "gray.600",
-              }}
+              _hover={{ borderColor: "gray.600" }}
+              color="gray.400"
+              _focus={{ boxShadow: "none", borderColor: "gray.600" }}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               isDisabled={isFetching}
             />
             <InputRightElement width="3rem">
               <IconButton
                 type="submit"
-                icon={
-                  <Icon as={HiArrowUp} stroke={"gray.900"} strokeWidth={1} />
-                }
+                icon={<Icon as={HiArrowUp} stroke="gray.900" strokeWidth={1} />}
                 aria-label="Send"
                 bg="impactGreen"
                 size="sm"
@@ -207,96 +229,81 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
           </InputGroup>
         </form>
         <Text color="gray.500" fontSize="sm">
-          &copy; Copyright Karya 2024 — Present
+          Kalai can make mistakes. Check important info.
         </Text>
       </VStack>
-    </Container>
+    </VStack>
   );
 }
 
-const Message = React.memo(
-  ({ msg, scrollToBottom }: { msg: Message; scrollToBottom: () => void }) => {
-    const { message, role, newMessage } = msg;
-    const [copyLabel, setCopyLabel] = useState<string>("Copy");
-    const [copyIcon, setCopyIcon] = useState<React.ReactElement>(
-      <Icon as={HiOutlineClipboard} />
-    );
-    const [text] = useTypewriter({
-      words: [message],
-      loop: 1,
-      typeSpeed: 20,
-      onType: useCallback(
-        (count: number) => {
-          if (count % 10 === 0) scrollToBottom();
-        },
-        [scrollToBottom]
-      ),
-      onLoopDone: useCallback(() => {
-        scrollToBottom();
-      }, [scrollToBottom]),
-    });
+// Memoized Message Component
+const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
+  const { message, role } = msg;
 
-    const handleCopy = useCallback(() => {
-      navigator.clipboard.writeText(message);
-      setCopyIcon(<Icon as={HiCheck} />);
-      setCopyLabel("Copied");
-      setTimeout(() => {
-        setCopyLabel("Copy");
-        setCopyIcon(<Icon as={HiOutlineClipboard} />);
-      }, 1000);
-    }, [message]);
-
-    return (
-      <Box my={2} color="gray.50" display="flex" w="full" gap={4}>
-        <Avatar
-          size="sm"
-          bg={role === "bot" ? "gray.700" : "impactGreen"}
-          icon={
-            role === "user" ? (
-              <Icon as={HiUser} boxSize={5} color="gray.900" />
-            ) : undefined
-          }
-          src={role === "bot" ? "/og-image.jpg" : undefined}
+  return (
+    <HStack
+      color="gray.50"
+      w="full"
+      justify={role === "user" ? "flex-end" : "flex-start"}
+      align={role === "user" ? "flex-end" : "flex-start"}
+      gap={8}
+    >
+      {role === "bot" && (
+        <Image
+          src="../../public/karya-logo.svg"
+          boxSize={10}
+          border="1px solid"
+          borderColor="gray.600"
+          borderRadius="full"
+          fit="contain"
+          p={2}
         />
-        <Box
-          display="flex"
-          flexDirection="column"
-          w="full"
-          pt={1}
-          gap={1.5}
-          role="group"
-          position="relative"
-        >
-          <Heading size="sm">{role === "user" ? "You" : BOT_NAME}</Heading>
-          {role === "bot" ? (
-            <Box className="markdown-body">
-              <Markdown
-                children={newMessage ? text : message}
-                remarkPlugins={[remarkGfm]}
-              />
-            </Box>
-          ) : (
-            <Text>{message}</Text>
-          )}
-          <Button
-            size="xs"
-            w="min"
-            variant="ghost"
-            color="gray.500"
-            border="solid 1.5px"
-            borderColor="gray.500"
-            _hover={{
-              bg: "gray.800",
-            }}
-            opacity={0}
-            leftIcon={copyIcon}
-            _groupHover={{ opacity: 1 }}
-            onClick={handleCopy}
-          >
-            {copyLabel}
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
+      )}
+      <VStack
+        w="auto"
+        align="flex-start"
+        bg={role === "user" ? "#2a2d3d" : ""}
+        color="gray.400"
+        borderRadius="xl"
+      >
+        {role === "bot" ? (
+          <Box className="markdown-body" pt={2}>
+            <Markdown children={message} remarkPlugins={[remarkGfm]} />
+          </Box>
+        ) : (
+          <Text p={3}>{message}</Text>
+        )}
+      </VStack>
+    </HStack>
+  );
+});
+
+// Skeleton Loader Component
+const FetchingSkeleton = () => (
+  <HStack w="full" gap={4}>
+    <Image
+      src="../../public/karya-logo.svg"
+      boxSize={10}
+      border="1px solid"
+      borderColor="gray.600"
+      borderRadius={50}
+      p={2}
+    />
+    <SkeletonCircle size="4" />
+  </HStack>
+);
+
+// Error Message Component
+const ErrorMessage = ({ error }: { error: string }) => (
+  <HStack w="full" gap={4}>
+    <Image
+      src="../../public/karya-logo.svg"
+      boxSize={10}
+      border="1px solid"
+      borderColor="gray.600"
+      borderRadius={50}
+      p={2}
+    />
+    <Text color="red.400">{error}</Text>
+  </HStack>
 );
