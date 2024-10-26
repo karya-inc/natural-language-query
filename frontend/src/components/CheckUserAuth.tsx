@@ -64,9 +64,10 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
       });
 
       const data = await res.json();
-      if (!data?.is_valid) {
+      if (data?.is_valid) {
+        setIsTokenValid(true);
+      } else {
         setIsTokenValid(false);
-        return;
       }
     } catch {
       setIsTokenValid(false);
