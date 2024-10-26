@@ -2,14 +2,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Literal, TypeVar
-from pydantic import BaseModel
 import jwt
 
 ResponsePayload = TypeVar("ResponsePayload")
 
 
 @dataclass
-class LoginResponse(Generic[ResponsePayload], BaseModel):
+class LoginResponse(Generic[ResponsePayload]):
     action: Literal[
         "OAUTH2_AUTH_CODE",
         "OAUTH2_TOKEN_RESPONSE",
@@ -51,11 +50,14 @@ class AuthProvider(ABC):
 
     Attributes:
         decode_key: Key to decode the token (usually the public key of the issuer)
-        algorithm: Algorithm used to encode the token
+        jwt_algorithm: Algorithm used to encode the token
+        nlq_role_field: Field in the token payload that contains the NLQ role
     """
 
     decode_key: str
     jwt_algorithm: str
+    jwt_audience: str
+    nlq_role_field: str
 
     @abstractmethod
     def login(self, payload: Any) -> LoginResponse[Any]:
@@ -100,12 +102,17 @@ class AuthProvider(ABC):
             IncompatibleTokenError: If the token payload doesn't fit the requirements for the application
         """
 
-        payload = jwt.decode(token, self.decode_key, algorithms=[self.jwt_algorithm])
+        payload = jwt.decode(
+            token,
+            self.decode_key,
+            algorithms=[self.jwt_algorithm],
+            audience=self.jwt_audience,
+        )
 
         if not payload:
             raise IncompatibleTokenError(IncompatibleTokenErrorCodes.EMPTY_PAYLOAD)
 
-        if "nlq_role" not in payload:
+        if self.nlq_role_field not in payload:
             raise IncompatibleTokenError(IncompatibleTokenErrorCodes.NLQ_ROLE_NOT_FOUND)
 
         return payload

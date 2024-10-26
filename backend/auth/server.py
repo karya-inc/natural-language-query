@@ -10,7 +10,7 @@ load_dotenv()
 
 auth_handler = get_auth_provider()
 
-app = FastAPI()
+app = FastAPI(docs_url="/docs")
 
 
 allowed_origin = os.environ.get("CORS_ORIGINS", "").split(",")
@@ -27,8 +27,8 @@ access_token_cookie = os.environ.get("TOKEN_COOKIE_NAME", "access_token")
 
 @app.get("/auth/verify")
 async def verify_token(
-    cookie_token: Annotated[str | None, Cookie(alias=access_token_cookie)],
-    authorization: Annotated[str | None, Header()],
+    cookie_token: Annotated[str | None, Cookie(alias=access_token_cookie)] = None,
+    authorization: Annotated[str | None, Header()] = None,
 ):
     """
     Verifies the user token and returns the user details.
@@ -57,15 +57,17 @@ async def verify_token(
         else:
             raise ValueError()
 
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(
-            status_code=401, detail="Unauthorized access. Invalid token."
+            status_code=401, detail=f"Unauthorized access. Invalid token - {e}"
         )
 
 
 @app.get("/auth/login_stratergy")
 async def get_login_stratergy(
-    code: Annotated[str | None, str, Body()], state: Annotated[str | None, str, Body()]
+    code: Annotated[str | None, str, Body()] = None,
+    state: Annotated[str | None, str, Body()] = None,
 ):
     """
     Returns information on how to login the user
@@ -76,4 +78,4 @@ async def get_login_stratergy(
         payload = OAuth2Phase2Payload(code=code, state=state)
 
     response = auth_handler.login(payload)
-    return response
+    return response.__dict__
