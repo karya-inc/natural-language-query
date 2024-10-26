@@ -42,7 +42,6 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
   /** Show a toast for login error */
   const toastLoginError = (reason?: string) =>
     toast({
-      id: "login_error",
       title: "Error",
       description: reason ?? "Failed to login",
       status: "error",
@@ -70,7 +69,7 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
         return;
       }
     } catch {
-      setIsTokenValid(true);
+      setIsTokenValid(false);
     }
   };
 
@@ -95,18 +94,19 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
         case "OAUTH2_AUTH_CODE":
         case "OAUTH2_IMPLICIT":
           const url = loginStratergy.payload;
-          window.location.replace(url);
+          window.open(url, "_blank", "width=900,height=800");
           break;
 
         case "OAUTH2_TOKEN_RESPONSE":
           setAccessToken(loginStratergy.payload.access_token);
           break;
+        default:
+          console.error(
+            "Backend responded with unsupported action for login",
+            action,
+          );
+          break;
       }
-
-      console.error(
-        "Backend responded with unsupported action for login",
-        action,
-      );
     } catch (e: any) {
       toastLoginError(e.toString());
     }
@@ -161,5 +161,11 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
     }
   }, [isTokenValid]);
 
-  return isTokenValid ? props.forComponent : null;
+  if (isTokenValid) {
+    console.warn("Token is valid");
+    return props.forComponent;
+  } else {
+    console.warn("Token is invalid");
+    return null;
+  }
 }
