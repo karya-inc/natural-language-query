@@ -1,6 +1,7 @@
 import { useToast } from "@chakra-ui/react";
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Login } from "./Login";
 
 export type CheckUserAuthProps = {
   forComponent: ReactNode;
@@ -177,6 +178,6 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
     return props.forComponent;
   } else {
     console.warn("Token is invalid");
-    return null;
+    return <Login />;
   }
 }
