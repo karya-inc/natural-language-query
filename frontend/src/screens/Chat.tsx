@@ -27,8 +27,8 @@ import { useTypewriter } from "react-simple-typewriter";
 import remarkGfm from "remark-gfm";
 import "../styles/markdown.css";
 import "github-markdown-css";
-
-const BOT_NAME = "Kalai";
+import { BotName } from "../components/RenderBotName";
+import { BOT_NAME } from "../config";
 
 export type Message = {
   id: string; // uuid string
@@ -72,7 +72,7 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
       e.preventDefault();
       // handle form submission
     },
-    []
+    [],
   );
 
   return (
@@ -87,16 +87,7 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
       <Flex gap={2}>
         <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
         <Heading color="gray.500" fontWeight="normal">
-          Hello, how can{" "}
-          <Box
-            as="span"
-            fontWeight="extrabold"
-            bgGradient="linear(to-br, impactGreen, #C8E56E)"
-            bgClip="text"
-          >
-            {BOT_NAME}
-          </Box>{" "}
-          help you today?
+          Hello, how can <BotName /> help you today?
         </Heading>
       </Flex>
       <VStack w="full" pb={12}>
@@ -219,7 +210,7 @@ const Message = React.memo(
     const { message, role, newMessage } = msg;
     const [copyLabel, setCopyLabel] = useState<string>("Copy");
     const [copyIcon, setCopyIcon] = useState<React.ReactElement>(
-      <Icon as={HiOutlineClipboard} />
+      <Icon as={HiOutlineClipboard} />,
     );
     const [text] = useTypewriter({
       words: [message],
@@ -229,7 +220,7 @@ const Message = React.memo(
         (count: number) => {
           if (count % 10 === 0) scrollToBottom();
         },
-        [scrollToBottom]
+        [scrollToBottom],
       ),
       onLoopDone: useCallback(() => {
         scrollToBottom();
@@ -298,5 +289,5 @@ const Message = React.memo(
         </Box>
       </Box>
     );
-  }
+  },
 );
