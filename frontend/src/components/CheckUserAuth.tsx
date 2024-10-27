@@ -148,6 +148,16 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
       exchangeCodeForToken(auth_code);
       urlSearchParams.delete("code");
     }
+
+    const login_success = urlSearchParams.get("success");
+    if (login_success) {
+      urlSearchParams.delete("success");
+      if (login_success === "true") {
+        checkToken();
+      } else if (login_success === "false") {
+        toastLoginError();
+      }
+    }
   }, [urlSearchParams]);
 
   /** Check if the token is valid */
