@@ -1,15 +1,7 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-  memo,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import useChat from "./useChat";
 import {
-  Flex,
   Image,
-  Heading,
   VStack,
   HStack,
   Box,
@@ -24,9 +16,7 @@ import {
 import { HiArrowUp } from "react-icons/hi";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
-// Constants
-const BOT_NAME = "Kalai";
+import BotGreeting from "./BotGreeting";
 
 export type Message = {
   id: string;
@@ -56,6 +46,7 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
   const [conversationStarted, setConversationStarted] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { postChat } = useChat({ input, sessionId });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,27 +55,6 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
-
-  const botGreeting = useMemo(
-    () => (
-      <Flex gap={2}>
-        <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
-        <Heading color="gray.500" fontWeight="normal">
-          Hello, how can{" "}
-          <Box
-            as="span"
-            fontWeight="extrabold"
-            bgGradient="linear(to-br, impactGreen, #C8E56E)"
-            bgClip="text"
-          >
-            {BOT_NAME}
-          </Box>{" "}
-          help you today?
-        </Heading>
-      </Flex>
-    ),
-    []
-  );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,18 +86,8 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
         let collectedPayload = "";
         let updatedSessionId = sessionId;
 
-        const response = await fetch("http://127.0.0.1:8000/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: input,
-            session_id: sessionId,
-          }),
-        });
+        const reader = await postChat(import.meta.env.VITE_ENDPOINT);
 
-        const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let done = false;
 
@@ -177,7 +137,7 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
       w="100%"
       h="100%"
     >
-      {!conversationStarted && botGreeting}
+      {!conversationStarted && <BotGreeting />}
       {conversationStarted && (
         <VStack w="full" flex={1} overflowY="auto" px={80} py={12} gap={10}>
           {messages.map((msg) => (

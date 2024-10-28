@@ -4,12 +4,8 @@ from typing import Optional, Generator
 from text_to_sql import sql_generator
 import json
 import uuid
-from logger import setup_logging, disable_logging
+from logger import setup_logging
 from fastapi.middleware.cors import CORSMiddleware
-
-
-
-# disable_logging()
 
 # Set up logging configuration
 logger = setup_logging('success.log', 'error.log')
@@ -21,10 +17,10 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],  
+    allow_headers=["*"],  
 )
 
 
@@ -33,17 +29,6 @@ def generate_sql_query_responses(
     session_id: str,
     type: str
 ) -> Generator[str, None, None]:
-    """
-    Generates SQL query responses in a server-sent events format.
-    
-    Args:
-        query: The natural language query to be processed.
-        session_id: Optional session identifier for tracking the query session.
-        type: Optional type of query response.
-        
-    Yields:
-        A formatted string containing the SQL query response as an event stream.
-    """
     try:
         logger.info(f"Started processing query: {query}")
 
@@ -70,28 +55,43 @@ def generate_sql_query_responses(
         raise HTTPException(status_code=500, detail="Internal Server Error while generating SQL queries.")
     
 
-@app.api_route("/chat", methods=["GET", "POST"])
+@app.api_route("/chat", methods=["POST"])
 async def stream_sql_query_responses(
     request: Request,
     query: Optional[str] = None,
     session_id: Optional[str] = None,
     type: Optional[str] = None
 ) -> StreamingResponse:
-    if request.method == "POST":
-        body = await request.json()
-        query = body.get("query")
-        session_id = body.get("session_id")
-        type = body.get("type")
+    """
+    Endpoint to stream SQL query responses as Server-Sent Events (SSE).
+    If session_id is not provided, a new one will be generated.
+    If type is not provided, it will be set to "report".
+    
+    Args:
+        query: The natural language query to process.
+        session_id: Optional session identifier; if not provided, one will be generated.
+        type: Optional type of query response.
+    
+    Returns:
+        StreamingResponse: The response streamed as Server-Sent Events.
+    """
+    body = await request.json()
+    query = body.get("query")
+    session_id = body.get("session_id")
+    type = body.get("type")
 
     # Same logic as before
     try:
+        # If no session_id is provided, generate a new UUID for the session
         if not session_id:
             session_id = str(uuid.uuid4())
             logger.info(f"Generated new session_id: {session_id}")
 
+        # If no type is provided, set it to default option of "report"
         if not type:
             type = "report"
 
+        # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {query}")
         response = StreamingResponse(
             generate_sql_query_responses(query, session_id, type),
