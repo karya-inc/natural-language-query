@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from starlette.responses import StreamingResponse
 from typing import Optional
 import json
@@ -6,7 +6,14 @@ import uuid
 from logger import setup_logging, disable_logging
 from response_generator import generate_response
 from chat_history import create_chat_history_table, get_chat_history
+from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
+
+load_dotenv()
 
 # disable_logging()
 
@@ -16,28 +23,53 @@ logger = setup_logging('server', 'server_success.log', 'server_error.log')
 
 # Create the FastAPI app
 app = FastAPI()
-    
 
-@app.get("/chat")
+
+# Configure CORS
+allowed_origin = os.getenv("CORS_ORIGINS", "").split(" ")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origin,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Pydantic models for request bodies
+class ChatRequest(BaseModel):
+    query: str
+    session_id: Optional[str] = None
+    type: Optional[str] = "report"
+
+class HistoryRequest(BaseModel):
+    session_id: str
+
+
+@app.post("/chat")
 async def stream_sql_query_responses(
-    query: str,
-    session_id: Optional[str] = None,
-    type: Optional[str] = None
+    chat_request: ChatRequest,
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
     If session_id is not provided, a new one will be generated.
     If type is not provided, it will be set to "report".
     
-    Args:
-        query: The natural language query to process.
-        session_id: Optional session identifier; if not provided, one will be generated.
-        type: Optional type of query response.
+    The request body should contain:
+    - query: The natural language query to process.
+    - session_id: Optional session identifier; if not provided, one will be generated.
+    - type: Optional type of query response (default is "report").
     
     Returns:
         StreamingResponse: The response streamed as Server-Sent Events.
     """
+
     try:
+        query = chat_request.query
+        session_id = chat_request.session_id
+        type = chat_request.type
+
         # If no session_id is provided, generate a new UUID for the session
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -46,10 +78,6 @@ async def stream_sql_query_responses(
         # Create chat history table for this session (if not already created)
         create_chat_history_table()
         logger.info("Chat history table created (if not exists).")
-
-        # If no type is provided, set it to default option of "report"
-        if not type:
-            type = "report" 
 
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {query}")
@@ -66,30 +94,32 @@ async def stream_sql_query_responses(
         raise HTTPException(status_code=500, detail="Failed to stream SQL query responses.")
     
 
-@app.get("/fetch_history")
-async def stream_chat_history(session_id: str) -> StreamingResponse:
+@app.post("/fetch_history")
+async def fetch_chat_history(
+    history_request: HistoryRequest
+) -> JSONResponse:
     """
-    Endpoint to stream the chat history for a given session using Server-Sent Events (SSE).
+    Endpoint to fetch the chat history for a given session.
 
-    Args:
-        session_id: The session identifier to fetch history.
-
+    The request body should contain:
+        - session_id: The session identifier to fetch history.
+   
     Returns:
-        StreamingResponse: The chat history streamed as Server-Sent Events (SSE).
+        JSONResponse: The chat history as a JSON object.
     """
     try:
-        # Log the start of chat history streaming
-        logger.info(f"Started streaming chat history for session: {session_id}")
+        # Extract the session_id from the request body
+        session_id = history_request.session_id
 
-        # Create a StreamingResponse for the chat history generator
-        response = StreamingResponse(
-            get_chat_history(session_id),
-            media_type="text/event-stream"
-        )
+        # Log the start of chat history retrieval
+        logger.info(f"Fetching chat history for session: {session_id}")
 
-        logger.info("Chat history streaming successfully started.")
-        return response
+        # Fetch the chat history
+        chat_history = get_chat_history(session_id)
+
+        logger.info("Chat history successfully fetched.")
+        return JSONResponse(content={"history": chat_history})
 
     except Exception as e:
         logger.error(f"Error while retrieving chat history for session: {session_id}. Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to stream chat history.")
+        raise HTTPException(status_code=500, detail="Failed to fetch chat history.")
