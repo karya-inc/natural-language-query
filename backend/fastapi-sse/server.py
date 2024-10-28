@@ -7,6 +7,10 @@ from logger import setup_logging, disable_logging
 from response_generator import generate_response
 from chat_history import create_chat_history_table, get_chat_history
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # disable_logging()
 
@@ -16,14 +20,17 @@ logger = setup_logging('server', 'server_success.log', 'server_error.log')
 
 # Create the FastAPI app
 app = FastAPI()
-    
+
+
 # Configure CORS
+allowed_origin = os.getenv("CORS_ORIGINS", "").split(" ")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=allowed_origin,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.post("/chat")
@@ -90,7 +97,7 @@ async def stream_chat_history(
         # Extract the session_id from the request body
         body = await request.json()
         session_id = body.get("session_id")
-        
+
         # Log the start of chat history streaming
         logger.info(f"Started streaming chat history for session: {session_id}")
 
