@@ -96,7 +96,7 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
         case "OAUTH2_AUTH_CODE":
         case "OAUTH2_IMPLICIT":
           const url = loginStratergy.payload;
-          window.open(url, "_blank", "width=900,height=800");
+          window.location.replace(url);
           break;
 
         case "OAUTH2_TOKEN_RESPONSE":
@@ -148,16 +148,6 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
     if (auth_code) {
       exchangeCodeForToken(auth_code);
       urlSearchParams.delete("code");
-    }
-
-    const login_success = urlSearchParams.get("success");
-    if (login_success) {
-      urlSearchParams.delete("success");
-      if (login_success === "true") {
-        checkToken();
-      } else if (login_success === "false") {
-        toastLoginError();
-      }
     }
   }, [urlSearchParams]);
 
