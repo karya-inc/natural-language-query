@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 
 
 load_dotenv()
@@ -94,34 +95,31 @@ async def stream_sql_query_responses(
     
 
 @app.post("/fetch_history")
-async def stream_chat_history(
+async def fetch_chat_history(
     history_request: HistoryRequest
-) -> StreamingResponse:
+) -> JSONResponse:
     """
-    Endpoint to stream the chat history for a given session using Server-Sent Events (SSE).
+    Endpoint to fetch the chat history for a given session.
 
     The request body should contain:
         - session_id: The session identifier to fetch history.
    
     Returns:
-        StreamingResponse: The chat history streamed as Server-Sent Events (SSE).
+        JSONResponse: The chat history as a JSON object.
     """
     try:
         # Extract the session_id from the request body
         session_id = history_request.session_id
 
-        # Log the start of chat history streaming
-        logger.info(f"Started streaming chat history for session: {session_id}")
+        # Log the start of chat history retrieval
+        logger.info(f"Fetching chat history for session: {session_id}")
 
-        # Create a StreamingResponse for the chat history generator
-        response = StreamingResponse(
-            get_chat_history(session_id),
-            media_type="text/event-stream"
-        )
+        # Fetch the chat history
+        chat_history = get_chat_history(session_id)
 
-        logger.info("Chat history streaming successfully started.")
-        return response
+        logger.info("Chat history successfully fetched.")
+        return JSONResponse(content={"history": chat_history})
 
     except Exception as e:
         logger.error(f"Error while retrieving chat history for session: {session_id}. Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to stream chat history.")
+        raise HTTPException(status_code=500, detail="Failed to fetch chat history.")

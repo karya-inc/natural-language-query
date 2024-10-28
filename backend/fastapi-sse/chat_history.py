@@ -55,15 +55,15 @@ def store_chat_history(session_id: str, query: str, response: str) -> None:
     conn.close()
 
 
-def get_chat_history(session_id: str) -> Generator[str, None, None]:
+def get_chat_history(session_id: str) -> list[dict]:
     """
-    Generator function to stream chat history for a given session.
+    Function to fetch chat history for a given session.
 
     Args:
         session_id: The session identifier to fetch history.
 
-    Yields:
-        Formatted string with chat history entries in SSE format.
+    Returns:
+        List of dictionaries containing chat history entries.
     """
     try:
         conn = sqlite3.connect('chat_history.db')
@@ -79,19 +79,18 @@ def get_chat_history(session_id: str) -> Generator[str, None, None]:
         history = cursor.fetchall()
         conn.close()
 
-        # Loop through each chat history entry and yield it in SSE format
+        # Create a list to store the chat history entries
+        history_list = []
         for entry in history:
             query, response, timestamp = entry
-
-            event_data = {
+            history_list.append({
                 "session_id": session_id,
                 "query": query,
                 "response": response,
                 "timestamp": timestamp
-            }
+            })
 
-            # Yield the event data as an SSE-formatted string
-            yield f"{json.dumps(event_data)}\n\n"
+        return history_list
 
     except Exception as e:
         logger.error(f"Error while retrieving chat history for session: {session_id}. Error: {str(e)}")
