@@ -1,14 +1,4 @@
-import {
-  Box,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Center,
-  Heading,
-  Text,
-} from "@chakra-ui/react";
-import { BOT_NAME } from "../config";
+import { Button, Card, Center, Heading } from "@chakra-ui/react";
 import { BotName } from "./RenderBotName";
 
 export type LoginProps = {
