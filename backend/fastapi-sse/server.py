@@ -9,6 +9,8 @@ from chat_history import create_chat_history_table, get_chat_history
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
+
 
 load_dotenv()
 
@@ -33,9 +35,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Pydantic models for request bodies
+class ChatRequest(BaseModel):
+    query: str
+    session_id: Optional[str] = None
+    type: Optional[str] = "report"
+
+class HistoryRequest(BaseModel):
+    session_id: str
+
+
 @app.post("/chat")
 async def stream_sql_query_responses(
-    request: Request,
+    chat_request: ChatRequest,
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
@@ -50,11 +63,11 @@ async def stream_sql_query_responses(
     Returns:
         StreamingResponse: The response streamed as Server-Sent Events.
     """
+
     try:
-        body = await request.json()
-        query = body.get("query")
-        session_id = body.get("session_id")
-        type = body.get("type", "report")
+        query = chat_request.query
+        session_id = chat_request.session_id
+        type = chat_request.type
 
         # If no session_id is provided, generate a new UUID for the session
         if not session_id:
@@ -82,7 +95,7 @@ async def stream_sql_query_responses(
 
 @app.post("/fetch_history")
 async def stream_chat_history(
-    request: Request
+    history_request: HistoryRequest
 ) -> StreamingResponse:
     """
     Endpoint to stream the chat history for a given session using Server-Sent Events (SSE).
@@ -95,8 +108,7 @@ async def stream_chat_history(
     """
     try:
         # Extract the session_id from the request body
-        body = await request.json()
-        session_id = body.get("session_id")
+        session_id = history_request.session_id
 
         # Log the start of chat history streaming
         logger.info(f"Started streaming chat history for session: {session_id}")
