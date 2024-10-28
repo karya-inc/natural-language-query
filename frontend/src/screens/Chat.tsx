@@ -27,6 +27,7 @@ import { useTypewriter } from "react-simple-typewriter";
 import remarkGfm from "remark-gfm";
 import "../styles/markdown.css";
 import "github-markdown-css";
+import CFImage from "../components/CloudflareImage";
 
 const BOT_NAME = "Kalai";
 
@@ -85,7 +86,7 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
       h="100%"
     >
       <Flex gap={2}>
-        <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
+        <CFImage cfsrc="karya-logo" width="40px" height="40px"/>
         <Heading color="gray.500" fontWeight="normal">
           Hello, how can{" "}
           <Box

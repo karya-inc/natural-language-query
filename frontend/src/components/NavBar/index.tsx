@@ -11,6 +11,7 @@ import {
 import chatHistory from "../../data/history.json";
 import "./index.css";
 import { redirect } from "react-router-dom";
+import CFImage from "../CloudflareImage";
 
 const NavBar = () => {
   const chatHistoryStyles = {
@@ -39,7 +40,7 @@ const NavBar = () => {
         onClick={() => redirect("/")}
         cursor="pointer"
       >
-        <Image src="../../../public/karya-logo.svg" boxSize={8} />
+        <CFImage cfsrc="karya-logo" boxSize={8} />
         <Box>Kalai</Box>
       </Flex>
       <VStack
