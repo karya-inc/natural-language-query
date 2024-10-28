@@ -166,18 +166,10 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
     checkToken(accessToken);
   }, [accessToken]);
 
-  /** Login the user if the token is invalid */
-  useEffect(() => {
-    if (isTokenValid === false) {
-      loginUser();
-    }
-  }, [isTokenValid]);
-
   if (isTokenValid) {
     console.warn("Token is valid");
     return props.forComponent;
   } else {
-    console.warn("Token is invalid");
-    return <Login />;
+    return <Login onLogin={loginUser} />;
   }
 }
