@@ -1,5 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
-import { ChatBot } from "../screens/Chat";
+import { ChatBot } from "../pages/Chat";
 import RootLayout from "../layouts/RootLayout";
 
 export const router = createBrowserRouter([
