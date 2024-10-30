@@ -28,8 +28,6 @@ const NavBar = ({
     },
   };
 
-  console.log(navOpen);
-
   return (
     <VStack
       p="6"
