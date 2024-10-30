@@ -13,6 +13,7 @@ import {
   Icon,
   SkeletonCircle,
 } from "@chakra-ui/react";
+import { GoSidebarCollapse } from "react-icons/go";
 import { HiArrowUp } from "react-icons/hi";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -36,9 +37,15 @@ export type MessageComponent = {
 
 export type ChatBotProps = {
   pastMessages?: Message[];
+  navOpen: boolean;
+  setNavOpen: (arg: boolean) => void;
 };
 
-export function ChatBot({ pastMessages = [] }: ChatBotProps) {
+export function ChatBot({
+  pastMessages = [],
+  navOpen,
+  setNavOpen,
+}: ChatBotProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(pastMessages);
   const [isFetching, setIsFetching] = useState(false);
@@ -137,9 +144,29 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
       w="100%"
       h="100%"
     >
+      {!navOpen && (
+        <Icon
+          as={GoSidebarCollapse}
+          stroke="gray.400"
+          strokeWidth={1}
+          fontSize="xl"
+          cursor="pointer"
+          onClick={() => setNavOpen(!navOpen)}
+          position="absolute"
+          top={5}
+          left={5}
+        />
+      )}
       {!conversationStarted && <BotGreeting />}
       {conversationStarted && (
-        <VStack w="full" flex={1} overflowY="auto" px={80} py={12} gap={10}>
+        <VStack
+          w="full"
+          flex={1}
+          overflowY="auto"
+          px={{ base: "10vw", lg: "10vw", xl: "20vw" }}
+          py={12}
+          gap={10}
+        >
           {messages.map((msg) => (
             <MemoizedMessage key={msg.id} msg={msg} />
           ))}
@@ -151,12 +178,10 @@ export function ChatBot({ pastMessages = [] }: ChatBotProps) {
 
       <VStack
         pb={6}
-        w="full"
         bg="gray.900"
-        maxW="4xl"
+        w={{ base: "80vw", md: "60vw", xl: "40vw" }}
         alignItems="center"
         gap={2}
-        zIndex={10}
       >
         <form onSubmit={handleSubmit} style={{ flex: 1, width: "100%" }}>
           <InputGroup size="lg">
@@ -206,7 +231,7 @@ const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
       w="full"
       justify={role === "user" ? "flex-end" : "flex-start"}
       align={role === "user" ? "flex-end" : "flex-start"}
-      gap={8}
+      gap={{ base: 4, lg: 6, xl: 8 }}
     >
       {role === "bot" && (
         <Image

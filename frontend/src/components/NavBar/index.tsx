@@ -7,41 +7,66 @@ import {
   Text,
   HStack,
   Heading,
+  Icon,
 } from "@chakra-ui/react";
 import chatHistory from "../../data/history.json";
+import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
 import { redirect } from "react-router-dom";
 
-const NavBar = () => {
+const NavBar = ({
+  navOpen,
+  setNavOpen,
+}: {
+  navOpen: boolean;
+  setNavOpen: (arg: boolean) => void;
+}) => {
   const chatHistoryStyles = {
     ":hover": {
       color: "gray.400",
       cursor: "pointer",
     },
   };
+
+  console.log(navOpen);
+
   return (
     <VStack
       p="6"
       pr={0}
       bg="#2a2d3d"
       align="center"
+      position={{ base: "absolute", md: "inherit" }}
+      top={{ base: 0, md: "unset" }}
+      left={{ base: 0, md: "unset" }}
       h="100vh"
-      w="20%"
+      w={{ base: "70%", md: "50%", xl: "20%" }}
       alignItems="flex-start"
       gap={12}
+      zIndex={10}
     >
-      <Flex
-        fontSize="2xl"
-        bgGradient="linear(to-br, impactGreen, #C8E56E)"
-        bgClip="text"
-        fontWeight="bold"
-        gap={2}
-        onClick={() => redirect("/")}
-        cursor="pointer"
-      >
-        <Image src="../../../public/karya-logo.svg" boxSize={8} />
-        <Box>Kalai</Box>
-      </Flex>
+      <HStack w="full" justify="space-between" pr={4}>
+        <Flex
+          fontSize="2xl"
+          bgGradient="linear(to-br, impactGreen, #C8E56E)"
+          bgClip="text"
+          fontWeight="bold"
+          gap={2}
+          onClick={() => redirect("/")}
+          cursor="pointer"
+        >
+          <Image src="../../../public/karya-logo.svg" boxSize={8} />
+          <Box>Kalai</Box>
+        </Flex>
+        <Icon
+          as={GoSidebarExpand}
+          stroke="gray.400"
+          strokeWidth={1}
+          fontSize="xl"
+          cursor="pointer"
+          onClick={() => setNavOpen(!navOpen)}
+        />
+      </HStack>
       <VStack
         align="start"
         gap={4}
@@ -72,11 +97,10 @@ const NavBar = () => {
             })}
         </VStack>
       </VStack>
-      <HStack color="gray.500" fontWeight="normal" gap={4}>
+      <HStack color="gray.500" fontWeight="normal" gap={{ base: 2, xl: 4 }}>
         <Avatar name="Dan Abrahmov" src="https://bit.ly/dan-abramov" />
         <VStack align="start" gap={0}>
           <Text>Dan Abrahmov</Text>
-          <Text>danabrahmov@gmail.com</Text>
         </VStack>
       </HStack>
     </VStack>
