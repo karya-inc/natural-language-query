@@ -1,11 +1,21 @@
-import { Flex, Image, Heading, Box } from "@chakra-ui/react";
+import { Image, Heading, Box, HStack } from "@chakra-ui/react";
 
 const BOT_NAME = "Kalai";
 
 const BotGreeting = () => {
   return (
-    <Flex gap={2}>
-      <Image src="karya-logo.svg" w="40px" h="40px" alt="Karya logo" />
+    <HStack
+      w={{ base: "80vw", md: "50vw", lg: "70vw" }}
+      align={{ base: "flex-start", lg: "center" }}
+      gap={{ base: 4, xl: 2 }}
+      justify="center"
+    >
+      <Image
+        src="karya-logo.svg"
+        w={{ base: "30px", lg: "40px" }}
+        h="30px"
+        alt="Karya logo"
+      />
       <Heading color="gray.500" fontWeight="normal">
         Hello, how can{" "}
         <Box
@@ -18,7 +28,7 @@ const BotGreeting = () => {
         </Box>{" "}
         help you today?
       </Heading>
-    </Flex>
+    </HStack>
   );
 };
 
