@@ -1,18 +1,23 @@
 from sqlalchemy import create_engine
+from db.config import Config
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./nlqdb.db"
+class Database:
+    def __init__(self, config: Config):
+        self.engine = create_engine(
+            config.SQLALCHEMY_DATABASE_URI,
+            **config.SQLALCHEMY_ENGINE_OPTIONS
+        )
 
-# SQLAlchemy engine
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        self.SessionLocal = sessionmaker(
+            bind=self.engine,
+            autocommit=False,
+            autoflush=False
+        )
 
-# Create a configured "SessionLocal" class for DB connections
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Dependency to get DB session in FastAPI endpoints
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    def get_session(self):
+        session = self.SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()

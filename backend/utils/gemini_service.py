@@ -1,10 +1,12 @@
 import os
 import google.generativeai as genai
+from google.generativeai.types import generation_types
+
 
 my_api_key = os.getenv("GEMINI_API_KEY")
 model_name = os.getenv("LLM_MODEL_NAME")
 
-def sql_generator(user_query):
+def sql_generator(user_query) -> generation_types.GenerateContentResponse:
     """
     This is the test gemini sql generator query
     This will be replace with Agentic Loop
