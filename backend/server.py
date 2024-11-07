@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import Optional, List
 from pydantic import BaseModel
@@ -21,7 +22,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins = os.getenv("CORS_ORIGINS", "").split(" "),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

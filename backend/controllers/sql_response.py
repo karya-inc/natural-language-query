@@ -4,7 +4,6 @@ from typing import Generator
 from typing import List
 from db.db_queries import create_session_and_query, get_chat_history, ChatHistory
 from sqlalchemy.orm import Session
-from google.generativeai.
 
 logger = get_logger("NLQ-Server")
 
