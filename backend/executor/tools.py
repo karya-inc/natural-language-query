@@ -23,9 +23,8 @@ class AgentTools(EphemeralTools):
 
         catalogs = []
         for result in results:
-            stmt = db.cursor.execute(dict_to_create_table(result.id, result.data))
+            stmt = dict_to_create_table(result.id, result.data)
             print(stmt)
-            raise Exception("stop")
             db.cursor.execute(stmt)
             catalogs.append(
                 Catalog(
