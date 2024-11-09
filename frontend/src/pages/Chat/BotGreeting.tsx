@@ -1,4 +1,5 @@
 import { Image, Heading, Box, HStack } from "@chakra-ui/react";
+import CFImage from "../../components/CloudflareImage";
 
 const BOT_NAME = "Kalai";
 
@@ -10,8 +11,8 @@ const BotGreeting = () => {
       gap={{ base: 4, xl: 2 }}
       justify="center"
     >
-      <Image
-        src="karya-logo.svg"
+      <CFImage
+        cfsrc="karya-logo"
         w={{ base: "30px", lg: "40px" }}
         h="30px"
         alt="Karya logo"

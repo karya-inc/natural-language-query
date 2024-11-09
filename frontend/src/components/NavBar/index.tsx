@@ -13,6 +13,7 @@ import chatHistory from "../../data/history.json";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
 import { redirect } from "react-router-dom";
+import CFImage from "../CloudflareImage";
 
 const NavBar = ({
   navOpen,
@@ -53,7 +54,7 @@ const NavBar = ({
           onClick={() => redirect("/")}
           cursor="pointer"
         >
-          <Image src="../../../public/karya-logo.svg" boxSize={8} />
+          <CFImage cfsrc="karya-logo" boxSize={8} />
           <Box>Kalai</Box>
         </Flex>
         <Icon
