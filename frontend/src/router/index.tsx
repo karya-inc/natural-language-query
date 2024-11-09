@@ -1,16 +1,14 @@
-import { createBrowserRouter } from "react-router-dom";
-import { ChatBot } from "../screens/Chat";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import RootLayout from "../layouts/RootLayout";
+import { CheckUserAuth } from "../components/CheckUserAuth";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootLayout />,
-    children: [
-      {
-        path: "",
-        element: <ChatBot />,
-      },
-    ],
+    element: <Navigate to={import.meta.env.BASE_URL} />,
+  },
+  {
+    path: import.meta.env.BASE_URL,
+    element: <CheckUserAuth forComponent={<RootLayout />} />,
   },
 ]);
