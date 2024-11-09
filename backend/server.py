@@ -1,9 +1,11 @@
 import os
 import uuid
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import Body, FastAPI, HTTPException, Depends
 from starlette.responses import StreamingResponse
+from auth.oauth import OAuth2Phase2Payload
+from dependencies.auth import TokenVerificationResult, verify_token, auth_handler
 from utils.logger import get_logger
 from controllers.sql_response import sql_response, chat_history
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +42,30 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     type: Optional[str] = None
     db: Session = Depends(get_db)
+
+@app.get("/auth/verify")
+async def verify_auth(auth: Annotated[TokenVerificationResult, Depends(verify_token)]):
+    """
+    Returns the token verification result
+    """
+    return auth.__dict__
+
+
+@app.get("/auth/login_stratergy")
+async def get_login_stratergy(
+    code: Annotated[str | None, str, Body()] = None,
+    state: Annotated[str | None, str, Body()] = None,
+):
+    """
+    Returns information on how to login the user
+    """
+
+    payload = None
+    if code:
+        payload = OAuth2Phase2Payload(code=code, state=state)
+
+    response = auth_handler.login(payload)
+    return response.__dict__
 
 @app.post("/chat")
 async def stream_sql_query_responses(

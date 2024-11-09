@@ -1,7 +1,7 @@
 import requests
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional, override
-from auth_provider import AuthProvider, LoginResponse
+from .auth_provider import AuthProvider, LoginResponse
 from utils.url import make_url
 
 
