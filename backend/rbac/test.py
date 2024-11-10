@@ -1,4 +1,4 @@
-from check_permissions import ColumnScope, check_query_privilages, Role, RoleTablePrivileges
+from .check_permissions import ColumnScope, check_query_privilages, Role, RoleTablePrivileges
 import unittest
 
 
