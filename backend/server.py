@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import os
 import uuid
 from typing import Annotated, Optional, List
@@ -10,12 +14,10 @@ from utils.logger import get_logger
 from controllers.sql_response import sql_response, chat_history
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistory
-from dotenv import load_dotenv
 from db.config import Config
 from db.session import Database
 from sqlalchemy.orm import Session
 
-load_dotenv()
 config = Config()
 db = Database(config)
 
