@@ -43,7 +43,7 @@ class ChatRequest(BaseModel):
     query: str
     session_id: Optional[str] = None
     type: Optional[str] = None
-    db: Session = Depends(get_db)
+
 
 @app.get("/auth/verify")
 async def verify_auth(auth: Annotated[TokenVerificationResult, Depends(verify_token)]):
@@ -71,7 +71,7 @@ async def get_login_stratergy(
 
 @app.post("/chat")
 async def stream_sql_query_responses(
-    chat_request: ChatRequest,
+    chat_request: ChatRequest, db: Annotated[Session, Depends(get_db)]
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
@@ -117,7 +117,9 @@ async def stream_sql_query_responses(
 
 
 @app.get("/fetch_history")
-async def get_chat_history(db: Session=Depends(get_db)) -> List[ChatHistory]:
+async def get_chat_history(
+    db: Annotated[Session, Depends(get_db)]
+) -> List[ChatHistory]:
     """
     Get chat history for the user
 
