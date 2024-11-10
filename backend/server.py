@@ -26,7 +26,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = os.getenv("CORS_ORIGINS", "").split(" "),
+    allow_origins=os.getenv("CORS_ORIGINS", "").split(" "),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,9 +35,11 @@ app.add_middleware(
 # Set up logging configuration
 logger = get_logger("NLQ-Server")
 
+
 # Dependency to get database session
 def get_db():
     return next(db.get_session())
+
 
 class ChatRequest(BaseModel):
     query: str
@@ -69,6 +71,7 @@ async def get_login_stratergy(
     response = auth_handler.login(payload)
     return response.__dict__
 
+
 @app.post("/chat")
 async def stream_sql_query_responses(
     chat_request: ChatRequest, db: Annotated[Session, Depends(get_db)]
@@ -89,7 +92,6 @@ async def stream_sql_query_responses(
 
     # Dependency check to validate user
 
-
     # If no session_id is provided, generate a new UUID for the session
     if not chat_request.session_id:
         session_id = str(uuid.uuid4())
@@ -98,22 +100,26 @@ async def stream_sql_query_responses(
         session_id = chat_request.session_id
 
     # user_id comes from auth dependency
-    #get user id from token
+    # get user id from token
 
     try:
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
             sql_response(chat_request.user_id, chat_request.query, session_id),
-            media_type="text/event-stream"
+            media_type="text/event-stream",
         )
 
         logger.info("Streaming response successfully started.")
         return response
 
     except Exception as e:
-        logger.error(f"Error while processing query: {chat_request.query} with session_id: {session_id}. Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to stream SQL query responses.")
+        logger.error(
+            f"Error while processing query: {chat_request.query} with session_id: {session_id}. Error: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to stream SQL query responses."
+        )
 
 
 @app.get("/fetch_history")
@@ -142,5 +148,7 @@ async def get_chat_history(
         return response
 
     except Exception as e:
-        logger.error(f"Error while retrieving chat history for user_id: {user_id}. Error: {str(e)}")
+        logger.error(
+            f"Error while retrieving chat history for user_id: {user_id}. Error: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail="Failed to stream chat history.")
