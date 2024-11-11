@@ -11,12 +11,13 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import TokenVerificationResult, verify_token, auth_handler, get_user_id
 from utils.logger import get_logger
-from controllers.sql_response import sql_response, chat_history
+from controllers.sql_response import sql_response, chat_history, get_session_history
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistory
+from db.db_queries import ChatHistory, ChatSessionHistory
 from db.config import Config
 from db.session import Database
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 config = Config()
 db = Database(config)
@@ -132,10 +133,6 @@ async def get_chat_history(
     Returns:
        Chat history
     """
-    # Get user information from dependency injection
-    # send it forward to retireve the data
-
-    # get user_id from token
 
     try:
         # Log the start of chat history streaming
@@ -152,3 +149,30 @@ async def get_chat_history(
             f"Error while retrieving chat history for user_id: {user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to stream chat history.")
+
+@app.get("/fetch_session_history/{session_id}")
+async def get_session_history_for_user( session_id: UUID,
+                                       db: Annotated[Session, Depends(get_db)],
+                                       user_id: Annotated[str, Depends(get_user_id)]
+                                       ) -> List[ChatSessionHistory]:
+    """
+    Get session id from query params and fetch the session history for the user
+
+    Args:
+        session_id (UUID): Session ID
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        Session history
+    """
+    logger.info(f"Session history for session_id: {session_id}")
+    try:
+        response = get_session_history(session_id, user_id, db)
+        logger.info("Session history for session_id return successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while retrieving session history for session_id: {session_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to get session history.")

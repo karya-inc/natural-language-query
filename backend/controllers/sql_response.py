@@ -2,8 +2,10 @@ from utils.gemini_service import sql_generator
 from utils.logger import get_logger
 from typing import Generator
 from typing import List
-from db.db_queries import create_session_and_query, get_chat_history, ChatHistory
+from db.db_queries import create_session_and_query, get_chat_history, \
+                        get_user_session_history, ChatHistory, ChatSessionHistory
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 logger = get_logger("NLQ-Server")
 
@@ -28,3 +30,9 @@ def chat_history(user_id: str, db: Session) -> List[ChatHistory]:
     # Log info
     logger.info(f"History for user_id: {user_id} is requested!")
     return get_chat_history(user_id, db)
+
+
+def get_session_history(session_id: UUID, user_id: str, db: Session) -> List[ChatSessionHistory]:
+    # Log info
+    logger.info(f"History for session_id: {session_id} is requested! for user {user_id}")
+    return get_user_session_history(session_id, user_id, db)
