@@ -60,12 +60,12 @@ def setup_logging(logger_name: str, success_file: str, error_file: str) -> loggi
     console_handler.setLevel(logging.INFO)
     
     # Success file handler
-    success_handler = logging.FileHandler(f"C:/Users/13mal/Documents/nlq_generator/text2sql/logs/{success_file}")
+    success_handler = logging.FileHandler(f"./text_to_sql/logs/{success_file}")
     success_handler.setFormatter(logging.Formatter(log_format))
     success_handler.setLevel(logging.INFO)
     
     # Error file handler
-    error_handler = logging.FileHandler(f"C:/Users/13mal/Documents/nlq_generator/text2sql/logs/{error_file}")
+    error_handler = logging.FileHandler(f"./text_to_sql/logs/{error_file}")
     error_handler.setFormatter(logging.Formatter(log_format))
     error_handler.setLevel(logging.ERROR)
     
