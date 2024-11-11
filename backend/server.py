@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from fastapi import Body, FastAPI, HTTPException, Depends
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
-from dependencies.auth import TokenVerificationResult, verify_token, auth_handler
+from dependencies.auth import TokenVerificationResult, verify_token, auth_handler, get_user_id
 from utils.logger import get_logger
 from controllers.sql_response import sql_response, chat_history
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,19 +54,6 @@ async def verify_auth(auth: Annotated[TokenVerificationResult, Depends(verify_to
     """
     return auth.__dict__
 
-async def get_current_user_id(
-    auth: Annotated[TokenVerificationResult, Depends(verify_token)]
-) -> str:
-    """
-    Returns the user id from the token
-    """
-    if not auth or not auth.payload or "sub" not in auth.payload:
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials",
-        )
-    return auth.payload["sub"]
-
 
 @app.get("/auth/login_stratergy")
 async def get_login_stratergy(
@@ -89,7 +76,7 @@ async def get_login_stratergy(
 async def stream_sql_query_responses(
     chat_request: ChatRequest,
     db: Annotated[Session, Depends(get_db)],
-    user_id: Annotated[str, Depends(get_current_user_id)]
+    user_id: Annotated[str, Depends(get_user_id)]
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
@@ -137,7 +124,7 @@ async def stream_sql_query_responses(
 @app.get("/fetch_history")
 async def get_chat_history(
     db: Annotated[Session, Depends(get_db)],
-    user_id: Annotated[str, Depends(get_current_user_id)]
+    user_id: Annotated[str, Depends(get_user_id)]
 ) -> List[ChatHistory]:
     """
     Get chat history for the user
