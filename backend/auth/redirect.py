@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
-from auth_provider import AuthProvider, LoginResponse
+from .auth_provider import AuthProvider, LoginResponse
 from utils.url import make_url
 
 

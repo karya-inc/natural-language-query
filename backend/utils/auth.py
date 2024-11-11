@@ -1,8 +1,8 @@
 from google.generativeai.client import os
 
-from auth_provider import AuthProvider
-from oauth import OAuth2Provider
-from redirect import RedirectAuthProvider
+from auth.auth_provider import AuthProvider
+from auth.oauth import OAuth2Provider
+from auth.redirect import RedirectAuthProvider
 
 
 def get_auth_provider() -> AuthProvider:
