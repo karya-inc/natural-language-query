@@ -2,211 +2,216 @@
   "$id": "catalogs.schema.json",
   "title": "Database schema definitions",
   "type": "object",
-  "patternProperties": {
-    "^.*$": {
+  "properties": {
+    "databases": {
       "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "pattern": "^\\S+$"
-        },
-        "description": {
-          "type": "string"
-        },
-        "tables": {
+      "patternProperties": {
+        "^.*$": {
           "type": "object",
-          "patternProperties": {
-            "^.*$": {
-              "description": "Schema for a table",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^\\S+$"
+            },
+            "description": {
+              "type": "string"
+            },
+            "tables": {
               "type": "object",
-              "properties": {
-                "description": {
-                  "type": "string"
-                },
-                "columns": {
-                  "type": "array",
-                  "description": "All the columns of the table",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "constraints": {
-                        "type": "string"
+              "patternProperties": {
+                "^.*$": {
+                  "description": "Schema for a table",
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "description": "All the columns of the table",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "constraints": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "constraints"
+                        ]
                       }
                     },
-                    "required": [
-                      "name",
-                      "type",
-                      "constraints"
-                    ]
-                  }
-                },
-                "permissions": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "allowedColumns": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "scopes": {
+                    "permissions": {
+                      "type": "array",
+                      "items": {
                         "type": "object",
-                        "description": "Row level restrictions for the role",
-                        "patternProperties": {
-                          "^.*$": {
-                            "description": "Restrict access to rows based on the value of a column",
-                            "oneOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "comparator": {
-                                    "type": "string",
-                                    "enum": [
-                                      "=",
-                                      "!=",
-                                      "LIKE",
-                                      "NOT LIKE"
+                        "properties": {
+                          "allowedColumns": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "scopes": {
+                            "type": "object",
+                            "description": "Row level restrictions for the role",
+                            "patternProperties": {
+                              "^.*$": {
+                                "description": "Restrict access to rows based on the value of a column",
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "comparator": {
+                                        "type": "string",
+                                        "enum": [
+                                          "=",
+                                          "!=",
+                                          "LIKE",
+                                          "NOT LIKE"
+                                        ]
+                                      },
+                                      "value": {
+                                        "type": "string"
+                                      },
+                                      "valueType": {
+                                        "type": "string",
+                                        "enum": [
+                                          "string",
+                                          "literal"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "comparator",
+                                      "value",
+                                      "valueType"
                                     ]
                                   },
-                                  "value": {
-                                    "type": "string"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "comparator": {
+                                        "type": "string",
+                                        "description": "Comparison operator for SQL",
+                                        "enum": [
+                                          ">",
+                                          "<",
+                                          ">=",
+                                          "<="
+                                        ]
+                                      },
+                                      "value": {
+                                        "type": "string"
+                                      },
+                                      "valueType": {
+                                        "const": "literal"
+                                      }
+                                    },
+                                    "required": [
+                                      "comparator",
+                                      "value",
+                                      "valueType"
+                                    ]
                                   },
-                                  "valueType": {
-                                    "type": "string",
-                                    "enum": [
-                                      "string",
-                                      "literal"
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "comparator": {
+                                        "type": "string",
+                                        "description": "Comparison operator for SQL",
+                                        "enum": [
+                                          "IS",
+                                          "IS NOT"
+                                        ]
+                                      },
+                                      "value": {
+                                        "description": "Value to compare with in the format of sql query",
+                                        "type": "null"
+                                      },
+                                      "valueType": {
+                                        "description": "Type of the value as in the sql query",
+                                        "const": "null"
+                                      }
+                                    },
+                                    "required": [
+                                      "comparator",
+                                      "value",
+                                      "valueType"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "comparator": {
+                                        "type": "string",
+                                        "description": "Comparison operator for SQL",
+                                        "enum": [
+                                          "IN",
+                                          "NOT IN"
+                                        ]
+                                      },
+                                      "value": {
+                                        "description": "Value to compare with in the format of sql query",
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "valueType": {
+                                        "description": "Type of the value as in the sql query",
+                                        "const": "list"
+                                      }
+                                    },
+                                    "required": [
+                                      "comparator",
+                                      "value",
+                                      "valueType"
                                     ]
                                   }
-                                },
-                                "required": [
-                                  "comparator",
-                                  "value",
-                                  "valueType"
-                                ]
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "comparator": {
-                                    "type": "string",
-                                    "description": "Comparison operator for SQL",
-                                    "enum": [
-                                      ">",
-                                      "<",
-                                      ">=",
-                                      "<="
-                                    ]
-                                  },
-                                  "value": {
-                                    "type": "string"
-                                  },
-                                  "valueType": {
-                                    "const": "literal"
-                                  }
-                                },
-                                "required": [
-                                  "comparator",
-                                  "value",
-                                  "valueType"
-                                ]
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "comparator": {
-                                    "type": "string",
-                                    "description": "Comparison operator for SQL",
-                                    "enum": [
-                                      "IS",
-                                      "IS NOT"
-                                    ]
-                                  },
-                                  "value": {
-                                    "description": "Value to compare with in the format of sql query",
-                                    "type": "null"
-                                  },
-                                  "valueType": {
-                                    "description": "Type of the value as in the sql query",
-                                    "const": "null"
-                                  }
-                                },
-                                "required": [
-                                  "comparator",
-                                  "value",
-                                  "valueType"
-                                ]
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "comparator": {
-                                    "type": "string",
-                                    "description": "Comparison operator for SQL",
-                                    "enum": [
-                                      "IN",
-                                      "NOT IN"
-                                    ]
-                                  },
-                                  "value": {
-                                    "description": "Value to compare with in the format of sql query",
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "valueType": {
-                                    "description": "Type of the value as in the sql query",
-                                    "const": "list"
-                                  }
-                                },
-                                "required": [
-                                  "comparator",
-                                  "value",
-                                  "valueType"
                                 ]
                               }
-                            ]
+                            }
+                          },
+                          "role": {
+                            "$ref": "roles.schema.json"
                           }
-                        }
+                        },
+                        "required": [
+                          "allowedColumns",
+                          "role"
+                        ]
                       },
-                      "role": {
-                        "$ref": "roles.schema.json"
-                      }
-                    },
-                    "required": [
-                      "allowedColumns",
-                      "role"
-                    ]
+                      "required": [
+                        "columns",
+                        "permissions"
+                      ]
+                    }
                   },
                   "required": [
                     "columns",
                     "permissions"
                   ]
                 }
-              },
-              "required": [
-                "columns",
-                "permissions"
-              ]
+              }
             }
-          }
+          },
+          "required": [
+            "name",
+            "description",
+            "tables"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "name",
-        "description",
-        "tables"
-      ],
-      "additionalProperties": false
+      }
     }
   }
 }

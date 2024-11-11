@@ -1,64 +1,66 @@
 {
   "$schema": "catalogs.schema.json",
-  "karya_db": {
-    "name": "karya_db",
-    "description": "Stores all the data related to the Karya platform",
-    "tables": {
-      "worker": {
-        "description": "Stores information about all the workers on the platform",
-        "columns": [
-          {
-            "name": "id",
-            "constraints": "PRIMARY KEY NOT NULL",
-            "type": "BIGINT"
-          },
-          {
-            "name": "full_name",
-            "constraints": "NOT NULL",
-            "type": "VARCHAR(255)"
-          },
-          {
-            "name": "email",
-            "constraints": "UNIQUE NOT NULL",
-            "type": "VARCHAR(255)"
-          },
-          {
-            "name": "phone_number",
-            "constraints": "UNIQUE NOT NULL",
-            "type": "VARCHAR(255)"
-          },
-          {
-            "name": "project_id",
-            "constraints": "FOREIGN KEY REFERENCES projects(id) NOT NULL",
-            "type": "BIGINT"
-          }
-        ],
-        "permissions": [
-          {
-            "role": "ADMIN",
-            "allowedColumns": [
-              "id",
-              "full_name",
-              "email",
-              "phone_number"
-            ]
-          },
-          {
-            "role": "COORDINATOR",
-            "allowedColumns": [
-              "id",
-              "full_name",
-              "project_id"
-            ],
-            "scopes": {
-              "project_id": {
-                "comparator": "=",
-                "value": "10",
-                "valueType": "literal"
+  "databases": {
+    "karya_db": {
+      "name": "karya_db",
+      "description": "Stores all the data related to the Karya platform",
+      "tables": {
+        "worker": {
+          "description": "Stores information about all the workers on the platform",
+          "columns": [
+            {
+              "name": "id",
+              "constraints": "PRIMARY KEY NOT NULL",
+              "type": "BIGINT"
+            },
+            {
+              "name": "full_name",
+              "constraints": "NOT NULL",
+              "type": "VARCHAR(255)"
+            },
+            {
+              "name": "email",
+              "constraints": "UNIQUE NOT NULL",
+              "type": "VARCHAR(255)"
+            },
+            {
+              "name": "phone_number",
+              "constraints": "UNIQUE NOT NULL",
+              "type": "VARCHAR(255)"
+            },
+            {
+              "name": "project_id",
+              "constraints": "FOREIGN KEY REFERENCES projects(id) NOT NULL",
+              "type": "BIGINT"
+            }
+          ],
+          "permissions": [
+            {
+              "role": "ADMIN",
+              "allowedColumns": [
+                "id",
+                "full_name",
+                "email",
+                "phone_number"
+              ]
+            },
+            {
+              "role": "COORDINATOR",
+              "allowedColumns": [
+                "id",
+                "full_name",
+                "project_id"
+              ],
+              "scopes": {
+                "project_id": {
+                  "comparator": "=",
+                  "value": "10",
+                  "valueType": "literal"
+                }
               }
             }
-          }
-        ]
+          ]
+        }
       }
     }
   }
