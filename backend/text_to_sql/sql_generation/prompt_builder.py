@@ -9,7 +9,7 @@ logger = setup_logging(
 )
 
 # Optionally, disable logging if not needed
-# disable_logging('./text_to_sql//logs/main_schema_enrichment')
+# disable_logging('main_schema_enrichment')
 
 def build_sql_prompt(enriched_db_schema: Any, question: str, query_dialect: str) -> str:
     """Build the prompt for SQL query generation."""

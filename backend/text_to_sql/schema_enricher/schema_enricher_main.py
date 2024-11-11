@@ -23,7 +23,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-# disable_logging('./text_to_sql//logs/main_schema_enrichment')
+# disable_logging('main_schema_enrichment')
 
 
 def user_triggered_enrichment() -> bool:

@@ -13,7 +13,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-disable_logging('./text_to_sql/logs/database')
+disable_logging('database')
 
 # Load environment variables from .env file
 load_dotenv()

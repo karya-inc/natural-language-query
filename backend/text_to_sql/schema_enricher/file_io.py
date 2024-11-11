@@ -12,7 +12,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-# disable_logging('./text_to_sql//text2sql/logs/file_io')
+# disable_logging('file_io')
 
 
 def load_json(path: str) -> Dict[str, Any]:

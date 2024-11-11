@@ -11,7 +11,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-# disable_logging('./text_to_sql//logs/column_description')
+# disable_logging('column_description')
 
 
 def generate_column_description(
