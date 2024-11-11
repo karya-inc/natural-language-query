@@ -54,6 +54,19 @@ async def verify_auth(auth: Annotated[TokenVerificationResult, Depends(verify_to
     """
     return auth.__dict__
 
+async def get_current_user_id(
+    auth: Annotated[TokenVerificationResult, Depends(verify_token)]
+) -> str:
+    """
+    Returns the user id from the token
+    """
+    if not auth or not auth.payload or "sub" not in auth.payload:
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials",
+        )
+    return auth.payload["sub"]
+
 
 @app.get("/auth/login_stratergy")
 async def get_login_stratergy(
@@ -74,7 +87,9 @@ async def get_login_stratergy(
 
 @app.post("/chat")
 async def stream_sql_query_responses(
-    chat_request: ChatRequest, db: Annotated[Session, Depends(get_db)]
+    chat_request: ChatRequest,
+    db: Annotated[Session, Depends(get_db)],
+    user_id: Annotated[str, Depends(get_current_user_id)]
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
@@ -82,9 +97,9 @@ async def stream_sql_query_responses(
     If type is not provided, it will be set to "report".
 
     Args:
-        query: The natural language query to process.
-        session_id: Optional session identifier; if not provided, one will be generated.
-        type: Optional type of query response.
+        chat_request (ChatRequest): The request containing the SQL query and optional session_id.
+        db (Session): The database session.
+        user_id (str): The user ID extracted from the token.
 
     Returns:
         StreamingResponse: The response streamed as Server-Sent Events.
@@ -99,14 +114,11 @@ async def stream_sql_query_responses(
     else:
         session_id = chat_request.session_id
 
-    # user_id comes from auth dependency
-    # get user id from token
-
     try:
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
-            sql_response(chat_request.user_id, chat_request.query, session_id),
+            sql_response(user_id, chat_request.query, session_id),
             media_type="text/event-stream",
         )
 
@@ -124,7 +136,8 @@ async def stream_sql_query_responses(
 
 @app.get("/fetch_history")
 async def get_chat_history(
-    db: Annotated[Session, Depends(get_db)]
+    db: Annotated[Session, Depends(get_db)],
+    user_id: Annotated[str, Depends(get_current_user_id)]
 ) -> List[ChatHistory]:
     """
     Get chat history for the user
