@@ -20,6 +20,7 @@ logger = setup_logging(
 # Load environment variables
 load_dotenv()
 ENRICHED_SCHEMA_PATH = os.getenv("ENRICHED_SCHEMA_PATH")
+INTERMEDIATE_ENRICHED_PER_TABLE_SCHEMA_FOLDER = os.getenv("INTERMEDIATE_ENRICHED_PER_TABLE_SCHEMA_FOLDER")
 
 
 def run_sql_generation(model: Any, 
@@ -38,7 +39,10 @@ question: str
     try:
         # Load enriched database schema
         logger.info("Loading enriched database schema.")
-        with open(ENRICHED_SCHEMA_PATH, "r") as json_file:
+
+        ENRICHED_SCHEMA_FULL_PATH = os.path.join(INTERMEDIATE_ENRICHED_PER_TABLE_SCHEMA_FOLDER, ENRICHED_SCHEMA_PATH)
+
+        with open(ENRICHED_SCHEMA_FULL_PATH, "r") as json_file:
             enriched_db_schema = json.load(json_file)
         logger.info("Successfully loaded enriched database schema.")
 
