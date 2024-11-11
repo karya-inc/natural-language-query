@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "allowed_roles",
+  "description": "Allowed roles",
+  "enum": [
+    "ADMIN",
+    "CLIENT",
+    "PROJECT_MANAGER",
+    "COORDINATOR"
+  ]
+}
