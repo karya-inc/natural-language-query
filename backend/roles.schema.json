@@ -1,7 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "allowed_roles",
-  "description": "Allowed roles",
+  "$id": "roles.schema.json",
   "enum": [
     "ADMIN",
     "CLIENT",

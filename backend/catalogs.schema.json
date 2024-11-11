@@ -179,7 +179,7 @@
                         }
                       },
                       "role": {
-                        "type": "string"
+                        "$ref": "roles.schema.json"
                       }
                     },
                     "required": [
