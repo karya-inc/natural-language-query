@@ -1,0 +1,7 @@
+# python==3.13
+# conda activate generate
+
+google-generativeai
+python-dotenv
+pg8000
+sqlalchemy
