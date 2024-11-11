@@ -20,7 +20,6 @@ class TestColumnSecurity(unittest.TestCase):
         self.table_privilages_map = {
             "employees": [
                 RoleTablePrivileges(
-                    "id1",
                     "admin",
                     "employees",
                     ["name", "salary", "department_id"],
@@ -28,10 +27,8 @@ class TestColumnSecurity(unittest.TestCase):
                 )
             ],
             "departments": [
-                RoleTablePrivileges("id2", "admin", "departments", ["name", "id"], []),
-                RoleTablePrivileges(
-                    "id2", "read_only_user", "departments", ["name"], []
-                ),
+                RoleTablePrivileges("admin", "departments", ["name", "id"], []),
+                RoleTablePrivileges("read_only_user", "departments", ["name"], []),
             ],
         }
 
@@ -251,7 +248,6 @@ class TestRowSecurity(unittest.TestCase):
         self.table_privilages_map = {
             "projects": [
                 RoleTablePrivileges(
-                    "1",
                     "project_manager",
                     "projects",
                     [
@@ -264,7 +260,6 @@ class TestRowSecurity(unittest.TestCase):
                     ["id"],
                 ),
                 RoleTablePrivileges(
-                    "2",
                     "department_manager",
                     "projects",
                     [
@@ -278,7 +273,6 @@ class TestRowSecurity(unittest.TestCase):
             ],
             "departments": [
                 RoleTablePrivileges(
-                    "id2",
                     "department_manager",
                     "departments",
                     ["id", "name", "description"],
@@ -459,7 +453,11 @@ class TestRowSecurity(unittest.TestCase):
             {
                 "projects": [
                     ColumnScope(
-                        "projects", "id", ["1", "2"], operator="NOT IN", value_type="list"
+                        "projects",
+                        "id",
+                        ["1", "2"],
+                        operator="NOT IN",
+                        value_type="list",
                     )
                 ],
             },
@@ -484,7 +482,6 @@ class TestRowSecurity(unittest.TestCase):
             "SELECT p.id, p.name FROM projects as p WHERE p.id IS NOT NULL",
             {"projects": [ColumnScope("projects", "id", None, "IS NOT", "null")]},
         )
-
 
 
 if __name__ == "__main__":

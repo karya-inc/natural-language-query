@@ -34,7 +34,6 @@ class RoleTablePrivileges:
         scoped_columns: list of columns that define row level restrictions. The role can only access rows where the column satisfies the scoping restrictions
     """
 
-    id: str
     role_id: str
     table: str
     columns: list[str]
