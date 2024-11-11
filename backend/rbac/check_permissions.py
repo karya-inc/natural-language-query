@@ -4,23 +4,6 @@ import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
 from dataclasses import dataclass, field
 
-
-@dataclass
-class Role:
-    """
-    This class represents a Role in the system. Each role has an id, a description, and a database role.
-
-    Attributes:
-        id:
-        description:
-        db_role:
-    """
-
-    id: str
-    description: str
-    db_role: str
-
-
 @dataclass
 class RoleTablePrivileges:
     """
@@ -84,7 +67,6 @@ class ErrorCode(Enum):
     This Enum represents the various error codes that can be returned when checking for privileges.
     """
 
-    ROLE_NOT_FOUND = "The specified role was not found."
     INVALID_SQL_QUERY = "The provided SQL query is invalid."
     CTE_ERROR = "The provided CTE is either invalid, not supported or is not allowed for the role."
     SUBQUERY_ERROR = (
@@ -157,15 +139,6 @@ def check_table_privilages_for_role(
         )
 
     return (privilages_for_role, None)
-
-
-def find_role_by_id(roles: list[Role], role_id: str) -> Optional[Role]:
-    """
-    This function finds a role by its id in a list of roles.
-    """
-    for role in roles:
-        if role.id == role_id:
-            return role
 
 
 def match_operator_to_exp(operator: str) -> tuple[exp._Expression, bool]:
@@ -425,8 +398,7 @@ def check_scope_privilages(
 
 def check_query_privilages(
     table_privilages_map: dict[str, list[RoleTablePrivileges]],
-    roles: list[Role],
-    role_id: str,
+    active_role: str,
     query: str,
     table_scopes: dict[str, list[ColumnScope]] = {},
     allowed_aliases: list[str] = [],
@@ -449,7 +421,7 @@ def check_query_privilages(
         - The role has access to the columns in the query
 
     The following kinds of queries are not not supported:
-        - Queries with wildcard stars. Eg:
+        - Queries with wildcard stars.
         - Queries that don't have a table name for a column.
         - Invalid SQL Queries
 
@@ -463,15 +435,6 @@ def check_query_privilages(
     ```
 
     """
-    active_role = find_role_by_id(roles, role_id)
-
-    if active_role is None:
-        return PrivilageCheckResult(
-            query_allowed=False,
-            err_code=ErrorCode.ROLE_NOT_FOUND,
-            context={"role": role_id, "query": query},
-        )
-
     # Try to parse the query
     parsed_query: exp.Expression
     try:
@@ -480,7 +443,7 @@ def check_query_privilages(
         return PrivilageCheckResult(
             query_allowed=False,
             err_code=ErrorCode.INVALID_SQL_QUERY,
-            context={"error": str(e), "role": role_id, "query": query},
+            context={"error": str(e), "role": active_role, "query": query},
         )
 
     # Check if the query contains a wildcard star
@@ -490,7 +453,7 @@ def check_query_privilages(
         return PrivilageCheckResult(
             query_allowed=False,
             err_code=ErrorCode.WILDCARD_STAR_NOT_ALLOWED,
-            context={"role": role_id, "query": query},
+            context={"role": active_role, "query": query},
         )
 
     alias_table_map: dict[str, str] = {}
@@ -503,14 +466,14 @@ def check_query_privilages(
     for cte in ctes:
         cte_query = next(cte.find_all(exp.Select))
         cte_result = check_query_privilages(
-            table_privilages_map, roles, role_id, cte_query.sql(), table_scopes
+            table_privilages_map, active_role, cte_query.sql(), table_scopes
         )
         if not cte_result.query_allowed:
             return PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.CTE_ERROR,
                 context={
-                    "role": role_id,
+                    "role": active_role,
                     "query": query,
                     "cte": cte,
                     "cte_result": str(cte_result),
@@ -526,8 +489,7 @@ def check_query_privilages(
         select = next(subquery.find_all(exp.Select))
         subquery_result = check_query_privilages(
             table_privilages_map,
-            roles,
-            role_id,
+            active_role,
             select.sql(),
             table_scopes,
             valid_query_aliases,
@@ -538,7 +500,7 @@ def check_query_privilages(
                 query_allowed=False,
                 err_code=ErrorCode.SUBQUERY_ERROR,
                 context={
-                    "role": role_id,
+                    "role": active_role,
                     "query": query,
                     "subquery": subquery.sql(),
                     "subquery_result": str(subquery_result),
@@ -561,7 +523,7 @@ def check_query_privilages(
             continue
 
         table_privilages, table_check_result = check_table_privilages_for_role(
-            table, table_privilages_map, role_id
+            table, table_privilages_map, active_role
         )
 
         if table_check_result and not table_check_result.query_allowed:
@@ -581,7 +543,7 @@ def check_query_privilages(
         missing_scopes = required_scopes - column_scopes_available
         assert (
             len(missing_scopes) == 0
-        ), f"Missing scopes: {missing_scopes} for role '{role_id}' on table '{table.name}'"
+        ), f"Missing scopes: {missing_scopes} for role '{active_role}' on table '{table.name}'"
 
         scope_check_result = check_scope_privilages(
             table, scopes_for_table, alias_table_map
@@ -605,7 +567,7 @@ def check_query_privilages(
                 query_allowed=False,
                 err_code=ErrorCode.UNSUPPORTED_SQL_QUERY,
                 context={
-                    "role": role_id,
+                    "role": active_role,
                     "query": query,
                     "reason": "No table name for column",
                 },
@@ -620,7 +582,7 @@ def check_query_privilages(
             return PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.ROLE_NO_TABLE_ACCESS,
-                context={"table": table_name, "role": role_id, "query": query},
+                context={"table": table_name, "role": active_role, "query": query},
             )
 
         table_privilages = table_privilages_for_role[table_name]
@@ -628,9 +590,9 @@ def check_query_privilages(
             return PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.ROLE_NO_COLUMN_ACCESS,
-                context={"column": column.name, "role": role_id, "query": query},
+                context={"column": column.name, "role": active_role, "query": query},
             )
 
     return PrivilageCheckResult(
-        query_allowed=True, context={"role": role_id, "query": query}
+        query_allowed=True, context={"role": active_role, "query": query}
     )
