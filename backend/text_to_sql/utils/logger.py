@@ -1,4 +1,13 @@
 import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Access environment variables
+LOGS_FOLDER_PATH = os.getenv("LOGS_FOLDER_PATH")
+
 
 def disable_logging(logger_name: str) -> None:
     """
@@ -29,8 +38,15 @@ def setup_logging(logger_name: str, success_file: str, error_file: str) -> loggi
     Returns:
         logging.Logger: Configured logger instance.
     """
+    # Create the folder if it doesn't exist
+    if not os.path.exists(LOGS_FOLDER_PATH):
+        logger.info(f"Folder {LOGS_FOLDER_PATH} does not exist. Creating it...")
+        os.makedirs(LOGS_FOLDER_PATH)
+        logger.info(f"Created folder: {LOGS_FOLDER_PATH}")
+
+
     log_format = '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-    logger = logging.getLogger(f"C:/Users/13mal/Documents/nlq_generator/text2sql/logs/{logger_name}")
+    logger = logging.getLogger(f"./text_to_sql/logs/{logger_name}")
     
     # Clear any existing handlers to avoid duplicate logs
     if logger.hasHandlers():

@@ -16,7 +16,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-# disable_logging('C:/Users/13mal/Documents/nlq_generator/text2sql/logs/schema_enrichment')
+# disable_logging('./text_to_sql//logs/schema_enrichment')
 
 
 # Function to enrich schema of a single table

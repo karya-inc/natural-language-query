@@ -10,7 +10,7 @@ logger = setup_logging(
 )
 
 # Disable logging if not needed
-# disable_logging('C:/Users/13mal/Documents/nlq_generator/text2sql/logs/sql_generation_response_handler')
+# disable_logging('./text_to_sql//logs/sql_generation_response_handler')
 
 from typing import Any, Dict
 

@@ -23,7 +23,7 @@ logger = setup_logging(
 )
 
 # # Disable logging if not needed
-# disable_logging('C:/Users/13mal/Documents/nlq_generator/text2sql/logs/main_schema_enrichment')
+# disable_logging('./text_to_sql//logs/main_schema_enrichment')
 
 
 def user_triggered_enrichment() -> bool:
