@@ -4,6 +4,14 @@
     "karya_db": {
       "name": "karya_db",
       "description": "Stores all the data related to the Karya platform",
+      "connection": {
+        "provider": "postgres",
+        "host": "localhost",
+        "dbname": "database_name",
+        "user": "username",
+        "password": "your_password",
+        "port": 5432
+      },
       "tables": {
         "worker": {
           "description": "Stores information about all the workers on the platform",
