@@ -59,13 +59,9 @@
                 "full_name",
                 "project_id"
               ],
-              "scopes": {
-                "project_id": {
-                  "comparator": "=",
-                  "value": "10",
-                  "valueType": "literal"
-                }
-              }
+              "scopes": [
+                "project_id"
+              ]
             }
           ]
         }
