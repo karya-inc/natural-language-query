@@ -3,7 +3,9 @@ import os
 from typing import Annotated, Optional
 from fastapi import Cookie, HTTPException, Header, Depends
 from google.generativeai.client import Any
+from rbac.check_permissions import ColumnScope
 from utils.auth import get_auth_provider
+from utils.parse_catalog import roles_validator
 
 
 auth_handler = get_auth_provider()
@@ -15,6 +17,9 @@ class TokenVerificationResult:
     is_valid: bool
     payload: Optional[dict[str, Any]] = field(default=None)
     user_id: Optional[str] = field(default=None)
+    role: Optional[str] = field(default=None)
+    scopes: list[ColumnScope] = field(default_factory=list)
+
 
 async def verify_token(
     cookie_token: Annotated[str | None, Cookie(alias=access_token_cookie)] = None,
@@ -48,22 +53,37 @@ async def verify_token(
         # Extract the user id from the token
         user_id = payload.get("sub")
 
-        if not user_id:
+        # Extract the role field from the token
+        try:
+            role = payload[auth_handler.nlq_role_field]
+            roles_validator.validate(role)
+        except:
             raise HTTPException(
-                status_code=401,
-                detail="Invalid token: Missing user identification"
+                status_code=401, detail="Invalid Token: Invalid Role in token payload"
             )
 
-        return TokenVerificationResult(True, payload, user_id)
+        scopes = []
+        for scope in payload.get("scopes", []):
+            scopes.append(ColumnScope(**scope))
+
+        if not user_id:
+            raise HTTPException(
+                status_code=401, detail="Invalid token: Missing user identification"
+            )
+
+        return TokenVerificationResult(
+            is_valid=True, payload=payload, user_id=user_id, role=role, scopes=scopes
+        )
     except Exception as e:
         print(e)
         raise HTTPException(
             status_code=401, detail=f"Unauthorized access. Invalid token - {e}"
         )
 
+
 async def get_user_id(
     auth_result: Annotated[TokenVerificationResult, Depends(verify_token)]
-    ) -> str:
+) -> str:
     """
     Dependency that extracts user_id from the token verification result.
 
@@ -77,8 +97,5 @@ async def get_user_id(
         HTTPException: If the token is invalid or user_id is missing
     """
     if not auth_result.is_valid or not auth_result.user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials"
-        )
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
     return auth_result.user_id
