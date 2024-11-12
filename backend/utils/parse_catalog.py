@@ -5,9 +5,8 @@ from jsonschema import exceptions, Draft202012Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from rbac.check_permissions import RoleTablePrivileges
-from ..executor.catalog import Catalog
-
-from logger import get_logger
+from executor.catalog import Catalog
+from utils.logger import get_logger
 
 logger = get_logger("[CATALOG]")
 
@@ -70,7 +69,7 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
         logger.info(f"Parsing Database: {dbname}")
         catalogs.append(
             Catalog(
-                provider=dbinfo["provider"],
+                provider=dbinfo["connection"]["provider"],
                 schema=dbinfo["tables"],
                 connection_params=dbinfo["connection"],
             )
@@ -82,14 +81,14 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
 
             table_permisions[tablename] = []
             for permission in table["permissions"]:
-                logger.info(f"Permission: {permission}")
+                logger.info(f"Parsing Permission: {permission} for table {tablename}")
 
                 table_permisions[tablename].append(
                     RoleTablePrivileges(
                         role_id=permission["role"],
                         table=tablename,
                         columns=permission["allowedColumns"],
-                        scoped_columns=permission["scopes"],
+                        scoped_columns=permission.get("scopes", []),
                     )
                 )
 
@@ -98,5 +97,3 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
     return ParsedCatalogConfiguration(
         catalogs=catalogs, database_privileges=database_privileges
     )
-
-parse_catalog_configuration()
