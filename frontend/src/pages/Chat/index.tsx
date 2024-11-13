@@ -18,9 +18,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import BotGreeting from "./BotGreeting";
 import CFImage from "../../components/CloudflareImage";
+import { downloadObjectAs } from "./utils";
 
 export type Message = {
-  id: string;
+  id: number;
   message: string;
   role: "user" | "bot";
   timestamp: number;
@@ -36,37 +37,40 @@ export type MessageComponent = {
 };
 
 export type ChatBotProps = {
-  pastMessages?: Message[];
+  messages: Message[];
+  setMessages: (
+    arg: Message[] | ((prevMessages: Message[]) => Message[])
+  ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
 };
 
 export type NLQUpdateEvent = (
   | {
-    kind: "UPDATE";
-    status: string;
-  }
+      kind: "UPDATE";
+      status: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TEXT";
-    payload: string;
-  }
+      kind: "RESPONSE";
+      type: "TEXT";
+      payload: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TABLE";
-    payload: Record<string, string>[];
-  }
+      kind: "RESPONSE";
+      type: "TABLE";
+      payload: Record<string, string>[];
+    }
 ) & {
   session_id: string;
 };
 
 export function ChatBot({
-  pastMessages = [],
+  messages = [],
+  setMessages,
   navOpen,
   setNavOpen,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>(pastMessages);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
   const [conversationStarted, setConversationStarted] = useState(false);
@@ -86,8 +90,21 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    [],
+    []
   );
+
+  const handleDownload = (report: Record<string, string>[]) => {
+    const today = new Date();
+    const date = today.getDate();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+
+    downloadObjectAs(
+      report,
+      `Table-Response-${year}-${month}-${date}.csv`,
+      "csv"
+    );
+  };
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,11 +112,10 @@ export function ChatBot({
       if (!input.trim()) return;
 
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: Math.random(),
         message: input,
         role: "user",
         timestamp: Date.now(),
-        session_id: sessionId,
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -127,7 +143,15 @@ export function ChatBot({
             try {
               const parsedChunk = JSON.parse(chunk) as NLQUpdateEvent;
               updatedSessionId = parsedChunk.session_id;
-              collectedPayload += parsedChunk.response.payload;
+              if (parsedChunk.kind === "UPDATE") {
+                collectedPayload += parsedChunk.status;
+              } else if (parsedChunk.kind === "RESPONSE") {
+                if (parsedChunk.type === "TEXT") {
+                  collectedPayload += parsedChunk.payload;
+                } else if (parsedChunk.type === "TABLE") {
+                  handleDownload(parsedChunk.payload);
+                }
+              }
             } catch {
               console.error("Failed to parse JSON");
             }
@@ -135,14 +159,13 @@ export function ChatBot({
         }
 
         const botMessage: Message = {
-          id: Date.now().toString(),
+          id: Math.random(),
           message: collectedPayload,
           role: "bot",
           timestamp: Date.now(),
-          session_id: updatedSessionId,
         };
 
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
+        setMessages((prevMessages: Message[]) => [...prevMessages, botMessage]);
         setSessionId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
@@ -151,7 +174,7 @@ export function ChatBot({
         setIsFetching(false);
       }
     },
-    [input, sessionId],
+    [input, sessionId]
   );
 
   return (

@@ -1,140 +1,94 @@
 [
   {
-    "id": "1",
-    "message": "Hello! How can I assist you today?",
-    "role": "bot",
-    "timestamp": 1672531199000
+    "session_id": "1",
+    "user_query": "Hello! How can I assist you today?"
   },
   {
-    "id": "2",
-    "message": "I need help with my account.",
-    "role": "user",
-    "timestamp": 1672531299000
+    "session_id": "2",
+    "user_query": "I need help with my account."
   },
   {
-    "id": "3",
-    "message": "Sure, I can help with that. What seems to be the problem?",
-    "role": "bot",
-    "timestamp": 1672531399000
+    "session_id": "3",
+    "user_query": "Sure, I can help with that. What seems to be the problem?"
   },
   {
-    "id": "4",
-    "message": "I forgot my password and can't log in.",
-    "role": "user",
-    "timestamp": 1672531499000
+    "session_id": "4",
+    "user_query": "I forgot my password and can't log in."
   },
   {
-    "id": "5",
-    "message": "No worries, I can help you reset your password.",
-    "role": "bot",
-    "timestamp": 1672531599000
+    "session_id": "5",
+    "user_query": "No worries, I can help you reset your password."
   },
   {
-    "id": "6",
-    "message": "Please click on the 'Forgot Password' link on the login page.",
-    "role": "bot",
-    "timestamp": 1672531699000
+    "session_id": "6",
+    "user_query": "Please click on the 'Forgot Password' link on the login page."
   },
   {
-    "id": "7",
-    "message": "I did that, but I didn't receive any email.",
-    "role": "user",
-    "timestamp": 1672531799000
+    "session_id": "7",
+    "user_query": "I did that, but I didn't receive any email."
   },
   {
-    "id": "8",
-    "message": "Have you checked your spam folder?",
-    "role": "bot",
-    "timestamp": 1672531899000
+    "session_id": "8",
+    "user_query": "Have you checked your spam folder?"
   },
   {
-    "id": "9",
-    "message": "Yes, I checked everywhere.",
-    "role": "user",
-    "timestamp": 1672531999000
+    "session_id": "9",
+    "user_query": "Yes, I checked everywhere."
   },
   {
-    "id": "10",
-    "message": "Let me verify your email address. What is your email?",
-    "role": "bot",
-    "timestamp": 1672532099000
+    "session_id": "10",
+    "user_query": "Let me verify your email address. What is your email?"
   },
   {
-    "id": "11",
-    "message": "It's user@example.com.",
-    "role": "user",
-    "timestamp": 1672532199000
+    "session_id": "11",
+    "user_query": "It's user@example.com."
   },
   {
-    "id": "12",
-    "message": "Thank you. I will resend the password reset email.",
-    "role": "bot",
-    "timestamp": 1672532299000
+    "session_id": "12",
+    "user_query": "Thank you. I will resend the password reset email."
   },
   {
-    "id": "13",
-    "message": "Please check your inbox now.",
-    "role": "bot",
-    "timestamp": 1672532399000
+    "session_id": "13",
+    "user_query": "Please check your inbox now."
   },
   {
-    "id": "14",
-    "message": "I got the email. Thank you!",
-    "role": "user",
-    "timestamp": 1672532499000
+    "session_id": "14",
+    "user_query": "I got the email. Thank you!"
   },
   {
-    "id": "15",
-    "message": "You're welcome! Is there anything else I can help you with?",
-    "role": "bot",
-    "timestamp": 1672532599000
+    "session_id": "15",
+    "user_query": "You're welcome! Is there anything else I can help you with?"
   },
   {
-    "id": "16",
-    "message": "No, that's all for now. Thanks!",
-    "role": "user",
-    "timestamp": 1672532699000
+    "session_id": "16",
+    "user_query": "No, that's all for now. Thanks!"
   },
   {
-    "id": "17",
-    "message": "Have a great day!",
-    "role": "bot",
-    "timestamp": 1672532799000
+    "session_id": "17",
+    "user_query": "Have a great day!"
   },
   {
-    "id": "18",
-    "message": "Hi, I need help with my order.",
-    "role": "user",
-    "timestamp": 1672532899000
+    "session_id": "18",
+    "user_query": "Hi, I need help with my order."
   },
   {
-    "id": "19",
-    "message": "Sure, can you provide your order number?",
-    "role": "bot",
-    "timestamp": 1672532999000
+    "session_id": "19",
+    "user_query": "Sure, can you provide your order number?"
   },
   {
-    "id": "20",
-    "message": "It's 123456.",
-    "role": "user",
-    "timestamp": 1672533099000
+    "session_id": "20",
+    "user_query": "It's 123456."
   },
   {
-    "id": "21",
-    "message": "Thank you. Let me check the status of your order.",
-    "role": "bot",
-    "timestamp": 1672533199000
+    "session_id": "21",
+    "user_query": "Thank you. Let me check the status of your order."
   },
   {
-    "id": "22",
-    "message": "Your order is on the way and should arrive by tomorrow.",
-    "role": "bot",
-    "timestamp": 1672533299000
+    "session_id": "22",
+    "user_query": "Your order is on the way and should arrive by tomorrow."
   },
   {
-    "id": "23",
-    "message": "Great, thank you!",
-    "role": "user",
-    "timestamp": 1672533399000
+    "session_id": "23",
+    "user_query": "Great, thank you!"
   }
 ]
