@@ -56,13 +56,14 @@ class AgentTools(EphemeralTools):
 
 import os
 import json
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 import psycopg2.extras
 
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
+client = AzureOpenAI(
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT", ""),
 )
-
 analyze_catalogs_schema = {
     "name": "analyze_catalogs",
     "description": "Analyze the catalogs and return the subset of catalogs that this query could be querying",

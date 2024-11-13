@@ -1,15 +1,19 @@
-from typing import Any, List
+from dataclasses import dataclass, field
+from typing import Any, List, Optional
+
+from executor.config import AgentConfig
+from executor.tools import AgentTools
 
 from .catalog import Catalog
 from .loop import agentic_loop
 
 
+@dataclass
 class NLQExecutor:
-    def __init__(self):
-        self.tools = None
-        self.config = None
-        self.catalogs = None
-        self.nlq = None
+    tools: Optional[AgentTools] = field(default=None)
+    config: Optional[AgentConfig] = field(default=None)
+    nlq: Optional[str] = field(default=None)
+    catalogs: List[Catalog] = field(default_factory=list)
 
     def with_tools(self, tools) -> "NLQExecutor":
         """Sets the tools to be used by the executor."""
@@ -28,10 +32,14 @@ class NLQExecutor:
 
     def execute(self, nlq: str) -> Any:
         """Executes the agentic loop with the given natural language query (NLQ)."""
-        if not all([self.tools, self.config, self.catalogs]):
+
+        if not self.tools or not self.config or len(self.catalogs) == 0:
             raise ValueError(
                 "NLQExecutor requires tools, config, and catalogs to be set before execution."
             )
 
-        self.nlq = nlq
-        return agentic_loop(self.nlq, self.catalogs, self.tools, self.config)
+        if not self.nlq:
+            self.nlq = nlq
+        return agentic_loop(
+            self.nlq, self.catalogs, self.tools, self.config, lambda x: None
+        )

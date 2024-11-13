@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from db.db_queries import ChatHistory, ChatSessionHistory, get_chat_history, get_user_session_history
 from executor.config import AgentConfig
+from executor.core import NLQExecutor
 from executor.loop import agentic_loop
 from executor.status import AgentStatus
 from executor.tools import GPTAgentTools
@@ -49,19 +50,18 @@ async def do_nlq(
             events.put(NLQUpdateEvent(kind="UPDATE", status=status.value))
         )
 
-    agent_config = AgentConfig(update_callback=update_callback)
+    config = AgentConfig(update_callback=update_callback)
 
-    agent_tools = GPTAgentTools()
+    agent = GPTAgentTools()
 
-    agentic_loop_future = asyncio.to_thread(
-        agentic_loop,
-        nlq=query,
-        catalogs=parsed_catalogs.catalogs,
-        tools=agent_tools,
-        config=agent_config,
-        # TODO: Implement execute_query
-        execute_query=lambda x: None,
+    nlq_executor = (
+        NLQExecutor()
+        .with_tools(agent)
+        .with_config(config)
+        .with_catalogs(parsed_catalogs.catalogs)
     )
+
+    agentic_loop_future = asyncio.to_thread(nlq_executor.execute, query)
 
     while True:
         event = await events.get()
