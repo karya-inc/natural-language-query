@@ -6,9 +6,10 @@ from executor.status import AgentStatus
 from executor.tools import GPTAgentTools
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from typing import AsyncIterator, List, Literal
+from typing import AsyncIterator, Iterator, List, Literal
 from sqlalchemy.orm import Session
 from uuid import UUID
+import json
 import asyncio
 
 logger = get_logger("NLQ-Server")
@@ -25,6 +26,13 @@ class NLQResponseEvent:
     kind: Literal["RESPONSE"]
     type: Literal["TEXT", "TABLE"]
     payload: str | List[dict]
+
+
+async def nlq_sse_wrapper(
+    user_id: str, query: str, session_id: str
+) -> AsyncIterator[str]:
+    async for event in do_nlq(user_id, query, session_id):
+        yield json.dumps(event.__dict__)
 
 
 async def do_nlq(
