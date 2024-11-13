@@ -16,8 +16,12 @@ access_token_cookie = os.environ.get("TOKEN_COOKIE_NAME", "access_token")
 class TokenVerificationResult:
     is_valid: bool
     payload: Optional[dict[str, Any]] = field(default=None)
-    user_id: Optional[str] = field(default=None)
-    role: Optional[str] = field(default=None)
+
+
+@dataclass
+class AuthenticatedUserInfo:
+    user_id: str
+    role: str
     scopes: list[ColumnScope] = field(default_factory=list)
 
 
@@ -32,7 +36,10 @@ async def verify_token(
         token: The user token to be verified.
 
     Returns:
-        A JSON response containing the user details.
+        A JSON response containing the token verification result.
+
+    Raises:
+        HTTPException: If the token is invalid or missing (with status code 401).
     """
     try:
         token: str
@@ -47,43 +54,22 @@ async def verify_token(
             )
 
         payload = auth_handler.validate_token(token)
+
         if not payload:
             return TokenVerificationResult(False)
 
-        # Extract the user id from the token
-        user_id = payload.get("sub")
+        else:
+            return TokenVerificationResult(is_valid=True, payload=payload)
 
-        # Extract the role field from the token
-        try:
-            role = payload[auth_handler.nlq_role_field]
-            roles_validator.validate(role)
-        except:
-            raise HTTPException(
-                status_code=401, detail="Invalid Token: Invalid Role in token payload"
-            )
-
-        scopes = []
-        for scope in payload.get("scopes", []):
-            scopes.append(ColumnScope(**scope))
-
-        if not user_id:
-            raise HTTPException(
-                status_code=401, detail="Invalid token: Missing user identification"
-            )
-
-        return TokenVerificationResult(
-            is_valid=True, payload=payload, user_id=user_id, role=role, scopes=scopes
-        )
     except Exception as e:
-        print(e)
         raise HTTPException(
             status_code=401, detail=f"Unauthorized access. Invalid token - {e}"
         )
 
 
-async def get_user_id(
+async def get_authenticated_user_info(
     auth_result: Annotated[TokenVerificationResult, Depends(verify_token)]
-) -> str:
+) -> AuthenticatedUserInfo:
     """
     Dependency that extracts user_id from the token verification result.
 
@@ -91,11 +77,36 @@ async def get_user_id(
         auth_result: The token verification result from verify_token
 
     Returns:
-        str: The user ID
+        AuthenticatedUserInfo: The user information extracted from the token.
 
     Raises:
-        HTTPException: If the token is invalid or user_id is missing
+        HTTPException: If the token is invalid (code: 401) or user information is missing (code: 403).
     """
-    if not auth_result.is_valid or not auth_result.user_id:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
-    return auth_result.user_id
+    if not auth_result.is_valid or not auth_result.payload:
+        raise HTTPException(status_code=403, detail="Could not validate credentials")
+
+    payload = auth_result.payload
+
+    # Extract the user id from the token
+    user_id = payload.get("sub")
+
+    # Extract the role field from the token and ensure it is a valid supported field
+    try:
+        role = payload[auth_handler.nlq_role_field]
+        roles_validator.validate(role)
+    except Exception as e:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Invalid Token: Missing or Invalid Role in token payload - {e}",
+        )
+
+    scopes = []
+    for scope in payload.get("scopes", []):
+        scopes.append(ColumnScope(**scope))
+
+    if not user_id:
+        raise HTTPException(
+            status_code=403, detail="Invalid token: Missing user identification"
+        )
+
+    return AuthenticatedUserInfo(user_id=user_id, role=role, scopes=scopes)

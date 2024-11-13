@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from fastapi import Body, FastAPI, HTTPException, Depends
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
-from dependencies.auth import TokenVerificationResult, verify_token, auth_handler, get_user_id
+from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
 from controllers.sql_response import sql_response, chat_history, get_session_history
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +18,10 @@ from db.config import Config
 from db.session import Database
 from sqlalchemy.orm import Session
 from uuid import UUID
+from utils.parse_catalog import parsed_catalogs
+
+parsed_catalogs.database_privileges
+
 
 config = Config()
 db = Database(config)
@@ -77,7 +81,7 @@ async def get_login_stratergy(
 async def stream_sql_query_responses(
     chat_request: ChatRequest,
     db: Annotated[Session, Depends(get_db)],
-    user_id: Annotated[str, Depends(get_user_id)]
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> StreamingResponse:
     """
     Endpoint to stream SQL query responses as Server-Sent Events (SSE).
@@ -106,7 +110,7 @@ async def stream_sql_query_responses(
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
-            sql_response(user_id, chat_request.query, session_id),
+            sql_response(user_info.user_id, chat_request.query, session_id),
             media_type="text/event-stream",
         )
 
@@ -125,7 +129,7 @@ async def stream_sql_query_responses(
 @app.get("/fetch_history")
 async def get_chat_history(
     db: Annotated[Session, Depends(get_db)],
-    user_id: Annotated[str, Depends(get_user_id)]
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[ChatHistory]:
     """
     Get chat history for the user
@@ -136,25 +140,27 @@ async def get_chat_history(
 
     try:
         # Log the start of chat history streaming
-        logger.info(f"User chat history for user_id: {user_id}")
+        logger.info(f"User chat history for user_id: {user_info.user_id}")
 
         # Create a StreamingResponse for the chat history generator
-        response = chat_history(user_id, db)
+        response = chat_history(user_info.user_id, db)
 
         logger.info("Chat history for user return successfully!!")
         return response
 
     except Exception as e:
         logger.error(
-            f"Error while retrieving chat history for user_id: {user_id}. Error: {str(e)}"
+            f"Error while retrieving chat history for user_id: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to stream chat history.")
 
+
 @app.get("/fetch_session_history/{session_id}")
-async def get_session_history_for_user( session_id: UUID,
-                                       db: Annotated[Session, Depends(get_db)],
-                                       user_id: Annotated[str, Depends(get_user_id)]
-                                       ) -> List[ChatSessionHistory]:
+async def get_session_history_for_user(
+    session_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> List[ChatSessionHistory]:
     """
     Get session id from query params and fetch the session history for the user
 
@@ -168,7 +174,7 @@ async def get_session_history_for_user( session_id: UUID,
     """
     logger.info(f"Session history for session_id: {session_id}")
     try:
-        response = get_session_history(session_id, user_id, db)
+        response = get_session_history(session_id, user_info.user_id, db)
         logger.info("Session history for session_id return successfully!!")
         return response
     except Exception as e:
