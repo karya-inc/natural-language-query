@@ -41,6 +41,25 @@ export type ChatBotProps = {
   setNavOpen: (arg: boolean) => void;
 };
 
+export type NLQUpdateEvent = (
+  | {
+    kind: "UPDATE";
+    status: string;
+  }
+  | {
+    kind: "RESPONSE";
+    type: "TEXT";
+    payload: string;
+  }
+  | {
+    kind: "RESPONSE";
+    type: "TABLE";
+    payload: Record<string, string>[];
+  }
+) & {
+  session_id: string;
+};
+
 export function ChatBot({
   pastMessages = [],
   navOpen,
@@ -106,7 +125,7 @@ export function ChatBot({
           if (value) {
             const chunk = decoder.decode(value, { stream: true });
             try {
-              const parsedChunk = JSON.parse(chunk);
+              const parsedChunk = JSON.parse(chunk) as NLQUpdateEvent;
               updatedSessionId = parsedChunk.session_id;
               collectedPayload += parsedChunk.response.payload;
             } catch {
