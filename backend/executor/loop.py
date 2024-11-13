@@ -1,4 +1,6 @@
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, List
+
+from executor.config import AgentConfig
 
 from .catalog import Catalog
 from .state import AgentState
@@ -7,7 +9,11 @@ from .tools import AgentTools
 
 
 def agentic_loop(
-        nlq: str, catalogs: List[Catalog], tools: AgentTools, config: Dict[str, Any], execute_query: Callable
+    nlq: str,
+    catalogs: List[Catalog],
+    tools: AgentTools,
+    config: AgentConfig,
+    execute_query: Callable,
 ) -> Any:
     state = AgentState(nlq=nlq)
 
