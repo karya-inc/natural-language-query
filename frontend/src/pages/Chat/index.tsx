@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import useChat from "./useChat";
 import {
-  Image,
   VStack,
   HStack,
   Box,
@@ -18,6 +17,7 @@ import { HiArrowUp } from "react-icons/hi";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import BotGreeting from "./BotGreeting";
+import CFImage from "../../components/CloudflareImage";
 
 export type Message = {
   id: string;
@@ -67,7 +67,7 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    []
+    [],
   );
 
   const handleSubmit = useCallback(
@@ -132,7 +132,7 @@ export function ChatBot({
         setIsFetching(false);
       }
     },
-    [input, sessionId]
+    [input, sessionId],
   );
 
   return (
@@ -234,8 +234,8 @@ const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
       gap={{ base: 4, lg: 6, xl: 8 }}
     >
       {role === "bot" && (
-        <Image
-          src="../../public/karya-logo.svg"
+        <CFImage
+          cfsrc="karya-logo"
           boxSize={10}
           border="1px solid"
           borderColor="gray.600"
@@ -266,8 +266,8 @@ const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
 // Skeleton Loader Component
 const FetchingSkeleton = () => (
   <HStack w="full" gap={4}>
-    <Image
-      src="../../public/karya-logo.svg"
+    <CFImage
+      cfsrc="karya-logo"
       boxSize={10}
       border="1px solid"
       borderColor="gray.600"
@@ -281,14 +281,14 @@ const FetchingSkeleton = () => (
 // Error Message Component
 const ErrorMessage = ({ error }: { error: string }) => (
   <HStack w="full" gap={4}>
-    <Image
-      src="../../public/karya-logo.svg"
+    <CFImage
+      cfsrc="karya-logo"
       boxSize={10}
       border="1px solid"
       borderColor="gray.600"
       borderRadius={50}
       p={2}
     />
-    <Text color="red.400">{error}</Text>
+    <Text color="red.400">{error ?? "Something Went Wrong"}</Text>
   </HStack>
 );

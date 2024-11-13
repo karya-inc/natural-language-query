@@ -1,26 +1,13 @@
-from .check_permissions import ColumnScope, check_query_privilages, Role, RoleTablePrivileges
+from .check_permissions import ColumnScope, check_query_privilages, RoleTablePrivileges
 import unittest
 
 
 class TestColumnSecurity(unittest.TestCase):
 
     def setUp(self):
-        self.roles = [
-            Role(
-                "admin",
-                "Administrator with full access",
-                "db_admin",
-            ),
-            Role(
-                "read_only_user",
-                "User with read-only access",
-                "db_read_only_user",
-            ),
-        ]
         self.table_privilages_map = {
             "employees": [
                 RoleTablePrivileges(
-                    "id1",
                     "admin",
                     "employees",
                     ["name", "salary", "department_id"],
@@ -28,17 +15,14 @@ class TestColumnSecurity(unittest.TestCase):
                 )
             ],
             "departments": [
-                RoleTablePrivileges("id2", "admin", "departments", ["name", "id"], []),
-                RoleTablePrivileges(
-                    "id2", "read_only_user", "departments", ["name"], []
-                ),
+                RoleTablePrivileges("admin", "departments", ["name", "id"], []),
+                RoleTablePrivileges("read_only_user", "departments", ["name"], []),
             ],
         }
 
     def test_role_not_found(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "manager",
             "SELECT employees.name FROM employees",
         )
@@ -46,14 +30,13 @@ class TestColumnSecurity(unittest.TestCase):
 
     def test_invalid_sql_query(self):
         result = check_query_privilages(
-            self.table_privilages_map, self.roles, "admin", "INVALID SQL QUERY"
+            self.table_privilages_map, "admin", "INVALID SQL QUERY"
         )
         self.assertFalse(result.query_allowed)
 
     def test_table_not_in_privilages(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             "SELECT projects.name FROM projects",
         )
@@ -61,14 +44,13 @@ class TestColumnSecurity(unittest.TestCase):
 
     def test_wildcard_star_not_allowed(self):
         result = check_query_privilages(
-            self.table_privilages_map, self.roles, "admin", "SELECT * FROM employees"
+            self.table_privilages_map, "admin", "SELECT * FROM employees"
         )
         self.assertFalse(result.query_allowed)
 
     def test_role_no_table_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             "SELECT employees.name FROM employees",
         )
@@ -77,7 +59,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_role_no_column_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             "SELECT employees.salary FROM employees",
         )
@@ -86,7 +67,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_query_allowed(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             "SELECT employees.name FROM employees",
         )
@@ -95,7 +75,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_join_query(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             "SELECT e.name, d.name FROM employees e JOIN departments d ON e.department_id = d.id",
         )
@@ -104,7 +83,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_join_query_no_table_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             "SELECT e.name, d.name FROM employees e JOIN departments d ON e.department_id = d.id",
         )
@@ -113,7 +91,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_cte_query(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             """
             WITH employee_departments AS (
@@ -129,7 +106,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_cte_query_no_table_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             """
             WITH employee_departments AS (
@@ -145,7 +121,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_alias_query(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             "SELECT employees.name AS employee_name FROM employees",
         )
@@ -154,7 +129,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_alias_query_no_column_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             "SELECT employees.salary AS employee_salary FROM employees",
         )
@@ -163,7 +137,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_subquery_query(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             "SELECT e.name FROM (SELECT employees.name FROM employees) e",
         )
@@ -172,7 +145,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_subquery_with_cte_join_no_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             """
             WITH employee_departments AS (
@@ -188,7 +160,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_subquery_with_cte_join(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             """
             WITH employee_departments AS (
@@ -204,7 +175,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_subquery_within_cte_with_join(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "admin",
             """
             WITH employee_departments AS (
@@ -223,7 +193,6 @@ class TestColumnSecurity(unittest.TestCase):
     def test_subquery_within_cte_with_join_no_access(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "read_only_user",
             """
             WITH employee_departments AS (
@@ -243,15 +212,9 @@ class TestColumnSecurity(unittest.TestCase):
 class TestRowSecurity(unittest.TestCase):
 
     def setUp(self):
-        self.roles = [
-            Role("project_manager", "Project Manager", "db_project_manager"),
-            Role("department_manager", "Department Manager", "db_department_manager"),
-        ]
-
         self.table_privilages_map = {
             "projects": [
                 RoleTablePrivileges(
-                    "1",
                     "project_manager",
                     "projects",
                     [
@@ -264,7 +227,6 @@ class TestRowSecurity(unittest.TestCase):
                     ["id"],
                 ),
                 RoleTablePrivileges(
-                    "2",
                     "department_manager",
                     "projects",
                     [
@@ -278,7 +240,6 @@ class TestRowSecurity(unittest.TestCase):
             ],
             "departments": [
                 RoleTablePrivileges(
-                    "id2",
                     "department_manager",
                     "departments",
                     ["id", "name", "description"],
@@ -290,7 +251,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_no_where_clause(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p",
             {
@@ -303,7 +263,6 @@ class TestRowSecurity(unittest.TestCase):
         try:
             _result = check_query_privilages(
                 self.table_privilages_map,
-                self.roles,
                 "department_manager",
                 "SELECT p.id, p.name FROM projects as p where p.department_id = 1",
             )
@@ -314,7 +273,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_where_clause_not_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
             table_scopes={
@@ -326,7 +284,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_where_clause_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
             table_scopes={
@@ -338,7 +295,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_joined_table_scopes_not_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "department_manager",
             "SELECT p.id, p.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.id = 1",
             table_scopes={
@@ -351,7 +307,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_joined_table_scopes_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "department_manager",
             "SELECT p.id, p.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.department_id = 1 and d.id = 1",
             table_scopes={
@@ -364,7 +319,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_joined_table_scopes_partially_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "department_manager",
             "SELECT p.id, p.name, d.name FROM projects as p JOIN departments as d ON p.department_id = d.id WHERE p.department_id = 1",
             table_scopes={
@@ -377,7 +331,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_subquery_scope_not_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM (SELECT q.id, q.name FROM projects q) p",
             table_scopes={
@@ -389,7 +342,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_subquery_scope_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM (SELECT q.id, q.name FROM projects q WHERE q.id = 1) p",
             table_scopes={
@@ -401,7 +353,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_value_is_string_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
             {
@@ -413,7 +364,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_value_is_string_not_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id = '1'",
             {
@@ -425,7 +375,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_value_is_string_invalid(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id = 1",
             {
@@ -437,7 +386,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_in_operator_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id IN (1, 2)",
             {
@@ -453,13 +401,16 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_not_in_operator_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id NOT IN (1, 2)",
             {
                 "projects": [
                     ColumnScope(
-                        "projects", "id", ["1", "2"], operator="NOT IN", value_type="list"
+                        "projects",
+                        "id",
+                        ["1", "2"],
+                        operator="NOT IN",
+                        value_type="list",
                     )
                 ],
             },
@@ -469,7 +420,6 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_is_null_satisfied(self):
         result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id IS NULL",
             {"projects": [ColumnScope("projects", "id", None, "IS", "null")]},
@@ -479,12 +429,10 @@ class TestRowSecurity(unittest.TestCase):
     def test_scope_is_not_null_satisfied(self):
         unittest.result = check_query_privilages(
             self.table_privilages_map,
-            self.roles,
             "project_manager",
             "SELECT p.id, p.name FROM projects as p WHERE p.id IS NOT NULL",
             {"projects": [ColumnScope("projects", "id", None, "IS NOT", "null")]},
         )
-
 
 
 if __name__ == "__main__":
