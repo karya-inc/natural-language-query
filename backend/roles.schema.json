@@ -1,9 +1,4 @@
 {
   "$id": "roles.schema.json",
-  "enum": [
-    "ADMIN",
-    "CLIENT",
-    "PROJECT_MANAGER",
-    "COORDINATOR"
-  ]
+  "enum": ["SUPER_ADMIN", "ADMIN", "CLIENT", "PROJECT_MANAGER", "COORDINATOR"]
 }
