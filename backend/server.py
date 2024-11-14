@@ -11,7 +11,7 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import do_nlq, chat_history, get_session_history, nlq_sse_wrapper
+from controllers.sql_response import chat_history, get_session_history, nlq_sse_wrapper
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistory, ChatSessionHistory
 from db.config import Config
@@ -110,7 +110,7 @@ async def stream_sql_query_responses(
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
-            nlq_sse_wrapper(user_info.user_id, chat_request.query, session_id),
+            nlq_sse_wrapper(user_info, chat_request.query, session_id),
             media_type="text/event-stream",
         )
 
