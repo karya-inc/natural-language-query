@@ -1,16 +1,20 @@
 from .catalog import Catalog
-from .query import Query
-from .result import Result
+from dataclasses import dataclass, field
+from typing import Any, Literal, Optional
 
+QueryType = Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]
 
-from dataclasses import dataclass
-from typing import Any, List
+QueryResults = list[dict[str, Any]]
 
 
 @dataclass
 class AgentState:
     nlq: str
-    relevant_catalogs: List[Catalog] = None
-    queries: List[Query] = None
-    results: List[Result] = None
-    final_formatted_result: str = None
+    intent: str
+    query_type: QueryType
+    relevant_catalog: Optional[Catalog] = field(default=None)
+    relevant_tables: Optional[dict[str, Any]] = field(default=None)
+    queries: list[str] = field(default_factory=list)
+    intermediate_results: dict[str, QueryResults] = field(default_factory=dict)
+    aggregate_query: Optional[str] = field(default=None)
+    final_result: QueryResults = field(default_factory=QueryResults)

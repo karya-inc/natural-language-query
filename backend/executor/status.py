@@ -2,10 +2,11 @@ from enum import Enum
 
 
 class AgentStatus(Enum):
-    CATALOGING = "Agent is cataloging data..."
-    GENERATING_QUERIES = "Agent is generating queries..."
-    EXECUTING_QUERIES = "Agent is executing queries..."
-    PROCESSING_RESULTS = "Agent is processing intermediate results..."
-    EVALUATING_RESULTS = "Agent is evaluating results..."
-    REFINING_QUERY = "Agent is refining the query..."
+    ANALYZING_INTENT = "Analyzing the intent of the query..."
+    CATALOGING = "Cataloging data..."
+    GENERATING_QUERIES = "Generating queries..."
+    EXECUTING_QUERIES = "Executing queries..."
+    EXECUTE_REFINED_QUERY = "Executing the refined query..."
+    EVALUATING_RESULTS = "Evaluating results..."
+    REFINING_QUERY = "Refining the query..."
     TASK_COMPLETED = "Agent has completed the task."
