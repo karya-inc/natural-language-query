@@ -1,94 +1,18 @@
 [
   {
     "session_id": "1",
-    "user_query": "Hello! How can I assist you today?"
+    "user_query": "Workers who got payed in the last 6 months"
   },
   {
     "session_id": "2",
-    "user_query": "I need help with my account."
+    "user_query": "Demographic information of the workers"
   },
   {
     "session_id": "3",
-    "user_query": "Sure, I can help with that. What seems to be the problem?"
+    "user_query": "Rocket Learning Lifetime money earned by workers"
   },
   {
     "session_id": "4",
-    "user_query": "I forgot my password and can't log in."
-  },
-  {
-    "session_id": "5",
-    "user_query": "No worries, I can help you reset your password."
-  },
-  {
-    "session_id": "6",
-    "user_query": "Please click on the 'Forgot Password' link on the login page."
-  },
-  {
-    "session_id": "7",
-    "user_query": "I did that, but I didn't receive any email."
-  },
-  {
-    "session_id": "8",
-    "user_query": "Have you checked your spam folder?"
-  },
-  {
-    "session_id": "9",
-    "user_query": "Yes, I checked everywhere."
-  },
-  {
-    "session_id": "10",
-    "user_query": "Let me verify your email address. What is your email?"
-  },
-  {
-    "session_id": "11",
-    "user_query": "It's user@example.com."
-  },
-  {
-    "session_id": "12",
-    "user_query": "Thank you. I will resend the password reset email."
-  },
-  {
-    "session_id": "13",
-    "user_query": "Please check your inbox now."
-  },
-  {
-    "session_id": "14",
-    "user_query": "I got the email. Thank you!"
-  },
-  {
-    "session_id": "15",
-    "user_query": "You're welcome! Is there anything else I can help you with?"
-  },
-  {
-    "session_id": "16",
-    "user_query": "No, that's all for now. Thanks!"
-  },
-  {
-    "session_id": "17",
-    "user_query": "Have a great day!"
-  },
-  {
-    "session_id": "18",
-    "user_query": "Hi, I need help with my order."
-  },
-  {
-    "session_id": "19",
-    "user_query": "Sure, can you provide your order number?"
-  },
-  {
-    "session_id": "20",
-    "user_query": "It's 123456."
-  },
-  {
-    "session_id": "21",
-    "user_query": "Thank you. Let me check the status of your order."
-  },
-  {
-    "session_id": "22",
-    "user_query": "Your order is on the way and should arrive by tomorrow."
-  },
-  {
-    "session_id": "23",
-    "user_query": "Great, thank you!"
+    "user_query": "Average payment made to workers"
   }
 ]
