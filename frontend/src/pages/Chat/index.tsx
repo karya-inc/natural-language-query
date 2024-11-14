@@ -43,6 +43,8 @@ export type ChatBotProps = {
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
+  conversationStarted: boolean;
+  setConversationStarted: (arg: boolean) => void;
 };
 
 export type NLQUpdateEvent = (
@@ -69,11 +71,12 @@ export function ChatBot({
   setMessages,
   navOpen,
   setNavOpen,
+  conversationStarted,
+  setConversationStarted,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
-  const [conversationStarted, setConversationStarted] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { postChat } = useChat({ input, sessionId });
@@ -128,7 +131,7 @@ export function ChatBot({
         let collectedPayload = "";
         let updatedSessionId = sessionId;
 
-        const reader = await postChat(import.meta.env.VITE_ENDPOINT);
+        const reader = await postChat(import.meta.env.VITE_CHAT_ENDPOINT);
 
         const decoder = new TextDecoder();
         let done = false;
@@ -165,7 +168,7 @@ export function ChatBot({
           timestamp: Date.now(),
         };
 
-        setMessages((prevMessages: Message[]) => [...prevMessages, botMessage]);
+        setMessages((prevMessages) => [...prevMessages, botMessage]);
         setSessionId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
