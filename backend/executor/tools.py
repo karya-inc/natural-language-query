@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import List, Tuple
+from typing import Any, List, Literal, Tuple
 from enum import Enum
 
+from openai.types.chat import ChatCompletionMessageParam
 from .storage import EphemeralTools
 from .catalog import Catalog
 from .query import Query
 from .result import Result
-from .state import AgentState
 
 
 class GenerationType(Enum):
@@ -25,7 +24,7 @@ class GenerationType(Enum):
 class AgentTools(EphemeralTools, ABC):
 
     @abstractmethod
-    def invoke_llm(self, **kwargs) -> str:
+    def invoke_llm[T](self, response_type: type[T], messages: list[ChatCompletionMessageParam]) -> T:
         raise NotImplementedError
 
     def analaze_nlq(self, nlq: str) -> str:

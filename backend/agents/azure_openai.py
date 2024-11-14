@@ -1,93 +1,40 @@
 import os
-import json
-from typing import List
-from executor.catalog import Catalog
-from executor.query import Query
-from executor.result import Result
-from executor.state import AgentState
-from executor.tools import AgentTools
 from openai import AzureOpenAI, OpenAI
+from openai.types.chat import ChatCompletionMessageParam
+from executor.tools import AgentTools
+from utils.logger import get_logger
+from dotenv import load_dotenv
+from typing import override
 
-client = AzureOpenAI(
-    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
-    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT", ""),
-)
-analyze_catalogs_schema = {
-    "name": "analyze_catalogs",
-    "description": "Analyze the catalogs and return the subset of catalogs that this query could be querying",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "providers": {
-                "type": "array",
-                "description": "The list of providers to analyze (e.g. ['postgres', 'mongodb'])",
-                "items": {"type": "string"},
-            },
-        },
-        "required": ["providers"],
-    },
-}
+load_dotenv()
+
+logger = get_logger("[Azure AI Agent]")
 
 
-class GPTAgentTools(AgentTools):
+class AzureAIAgentTools(AgentTools):
+    az_ai_client: OpenAI
 
-    def analyze_catalogs(self, nlq: str, catalogs: List[Catalog]) -> List[Catalog]:
-        message_content = f"Analyze the following natural language query and return the subset of catalogs that this query could be querying:\n\nNLQ: {nlq}\n\nCatalogs: {catalogs}"
-
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": message_content,
-                }
-            ],
-            functions=[analyze_catalogs_schema],
-            function_call="auto",
-            model="gpt-4o",
+    def __init__(self) -> None:
+        self.az_ai_client = AzureOpenAI(
+            api_key=os.environ.get("AZURE_API_KEY"),
+            azure_endpoint=os.environ.get("AZURE_ENDPOINT", ""),
+            api_version=os.environ.get("AZURE_VERSION"),
         )
 
-        response = json.loads(
-            chat_completion.choices[0].message.function_call.arguments
+        self.gemini_ai_client = OpenAI(
+            api_key=os.environ.get("GEMINI_API_KEY"),
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
 
-        filtered_catalogs = []
-        for catalog in catalogs:
-            if catalog.provider in response["providers"]:
-                filtered_catalogs.append(catalog)
+    @override
+    def invoke_llm[T](self, response_type: type[T], messages: list[ChatCompletionMessageParam]) -> T:
 
-        return filtered_catalogs
+        response = self.az_ai_client.beta.chat.completions.parse(
+            model="gpt-4o", messages=messages, response_format=response_type
+        )
+        parsed_content = response.choices[0].message.parsed
 
-    def generate_queries(self, nlq: str, catalogs: List[Catalog]) -> List[Query]:
-        queries = []
+        if parsed_content:
+            return parsed_content
 
-        for catalog in catalogs:
-            if catalog.provider == "postgres":
-                provider = "SQL"
-            else:
-                raise ValueError(f"Unsupported provider: {catalog.provider}")
-            message_content = f"Convert the following natural language query to {provider} for the given catalog. Only return the SQL and nothing else (not even markdown or code blocks):\n\nNLQ: {nlq}\n\nCatalog: {catalog}"
-
-            chat_completion = client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": message_content,
-                    }
-                ],
-                model="gpt-4o",
-            )
-
-            response = chat_completion.choices[0].message.content
-            if response.startswith("```sql"):
-                response = response[6:].strip()
-            elif response.startswith("```"):
-                response = response[3:].strip()
-
-            if response.endswith("```"):
-                response = response[:-3].strip()
-
-            print(f"response({catalog.provider}): {response}")
-            queries.append(Query(nlq=nlq, sql=response, catalog=catalog))
-
-        return queries
+        raise Exception("LLM response is empty")
