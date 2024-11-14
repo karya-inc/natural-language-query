@@ -10,6 +10,7 @@ class Catalog:
     """
 
     name: str
+    description: Optional[str]
     provider: Literal["postgres", "sqlite"]
     schema: Dict[str, Any]  # A dictionary representing tables and their columns
     annotations: Dict[str, Dict[str, str]] = field(default_factory=dict)

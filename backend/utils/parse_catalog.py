@@ -70,6 +70,7 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
         catalogs.append(
             Catalog(
                 name=dbname,
+                description=dbinfo["description"],
                 provider=dbinfo["connection"]["provider"],
                 schema=dbinfo["tables"],
                 connection_params=dbinfo["connection"],
