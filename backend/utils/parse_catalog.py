@@ -69,6 +69,7 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
         logger.info(f"Parsing Database: {dbname}")
         catalogs.append(
             Catalog(
+                name=dbname,
                 provider=dbinfo["connection"]["provider"],
                 schema=dbinfo["tables"],
                 connection_params=dbinfo["connection"],
@@ -97,5 +98,6 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
     return ParsedCatalogConfiguration(
         catalogs=catalogs, database_privileges=database_privileges
     )
+
 
 parsed_catalogs = parse_catalog_configuration()
