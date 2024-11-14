@@ -1,16 +1,13 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, Literal, Tuple
+from typing import Any, List, Literal
 from openai.types.chat import ChatCompletionMessageParam
 
 from executor.state import AgentState, QueryResults
-from .storage import EphemeralTools
 from .catalog import Catalog
-from .query import Query
-from .result import Result
 
 
-class AgentTools(EphemeralTools, ABC):
+class AgentTools(ABC):
 
     @abstractmethod
     def invoke_llm[
