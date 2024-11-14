@@ -37,7 +37,7 @@ def agentic_loop(
 
         if not state.results:
             send_update(AgentStatus.EXECUTING_QUERIES)
-            state.results = tools.execute_queries(state.queries)
+            state.results = execute_query(state.queries)
 
         if len(state.results) > 1:
             send_update(AgentStatus.PROCESSING_RESULTS)
@@ -45,10 +45,10 @@ def agentic_loop(
             aggregate_query = tools.generate_aggregate_query(
                 state.results, intermediate_catalog
             )
-            state.results = tools.execute_queries([aggregate_query])
+            state.results = execute_query([aggregate_query])
 
         send_update(AgentStatus.EVALUATING_RESULTS)
-        is_sufficient, result = tools.is_result_sufficient(state.results, state.nlq)
+        is_sufficient, result = tools.is_result_relevant(state.results, state.nlq)
         if is_sufficient:
             state.final_formatted_result = tools.format_result(state.nlq, result)
             send_update(AgentStatus.TASK_COMPLETED)
