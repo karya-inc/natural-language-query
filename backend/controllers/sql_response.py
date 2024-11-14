@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from db.db_queries import ChatHistory, ChatSessionHistory, get_chat_history, get_user_session_history
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
-from executor.loop import agentic_loop
 from executor.status import AgentStatus
-from executor.tools import GPTAgentTools
+from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from typing import AsyncIterator, Iterator, List, Literal
+from typing import AsyncIterator, List, Literal
 from sqlalchemy.orm import Session
 from uuid import UUID
 import json
@@ -37,7 +36,7 @@ async def nlq_sse_wrapper(
 
 
 async def do_nlq(
-    user_id: str, query: str, session_id: str
+    user_info: str, query: str, session_id: str
 ) -> AsyncIterator[NLQUpdateEvent | NLQResponseEvent]:
     # Log info
     logger.info(f"Generating sql response for query : {query}")
@@ -52,7 +51,7 @@ async def do_nlq(
 
     config = AgentConfig(update_callback=update_callback)
 
-    agent = GPTAgentTools()
+    agent = AzureAIAgentTools()
 
     nlq_executor = (
         NLQExecutor()
