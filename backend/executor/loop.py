@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, cast
 
 from executor.config import AgentConfig
 
@@ -41,7 +41,10 @@ async def execute_query_with_healing(
 
     if set_limit:
         query_to_execute = (
-            sqlglot.parse_one(query_to_execute, into=exp.Query)
+            cast(
+                exp.Query,
+                sqlglot.parse_one(query_to_execute),
+            )
             .limit(INTERMIDIATE_RESULT_LIMIT)
             .sql()
         )
@@ -136,6 +139,9 @@ async def agentic_loop(
                                 config=config,
                             )
                         )
+
+            if len(state.queries) == 1:
+                state.aggregate_query = state.queries[0]
 
             if not state.aggregate_query:
                 send_update(AgentStatus.REFINING_QUERY)
