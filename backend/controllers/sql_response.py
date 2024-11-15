@@ -7,7 +7,6 @@ from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from utils.query_pipeline import QueryExecutionPipeline
 from typing import AsyncIterator, List, Literal
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -51,7 +50,7 @@ async def do_nlq(
             events.put(NLQUpdateEvent(kind="UPDATE", status=status.value))
         )
 
-    config = AgentConfig(update_callback=update_callback)
+    config = AgentConfig(update_callback=update_callback, user_info=user_info)
 
     agent = AzureAIAgentTools()
 

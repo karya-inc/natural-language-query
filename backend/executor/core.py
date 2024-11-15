@@ -4,8 +4,8 @@ from typing import Any, List, Optional
 from executor.config import AgentConfig
 from executor.tools import AgentTools
 
-from .catalog import Catalog
-from .loop import agentic_loop
+from executor.catalog import Catalog
+from executor.loop import agentic_loop
 
 
 @dataclass
@@ -40,6 +40,4 @@ class NLQExecutor:
 
         if not self.nlq:
             self.nlq = nlq
-        return agentic_loop(
-            self.nlq, self.catalogs, self.tools, self.config, lambda x: None
-        )
+        return agentic_loop(self.nlq, self.catalogs, self.tools, self.config)

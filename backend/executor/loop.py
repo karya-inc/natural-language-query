@@ -1,7 +1,7 @@
-from typing import Any, Callable, List
+from typing import Any, List
 
 from executor.config import AgentConfig
-from utils.query_pipeline import QueryExecutionResult, QueryExecutionSuccessResult
+from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
 
 from .catalog import Catalog
 from .state import AgentState
@@ -21,15 +21,21 @@ def execute_query_with_healing(
     state: AgentState,
     query: str,
     tools: AgentTools,
+    config: AgentConfig,
     set_limit: bool,
-    execute_query: Callable[[str], QueryExecutionResult],
 ):
+    assert state.relevant_catalog, "Relevant catalog not set"
+
+    query_pipeline = QueryExecutionPipeline(
+        catalog=state.relevant_catalog,
+        active_role=config.user_info.role,
+        scopes=config.user_info.scopes,
+    )
     query_to_execute = query
 
     healing_attempts = 0
     while True:
-
-        execution_result = execute_query(query_to_execute)
+        execution_result = query_pipeline.execute(query_to_execute)
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
@@ -49,7 +55,6 @@ def agentic_loop(
     catalogs: List[Catalog],
     tools: AgentTools,
     config: AgentConfig,
-    execute_query: Callable,
 ) -> Any:
     def send_update(status: AgentStatus):
         if config.update_callback:
@@ -116,7 +121,7 @@ def agentic_loop(
                             query=query,
                             tools=tools,
                             set_limit=True,
-                            execute_query=execute_query,
+                            config=config,
                         )
 
             if not state.aggregate_query:
@@ -134,7 +139,7 @@ def agentic_loop(
                     query=state.aggregate_query,
                     tools=tools,
                     set_limit=False,
-                    execute_query=execute_query,
+                    config=config,
                 )
 
             send_update(AgentStatus.TASK_COMPLETED)
