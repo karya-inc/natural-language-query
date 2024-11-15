@@ -9,10 +9,13 @@ from .status import AgentStatus
 from .tools import AgentTools
 from utils.logger import get_logger
 import time
+import sqlglot
+import sqlglot.expressions as exp
 
 TURN_LIMIT = 5
 MAX_HEALING_ATTEMPTS = 5
 FAILURE_RETRY_DELAY = 2
+INTERMIDIATE_RESULT_LIMIT = 5
 
 logger = get_logger("[AGENTIC LOOP]")
 
@@ -31,7 +34,15 @@ def execute_query_with_healing(
         active_role=config.user_info.role,
         scopes=config.user_info.scopes,
     )
+
     query_to_execute = query
+
+    if set_limit:
+        query_to_execute = (
+            sqlglot.parse_one(query_to_execute, into=exp.Query)
+            .limit(INTERMIDIATE_RESULT_LIMIT)
+            .sql()
+        )
 
     healing_attempts = 0
     while True:
