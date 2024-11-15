@@ -29,10 +29,18 @@ class AzureAIAgentTools(AgentTools):
     @override
     async def invoke_llm[
         T
-    ](self, response_type: type[T], messages: list[ChatCompletionMessageParam]) -> T:
+    ](
+        self,
+        response_type: type[T],
+        messages: list[ChatCompletionMessageParam],
+        temperature=0.0,
+    ) -> T:
 
         response = await self.az_ai_client.beta.chat.completions.parse(
-            model="gpt-4o", messages=messages, response_format=response_type
+            model="gpt-4o",
+            messages=messages,
+            response_format=response_type,
+            temperature=temperature,
         )
         parsed_content = response.choices[0].message.parsed
 
