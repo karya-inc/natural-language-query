@@ -128,7 +128,7 @@ async def agentic_loop(
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)
                 # Generate queries
-                state.queries = await tools.generate_queries(nlq, state.relevant_tables)
+                state.queries = await tools.generate_queries(nlq, state.relevant_tables, state.relevant_catalog.provider)
                 if len(state.queries) == 0:
                     raise Exception("Failed to generate queries")
 

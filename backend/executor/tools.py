@@ -146,14 +146,16 @@ class AgentTools(ABC):
         return llm_response.tables
 
     async def generate_queries(
-        self, nlq: str, relevant_tables: dict[str, Any]
+        self, nlq: str, relevant_tables: dict[str, Any], provider: str
     ) -> List[str]:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
 
-        system_prompt = """
-        You are a seasoned SQL Expert with over 10 years of experience. Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog. The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
+        system_prompt = f"""
+        You are a seasoned SQL Expert with over 10 years of experience with {provider} dialect.
+        Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
+        The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
         Task Requirements:
         1. User Intent Analysis: Carefully review the provided user intent to understand what the user needs.
@@ -209,11 +211,11 @@ class AgentTools(ABC):
         in the ephimeral storage. Use subqueries and CTES (with clause) to generate the aggregate query.
         """
         system_prompt = """
-            You are a SQL Expert with over 10 years of experience. Your task is to consolidate multiple provided queries into an optimal single SQL query or the minimum number of queries needed to achieve the desired result. You will be provided with a json containing queries and sample responses from them. 
+            You are a SQL Expert with over 10 years of experience. Your task is to consolidate multiple provided queries into an optimal single SQL query or the minimum number of queries needed to achieve the desired result. You will be provided with a json containing queries and sample responses from them.
 
             Task Requirements:
             1. Analyze Provided Queries: Carefully review the given individual queries to understand the data they retrieve and their intended outcomes.
-            2. Aggregate Query Construction: Combine and refactor the individual queries into one comprehensive SQL query that can deliver the same result set. You can convert these provided queries in CTEs (With clasuses), subqueries or joings to achieve this. 
+            2. Aggregate Query Construction: Combine and refactor the individual queries into one comprehensive SQL query that can deliver the same result set. You can convert these provided queries in CTEs (With clasuses), subqueries or joings to achieve this.
             3. Ensure that the final query is optimized for performance and adheres to SQL best practices.
 
             Guidelines:
