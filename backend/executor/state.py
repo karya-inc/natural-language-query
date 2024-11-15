@@ -1,4 +1,4 @@
-from .catalog import Catalog
+from executor.catalog import Catalog
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 

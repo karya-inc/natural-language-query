@@ -4,8 +4,8 @@ from typing import Any, List, Optional
 from executor.config import AgentConfig
 from executor.tools import AgentTools
 
-from .catalog import Catalog
-from .loop import agentic_loop
+from executor.catalog import Catalog
+from executor.loop import agentic_loop
 
 
 @dataclass

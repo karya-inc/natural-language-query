@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from .status import AgentStatus
+from executor.status import AgentStatus
 
 
 @dataclass

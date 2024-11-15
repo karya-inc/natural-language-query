@@ -1,12 +1,13 @@
 from typing import Any, Callable, List
 
 from executor.config import AgentConfig
+from executor.errors import UnRecoverableError
 from utils.query_pipeline import QueryExecutionResult, QueryExecutionSuccessResult
 
-from .catalog import Catalog
-from .state import AgentState
-from .status import AgentStatus
-from .tools import AgentTools
+from executor.catalog import Catalog
+from executor.state import AgentState
+from executor.status import AgentStatus
+from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
 
