@@ -159,13 +159,7 @@ class AgentTools(ABC):
 
         IMPORTANT NOTE: When generating query, anywhere a column is specified in query (including WHERE clauses) it should be prefixed with the table name.
 
-        Task Requirements:
-        1. User Intent Analysis: Carefully review the provided user intent to understand what the user needs.
-        2. SQL Query Generation: Construct SQL queries that meet the user's requirements, ensuring they are:
-        Accurate and adhere to best practices.
-        Based on the information provided in the database catalog.
-        Multiple and simple where possible, to cater to straightforward data retrieval.
-        3. User Permissions: A query is allowed if:
+        User Permissions: A query is allowed if:
             - The role has access to the table in the query
             - The role has access to the columns in the query
             - The row level restrictions are satisfied for the query with where clauses on the required column scopes
@@ -188,7 +182,7 @@ class AgentTools(ABC):
         Guidelines:
         1. Leverage the Catalog: Use the metadata to align your queries with the correct database, tables, and columns.
         2. Output: Create multiple simple queries to address the user intent comprehensively and efficiently.
-        3. Commented Code: Where appropriate, include brief comments in the SQL code to clarify complex logic or non-standard sections.
+        3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
         """
         nlq_relevant_tables = f"{nlq} Relevant Tables: {relevant_tables}"
