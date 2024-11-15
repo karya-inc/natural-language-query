@@ -35,16 +35,22 @@ def execute_query_with_healing(
 
     healing_attempts = 0
     while True:
+        if healing_attempts >= MAX_HEALING_ATTEMPTS:
+            # TODO: Unrecoverable error
+            raise Exception("Failed to heal query")
+
         execution_result = query_pipeline.execute(query_to_execute)
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
         if not execution_result.recoverable:
+            # TODO: Unrecoverable error
             raise Exception(execution_result.reason)
 
         # Attempt to heal the query
         healing_attempts += 1
-        if healing_attempts % 2 == 0:
+        if healing_attempts % 3 == 0:
+            # Couldn't fix after 2mes, try to regenerate the query
             query_to_execute = tools.heal_fix_query(query_to_execute)
         else:
             query_to_execute = tools.heal_regenerate_query(state, query_to_execute)
