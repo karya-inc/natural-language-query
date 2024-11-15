@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import json
-from os import system
 from typing import Any, List, Literal
 from openai.types.chat import ChatCompletionMessageParam
 

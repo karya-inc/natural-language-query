@@ -91,7 +91,7 @@ async def stream_sql_query_responses(
     Args:
         chat_request (ChatRequest): The request containing the SQL query and optional session_id.
         db (Session): The database session.
-        user_id (str): The user ID extracted from the token.
+        user_info (AuthenticatedUserInfo): The user info extracted from the token after successfully authenticating.
 
     Returns:
         StreamingResponse: The response streamed as Server-Sent Events.
