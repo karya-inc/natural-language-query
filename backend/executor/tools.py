@@ -60,7 +60,6 @@ class AgentTools(ABC):
         )
         return llm_response.query_type
 
-
     def get_relevant_catalog(self, nlq: str, catalogs: List[Catalog]) -> str:
         """
         Get the subset of database catalogs that might be relevant to the given natural language query (NLQ).
@@ -99,7 +98,9 @@ class AgentTools(ABC):
             For multi-database queries: False
         Ensure that your analysis is thorough, leveraging your extensive experience to provide precise and contextually accurate responses.
         """
-        nlq_database_info = f"User asked query: {nlq}, ## Database Catalogs: {database_info_json}"
+        nlq_database_info = (
+            f"User asked query: {nlq}, ## Database Catalogs: {database_info_json}"
+        )
 
         llm_resp = self.invoke_llm(
             RelevantCatalog,
@@ -136,7 +137,9 @@ class AgentTools(ABC):
         Your role is to analyze user queries and identify the relevant tables in a database catalog that can provide the required data.
         The catalog contains metadata about databases, including descriptions, table names, and column names.
         """
-        nlq_tables_info = f"User asked query: {nlq}, ## Database Catalog: {tables_info_json}"
+        nlq_tables_info = (
+            f"User asked query: {nlq}, ## Database Catalog: {tables_info_json}"
+        )
 
         llm_response = self.invoke_llm(
             List[str],
@@ -200,23 +203,22 @@ class AgentTools(ABC):
         )
         return llm_response
 
-
     def generate_aggregate_query(
-        self, intermediate_results: dict[str, QueryResults]
+        self,
+        intermediate_results: dict[str, QueryResults],
+        relevant_tables: dict[str, Any],
     ) -> str:
         """
         Generate an aggregate query by looking at the queries used to generate results
         in the ephimeral storage. Use subqueries and CTES (with clause) to generate the aggregate query.
         """
         system_prompt = """
-            You are a SQL Expert with over 10 years of experience. Your task is to consolidate multiple provided queries into an optimal single SQL query or the minimum number of queries needed to achieve the desired result. You will be given a database catalog that includes tables, column names, and their data types.
+            You are a SQL Expert with over 10 years of experience. Your task is to consolidate multiple provided queries into an optimal single SQL query or the minimum number of queries needed to achieve the desired result. You will be provided with a json containing queries and sample responses from them. 
 
             Task Requirements:
             1. Analyze Provided Queries: Carefully review the given individual queries to understand the data they retrieve and their intended outcomes.
-            2. Aggregate Query Construction:
-                Combine and refactor the individual queries into one comprehensive SQL query, or the fewest possible queries, that can deliver the same result set.
-                Ensure that the final query is optimized for performance and adheres to SQL best practices.
-            3. Database Catalog Utilization: Use the metadata from the catalog to ensure that your query references the correct tables and columns and aligns with the database schema.
+            2. Aggregate Query Construction: Combine and refactor the individual queries into one comprehensive SQL query that can deliver the same result set. You can convert these provided queries in CTEs (With clasuses), subqueries or joings to achieve this. 
+            3. Ensure that the final query is optimized for performance and adheres to SQL best practices.
 
             Guidelines:
             1. Efficiency and Performance: Design the aggregated query to minimize computation time and resource usage.
@@ -225,13 +227,13 @@ class AgentTools(ABC):
             Ensure that the final result is accurate, optimized, and reflects your expertise in SQL.
             """
 
-        intermediate_results_json = json.dumps(intermediate_results)
+        user_prompt = f"Intermediate Results: {intermediate_results}, Relevant Tables: {relevant_tables}"
 
         llm_response = self.invoke_llm(
             str,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": intermediate_results_json},
+                {"role": "user", "content": user_prompt},
             ],
         )
         return llm_response
