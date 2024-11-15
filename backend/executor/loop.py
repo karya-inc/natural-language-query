@@ -166,6 +166,7 @@ async def agentic_loop(
 
         except UnRecoverableError as e:
             logger.error(f"Unrecoverable error in agentic loop: {e}")
+            send_update(AgentStatus.TASK_FAILED)
             raise e
         except Exception as e:
             turns += 1

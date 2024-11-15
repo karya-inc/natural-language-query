@@ -10,3 +10,4 @@ class AgentStatus(Enum):
     EVALUATING_RESULTS = "Evaluating results..."
     REFINING_QUERY = "Refining the query..."
     TASK_COMPLETED = "Agent has completed the task."
+    TASK_FAILED = "Agent has failed to complete the task."

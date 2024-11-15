@@ -65,7 +65,7 @@ async def do_nlq(
 
     while True:
         event = await events.get()
-        if event.status == AgentStatus.TASK_COMPLETED:
+        if event.status == AgentStatus.TASK_COMPLETED or event.status == AgentStatus.TASK_FAILED:
             break
 
         yield event
