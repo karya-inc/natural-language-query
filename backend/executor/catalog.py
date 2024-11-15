@@ -9,8 +9,10 @@ class Catalog:
     the schema of the database, alongside annotations of key columns.
     """
 
+    name: str
+    description: Optional[str]
     provider: Literal["postgres", "sqlite"]
     schema: Dict[str, Any]  # A dictionary representing tables and their columns
     annotations: Dict[str, Dict[str, str]] = field(default_factory=dict)
     ephemeral: bool = field(default=False)
-    connection_params: Optional[Dict[str, Any]] = None
+    connection_params: Dict[str, Any] = field(default_factory=dict)

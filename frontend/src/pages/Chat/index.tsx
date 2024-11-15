@@ -19,6 +19,7 @@ import remarkGfm from "remark-gfm";
 import BotGreeting from "./BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { downloadObjectAs } from "./utils";
+import { BACKEND_URL } from "../../config";
 
 export type Message = {
   id: number;
@@ -39,7 +40,7 @@ export type MessageComponent = {
 export type ChatBotProps = {
   messages: Message[];
   setMessages: (
-    arg: Message[] | ((prevMessages: Message[]) => Message[])
+    arg: Message[] | ((prevMessages: Message[]) => Message[]),
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -49,19 +50,19 @@ export type ChatBotProps = {
 
 export type NLQUpdateEvent = (
   | {
-      kind: "UPDATE";
-      status: string;
-    }
+    kind: "UPDATE";
+    status: string;
+  }
   | {
-      kind: "RESPONSE";
-      type: "TEXT";
-      payload: string;
-    }
+    kind: "RESPONSE";
+    type: "TEXT";
+    payload: string;
+  }
   | {
-      kind: "RESPONSE";
-      type: "TABLE";
-      payload: Record<string, string>[];
-    }
+    kind: "RESPONSE";
+    type: "TABLE";
+    payload: Record<string, string>[];
+  }
 ) & {
   session_id: string;
 };
@@ -93,7 +94,7 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    []
+    [],
   );
 
   const handleDownload = (report: Record<string, string>[]) => {
@@ -105,7 +106,7 @@ export function ChatBot({
     downloadObjectAs(
       report,
       `Table-Response-${year}-${month}-${date}.csv`,
-      "csv"
+      "csv",
     );
   };
 
@@ -149,7 +150,7 @@ export function ChatBot({
         let collectedPayload = "";
         let updatedSessionId = sessionId;
 
-        const reader = await postChat(import.meta.env.VITE_CHAT_ENDPOINT);
+        const reader = await postChat(`${BACKEND_URL}/chat`);
 
         const decoder = new TextDecoder();
         let done = false;
@@ -188,7 +189,7 @@ export function ChatBot({
         setIsFetching(false);
       }
     },
-    [input, sessionId]
+    [input, sessionId],
   );
 
   return (

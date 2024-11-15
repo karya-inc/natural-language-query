@@ -5,6 +5,7 @@ function useChat({ input, sessionId }: { input: string; sessionId: string }) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
         query: input,
         session_id: sessionId,

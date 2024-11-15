@@ -2,6 +2,7 @@ import { useToast } from "@chakra-ui/react";
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Login } from "./Login";
+import { BACKEND_URL } from "../config";
 
 export type CheckUserAuthProps = {
   forComponent: ReactNode;
@@ -23,7 +24,6 @@ type LoginResponse =
       refresh_token: string;
     };
   };
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 export function CheckUserAuth(props: CheckUserAuthProps) {
   const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
   const toast = useToast();
