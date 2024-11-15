@@ -157,6 +157,8 @@ class AgentTools(ABC):
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
+        IMPORTANT NOTE: When generating query, anywhere a column is specified in query (including WHERE clauses) it should be prefixed with the table name.
+
         Task Requirements:
         1. User Intent Analysis: Carefully review the provided user intent to understand what the user needs.
         2. SQL Query Generation: Construct SQL queries that meet the user's requirements, ensuring they are:
@@ -172,8 +174,6 @@ class AgentTools(ABC):
             - Queries with wildcard stars.
             - Queries that don't have a table name for a column.
             - Invalid SQL Queries
-
-        **NOTE**: Anywhere a column is specified in query (including WHERE clauses) it should be prefixed with the table name.
 
         ```sql
             <!-- Queries with wildcard stars are not allowed -->
