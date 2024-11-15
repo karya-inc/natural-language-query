@@ -61,7 +61,7 @@ async def do_nlq(
         .with_catalogs(parsed_catalogs.catalogs)
     )
 
-    agentic_loop_future = asyncio.to_thread(nlq_executor.execute, query)
+    agentic_loop_future = asyncio.create_task(nlq_executor.execute(query))
 
     while True:
         event = await events.get()

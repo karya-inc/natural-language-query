@@ -12,12 +12,12 @@ from executor.catalog import Catalog
 class AgentTools(ABC):
 
     @abstractmethod
-    def invoke_llm[
+    async def invoke_llm[
         T
     ](self, response_type: type[T], messages: list[ChatCompletionMessageParam]) -> T:
         raise NotImplementedError
 
-    def analaze_nlq_intent(self, nlq: str) -> str:
+    async def analaze_nlq_intent(self, nlq: str) -> str:
         """
         Analyze the natural language query (NLQ) and return the intent of the query.
         """
@@ -30,7 +30,7 @@ class AgentTools(ABC):
         3. Insightful Guidance: If applicable, offer additional insights, best practices, or recommendations related to SQL or technology to enhance user understanding.
         4. Clarity and Relevance: Ensure your response is easy to understand and directly relevant to the user's intent.
         """
-        return self.invoke_llm(
+        return await self.invoke_llm(
             str,
             [
                 {"role": "system", "content": system_prompt},
@@ -38,7 +38,7 @@ class AgentTools(ABC):
             ],
         )
 
-    def analyze_query_type(
+    async def analyze_query_type(
         self, nlq: str
     ) -> Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]:
         """
@@ -51,7 +51,7 @@ class AgentTools(ABC):
         2. Report Generation: This encompasses queries where the user is requesting new data compilations, reports, or detailed data summaries that have not been previously generated.
         Evaluate the user's input and correctly assign it to one of the defined buckets: Question Answering or Report Generation.
         """
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             QueryType,
             [
                 {"role": "system", "content": system_prompt},
@@ -60,7 +60,7 @@ class AgentTools(ABC):
         )
         return llm_response.query_type
 
-    def get_relevant_catalog(self, nlq: str, catalogs: List[Catalog]) -> str:
+    async def get_relevant_catalog(self, nlq: str, catalogs: List[Catalog]) -> str:
         """
         Get the subset of database catalogs that might be relevant to the given natural language query (NLQ).
         """
@@ -102,7 +102,7 @@ class AgentTools(ABC):
             f"User asked query: {nlq}, ## Database Catalogs: {database_info_json}"
         )
 
-        llm_resp = self.invoke_llm(
+        llm_resp = await self.invoke_llm(
             RelevantCatalog,
             [
                 {"role": "system", "content": system_prompt},
@@ -113,7 +113,7 @@ class AgentTools(ABC):
             raise UnRecoverableError("Multiple catalogs/databases are required")
         return llm_resp.database_name
 
-    def get_relevant_tables(self, nlq: str, catalog: Catalog) -> List[str]:
+    async def get_relevant_tables(self, nlq: str, catalog: Catalog) -> List[str]:
         tables_info = []
         for tablename, tableinfo in catalog.schema.items():
             columns_info_map = map(
@@ -141,7 +141,7 @@ class AgentTools(ABC):
             f"User asked query: {nlq}, ## Database Catalog: {tables_info_json}"
         )
 
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             List[str],
             [
                 {"role": "system", "content": system_prompt},
@@ -151,7 +151,7 @@ class AgentTools(ABC):
 
         return llm_response
 
-    def generate_queries(self, nlq: str, relevant_tables: dict[str, Any]) -> List[str]:
+    async def generate_queries(self, nlq: str, relevant_tables: dict[str, Any]) -> List[str]:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
@@ -194,7 +194,7 @@ class AgentTools(ABC):
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
         """
         nlq_relevant_tables = f"{nlq} Relevant Tables: {relevant_tables}"
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             List[str],
             [
                 {"role": "system", "content": system_prompt},
@@ -203,7 +203,7 @@ class AgentTools(ABC):
         )
         return llm_response
 
-    def generate_aggregate_query(
+    async def generate_aggregate_query(
         self,
         intermediate_results: dict[str, QueryResults],
         relevant_tables: dict[str, Any],
@@ -229,7 +229,7 @@ class AgentTools(ABC):
 
         user_prompt = f"Intermediate Results: {intermediate_results}, Relevant Tables: {relevant_tables}"
 
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             str,
             [
                 {"role": "system", "content": system_prompt},
@@ -238,13 +238,13 @@ class AgentTools(ABC):
         )
         return llm_response
 
-    def is_result_relevant(self, results: QueryResults, nlq: str) -> bool:
+    async def is_result_relevant(self, results: QueryResults, nlq: str) -> bool:
         """
         Check if the aggregated result is relevant to the original natural language query (NLQ).
         """
         raise NotImplementedError
 
-    def heal_fix_query(self, query: str) -> str:
+    async def heal_fix_query(self, query: str) -> str:
         """
         Fix the query by looking at the error message and the query itself.
         """
@@ -266,7 +266,7 @@ class AgentTools(ABC):
         Your expertise is key in resolving issues swiftly and effectively, resulting in a functional and optimized SQL query.
         """
 
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             str,
             [
                 {"role": "system", "content": system_prompt},
@@ -275,7 +275,7 @@ class AgentTools(ABC):
         )
         return llm_response
 
-    def heal_regenerate_query(self, state: AgentState, query: str) -> str:
+    async def heal_regenerate_query(self, state: AgentState, query: str) -> str:
         """
         Regenerate the query by trying to understand the intent of the query.
         Take reference from the previous SQL query and error message.
@@ -297,7 +297,7 @@ class AgentTools(ABC):
         Relevant Tables: {state.relevant_tables}, Intermediate Results: {state.intermediate_results},
         Fix Query: {query}"""
 
-        llm_response = self.invoke_llm(
+        llm_response = await self.invoke_llm(
             str,
             [
                 {"role": "system", "content": system_prompt},
@@ -306,7 +306,7 @@ class AgentTools(ABC):
         )
         return llm_response
 
-    def answer_question(self, nlq: str) -> Any:
+    async def answer_question(self, nlq: str) -> Any:
         """
         Answer the question asked by the user
         """

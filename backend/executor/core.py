@@ -30,7 +30,7 @@ class NLQExecutor:
         self.catalogs = catalogs
         return self
 
-    def execute(self, nlq: str) -> Any:
+    async def execute(self, nlq: str) -> Any:
         """Executes the agentic loop with the given natural language query (NLQ)."""
 
         if not self.tools or not self.config or len(self.catalogs) == 0:
@@ -40,4 +40,4 @@ class NLQExecutor:
 
         if not self.nlq:
             self.nlq = nlq
-        return agentic_loop(self.nlq, self.catalogs, self.tools, self.config)
+        return await agentic_loop(self.nlq, self.catalogs, self.tools, self.config)

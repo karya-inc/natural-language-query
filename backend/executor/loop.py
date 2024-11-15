@@ -22,7 +22,7 @@ INTERMIDIATE_RESULT_LIMIT = 5
 logger = get_logger("[AGENTIC LOOP]")
 
 
-def execute_query_with_healing(
+async def execute_query_with_healing(
     state: AgentState,
     query: str,
     tools: AgentTools,
@@ -62,12 +62,14 @@ def execute_query_with_healing(
         healing_attempts += 1
         if healing_attempts % 3 == 0:
             # Couldn't fix after 2mes, try to regenerate the query
-            query_to_execute = tools.heal_fix_query(query_to_execute)
+            query_to_execute = await tools.heal_fix_query(query_to_execute)
         else:
-            query_to_execute = tools.heal_regenerate_query(state, query_to_execute)
+            query_to_execute = await tools.heal_regenerate_query(
+                state, query_to_execute
+            )
 
 
-def agentic_loop(
+async def agentic_loop(
     nlq: str,
     catalogs: List[Catalog],
     tools: AgentTools,
@@ -79,11 +81,11 @@ def agentic_loop(
             config.update_callback(status)
 
     send_update(AgentStatus.ANALYZING_INTENT)
-    intent = tools.analaze_nlq_intent(nlq)
-    nlq_type = tools.analyze_query_type(intent)
+    intent = await tools.analaze_nlq_intent(nlq)
+    nlq_type = await tools.analyze_query_type(intent)
 
     if nlq_type == "QUESTION_ANSWERING":
-        return tools.answer_question(intent)
+        return await tools.answer_question(intent)
 
     # Handle report generation
     assert (
@@ -102,7 +104,7 @@ def agentic_loop(
             # Get the relevant catalog
             if not state.relevant_catalog:
                 send_update(AgentStatus.CATALOGING)
-                relevant_catalog_name = tools.get_relevant_catalog(nlq, catalogs)
+                relevant_catalog_name = await tools.get_relevant_catalog(nlq, catalogs)
                 state.relevant_catalog = next(
                     catalog
                     for catalog in catalogs
@@ -112,7 +114,7 @@ def agentic_loop(
             if not state.relevant_tables:
                 # Get the relevant table names
                 send_update(AgentStatus.CATALOGING)
-                relevant_table_names = tools.get_relevant_tables(
+                relevant_table_names = await tools.get_relevant_tables(
                     nlq, state.relevant_catalog
                 )
                 relevant_tables = {}
@@ -125,7 +127,7 @@ def agentic_loop(
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)
                 # Generate queries
-                state.queries = tools.generate_queries(nlq, state.relevant_tables)
+                state.queries = await tools.generate_queries(nlq, state.relevant_tables)
                 if len(state.queries) == 0:
                     raise Exception("Failed to generate queries")
 
@@ -134,25 +136,27 @@ def agentic_loop(
                 # Execute the queries
                 for query in state.queries:
                     if query not in state.intermediate_results:
-                        state.intermediate_results[query] = execute_query_with_healing(
-                            state=state,
-                            query=query,
-                            tools=tools,
-                            set_limit=True,
-                            config=config,
+                        state.intermediate_results[query] = (
+                            await execute_query_with_healing(
+                                state=state,
+                                query=query,
+                                tools=tools,
+                                set_limit=True,
+                                config=config,
+                            )
                         )
 
             if not state.aggregate_query:
                 send_update(AgentStatus.REFINING_QUERY)
                 # Generate the aggregate query
-                state.aggregate_query = tools.generate_aggregate_query(
+                state.aggregate_query = await tools.generate_aggregate_query(
                     state.intermediate_results, state.relevant_tables
                 )
 
             if not state.final_result:
                 send_update(AgentStatus.EXECUTE_REFINED_QUERY)
                 # Execute the aggregate query
-                state.final_result = execute_query_with_healing(
+                state.final_result = await execute_query_with_healing(
                     state=state,
                     query=state.aggregate_query,
                     tools=tools,
