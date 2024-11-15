@@ -5,6 +5,7 @@ from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from sqlalchemy import Engine, create_engine, text
 from rbac.check_permissions import ColumnScope, check_query_privilages
+from urllib.parse import quote
 
 
 logger = get_logger("[QUERY_PIPELINE]")
@@ -42,13 +43,16 @@ class QueryExecutionPipeline:
         self.active_role = active_role
 
         if self.catalog.provider == "postgres":
-            host = self.catalog.connection_params["host"]
-            dbname = self.catalog.connection_params["dbname"]
-            user = self.catalog.connection_params["user"]
-            password = self.catalog.connection_params["password"]
+            host = quote(self.catalog.connection_params["host"])
+            dbname = quote(self.catalog.connection_params["dbname"])
+            user = quote(self.catalog.connection_params["user"])
+            password = quote(self.catalog.connection_params["password"])
+            port = self.catalog.connection_params.get("port", 5432)
 
             # Setup connection to postgres
-            engine = create_engine(f"postgresql://{user}:{password}@{host}/{dbname}")
+            engine = create_engine(
+                f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+            )
             self.engine = engine
 
         else:

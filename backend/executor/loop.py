@@ -82,17 +82,8 @@ async def agentic_loop(
 
     send_update(AgentStatus.ANALYZING_INTENT)
     intent = await tools.analaze_nlq_intent(nlq)
-    nlq_type = await tools.analyze_query_type(intent)
 
-    if nlq_type == "QUESTION_ANSWERING":
-        return await tools.answer_question(intent)
-
-    # Handle report generation
-    assert (
-        nlq_type == "REPORT_GENERATION"
-    ), "Unknown query type - Expected REPORT_GENERATION"
-
-    state = AgentState(nlq=nlq, intent=intent, query_type=nlq_type)
+    state = AgentState(nlq=nlq, intent=intent, query_type="REPORT_GENERATION")
 
     turns = 0
 
@@ -175,4 +166,4 @@ async def agentic_loop(
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             time.sleep(FAILURE_RETRY_DELAY)
-            pass
+            raise e

@@ -4,7 +4,7 @@ from typing import Any, List, Literal
 from openai.types.chat import ChatCompletionMessageParam
 
 from executor.errors import UnRecoverableError
-from executor.models import QueryType, RelevantCatalog
+from executor.models import AggregatedQuery, HealedQuery, QueryType, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 
@@ -30,13 +30,14 @@ class AgentTools(ABC):
         3. Insightful Guidance: If applicable, offer additional insights, best practices, or recommendations related to SQL or technology to enhance user understanding.
         4. Clarity and Relevance: Ensure your response is easy to understand and directly relevant to the user's intent.
         """
-        return await self.invoke_llm(
-            str,
+        response = await self.invoke_llm(
+            NLQIntent,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": nlq},
             ],
         )
+        return response.intent
 
     async def analyze_query_type(
         self, nlq: str
@@ -116,17 +117,10 @@ class AgentTools(ABC):
     async def get_relevant_tables(self, nlq: str, catalog: Catalog) -> List[str]:
         tables_info = []
         for tablename, tableinfo in catalog.schema.items():
-            columns_info_map = map(
-                lambda col_kv: {
-                    "name": col_kv[0],
-                    "description": col_kv[1]["description"],
-                },
-                tableinfo["columns"].items(),
-            )
             curr_table_info = {
                 "table": tablename,
                 "description": tableinfo["description"],
-                "columns": list(columns_info_map),
+                "columns": tableinfo["columns"],
             }
             tables_info.append(curr_table_info)
 
@@ -142,16 +136,18 @@ class AgentTools(ABC):
         )
 
         llm_response = await self.invoke_llm(
-            List[str],
+            RelevantTables,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": nlq_tables_info},
             ],
         )
 
-        return llm_response
+        return llm_response.tables
 
-    async def generate_queries(self, nlq: str, relevant_tables: dict[str, Any]) -> List[str]:
+    async def generate_queries(
+        self, nlq: str, relevant_tables: dict[str, Any]
+    ) -> List[str]:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
@@ -195,13 +191,13 @@ class AgentTools(ABC):
         """
         nlq_relevant_tables = f"{nlq} Relevant Tables: {relevant_tables}"
         llm_response = await self.invoke_llm(
-            List[str],
+            GeneratedQueryList,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": nlq_relevant_tables},
             ],
         )
-        return llm_response
+        return llm_response.queries
 
     async def generate_aggregate_query(
         self,
@@ -230,13 +226,13 @@ class AgentTools(ABC):
         user_prompt = f"Intermediate Results: {intermediate_results}, Relevant Tables: {relevant_tables}"
 
         llm_response = await self.invoke_llm(
-            str,
+            AggregatedQuery,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
-        return llm_response
+        return llm_response.query
 
     async def is_result_relevant(self, results: QueryResults, nlq: str) -> bool:
         """
@@ -267,13 +263,13 @@ class AgentTools(ABC):
         """
 
         llm_response = await self.invoke_llm(
-            str,
+            HealedQuery,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query},
             ],
         )
-        return llm_response
+        return llm_response.query
 
     async def heal_regenerate_query(self, state: AgentState, query: str) -> str:
         """
@@ -298,13 +294,13 @@ class AgentTools(ABC):
         Fix Query: {query}"""
 
         llm_response = await self.invoke_llm(
-            str,
+            HealedQuery,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_query},
             ],
         )
-        return llm_response
+        return llm_response.query
 
     async def answer_question(self, nlq: str) -> Any:
         """
