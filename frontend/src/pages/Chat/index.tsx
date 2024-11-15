@@ -44,6 +44,8 @@ export type ChatBotProps = {
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
+  conversationStarted: boolean;
+  setConversationStarted: (arg: boolean) => void;
 };
 
 export type NLQUpdateEvent = (
@@ -70,11 +72,12 @@ export function ChatBot({
   setMessages,
   navOpen,
   setNavOpen,
+  conversationStarted,
+  setConversationStarted,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
-  const [conversationStarted, setConversationStarted] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { postChat } = useChat({ input, sessionId });
@@ -106,6 +109,24 @@ export function ChatBot({
       "csv",
     );
   };
+
+  function setLoaderMessage(status: string) {
+    const botMessage: Message = {
+      id: Math.random(),
+      message: status,
+      role: "bot",
+      timestamp: Date.now(),
+    };
+
+    setMessages((prevMessages: Message[]) => {
+      console.log(prevMessages);
+      if (prevMessages.at(-1)?.role === "user") {
+        return [...prevMessages, botMessage];
+      } else {
+        return [...prevMessages.slice(0, -1), botMessage];
+      }
+    });
+  }
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -143,6 +164,7 @@ export function ChatBot({
             const chunk = decoder.decode(value, { stream: true });
             try {
               const parsedChunk = JSON.parse(chunk) as NLQUpdateEvent;
+              setLoaderMessage(parsedChunk.status);
               updatedSessionId = parsedChunk.session_id;
               if (parsedChunk.kind === "UPDATE") {
                 collectedPayload += parsedChunk.status;
@@ -159,14 +181,6 @@ export function ChatBot({
           }
         }
 
-        const botMessage: Message = {
-          id: Math.random(),
-          message: collectedPayload,
-          role: "bot",
-          timestamp: Date.now(),
-        };
-
-        setMessages((prevMessages: Message[]) => [...prevMessages, botMessage]);
         setSessionId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
