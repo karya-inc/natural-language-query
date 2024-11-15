@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, Literal
+from typing import Any, List, Literal, cast
 from openai.types.chat import ChatCompletionMessageParam
+from sqlalchemy.orm import context
 
 from executor.errors import UnRecoverableError
 from executor.models import AggregatedQuery, HealedQuery, QueryType, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
+from utils.query_pipeline import QueryExecutionResult
 
 
 class AgentTools(ABC):
@@ -236,12 +238,26 @@ class AgentTools(ABC):
         """
         raise NotImplementedError
 
-    async def heal_fix_query(self, query: str) -> str:
+    async def heal_fix_query(
+        self, query: str, state: AgentState, errors: QueryExecutionResult
+    ) -> str:
         """
         Fix the query by looking at the error message and the query itself.
         """
-        system_prompt = """
-        You are a SQL Expert with over 10 years of experience. Your task is to troubleshoot and fix SQL queries that are not functioning as expected. You will be provided with the original SQL query and the context of the issue, including any errors or unexpected results.
+
+        catalog = cast(Catalog, state.relevant_catalog)
+        system_prompt = f"""
+        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
+
+        User Permissions: A query is allowed if:
+            - The role has access to the table in the query
+            - The role has access to the columns in the query
+            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
+
+        The following kinds of queries are not not supported:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Invalid SQL Queries
 
         Task Requirements:
         1. Analyze the Problem: Carefully review the provided SQL query and the context, including the error message or details about the unexpected outcome.
@@ -250,44 +266,38 @@ class AgentTools(ABC):
             Correct the SQL query to ensure it performs as expected and meets the desired requirements.
         3. Generate the Solution: Provide the fixed SQL query and, if necessary, a brief explanation of the changes made and why they resolve the issue.
 
-        Guidelines:
-        1. Accuracy: Ensure that the corrected query adheres to best practices and produces the intended result.
-        2. Efficiency: Optimize the query where possible to improve performance without altering its functionality.
-        3. Clarity: Maintain clear and readable SQL code, try not to make it more complicated than necessary.
-
         Your expertise is key in resolving issues swiftly and effectively, resulting in a functional and optimized SQL query.
         """
 
+        user_prompt = f"SQL Query: {query}, Errors: {errors}, Context: {context}"
         llm_response = await self.invoke_llm(
             HealedQuery,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": query},
+                {"role": "user", "content": user_prompt},
             ],
         )
         return llm_response.query
 
-    async def heal_regenerate_query(self, state: AgentState, query: str) -> str:
+    async def heal_regenerate_query(
+        self, query: str, state: AgentState, errors: QueryExecutionResult
+    ) -> str:
         """
         Regenerate the query by trying to understand the intent of the query.
         Take reference from the previous SQL query and error message.
         """
         system_prompt = """
-        You are the SQL Query Fixer Expert with over 10 years of experience. Your task is to troubleshoot and fix regenerated SQL queries that are not functioning as expected. You will be provided with the original SQL query, the fix query, and the context of the issue, including any errors or unexpected results.
+        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
 
         Task Requirements:
-        1. Analyze the Problem: Carefully review the provided original SQL query, the regenerated query, and the context, including the error message or details about the unexpected outcome.
-        2. Diagnose and Fix:
-            Identify the differences between the original query and the regenerated query that caused the issue.
-            Correct the regenerated SQL query to ensure it performs as expected and matches the functionality of the original query.
+        1. Analyze the Problem: Carefully review the provided original SQL query. and the context, including the error message or details about the unexpected outcome.
+        2. Diagnose and Fix the problem by Regenerating a completely new query based on the context that tries to fix the issue.
 
         Guidelines:
         1. Accuracy: Ensure that the corrected query adheres to best practices and produces the intended result.
         2. Efficiency: Optimize the query where possible to improve performance without altering its functionality.
         """
-        user_query = f"""User Query: {state.intent}, Relevant Catalog: {state.relevant_catalog},
-        Relevant Tables: {state.relevant_tables}, Intermediate Results: {state.intermediate_results},
-        Fix Query: {query}"""
+        user_query = f"""Fix Query: {query}, Context: {state}, Errors: {errors}"""
 
         llm_response = await self.invoke_llm(
             HealedQuery,

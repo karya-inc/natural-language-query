@@ -16,7 +16,7 @@ import sqlglot.expressions as exp
 
 TURN_LIMIT = 5
 MAX_HEALING_ATTEMPTS = 5
-FAILURE_RETRY_DELAY = 2
+FAILURE_RETRY_DELAY = 0.2
 INTERMIDIATE_RESULT_LIMIT = 5
 
 logger = get_logger("[AGENTIC LOOP]")
@@ -65,10 +65,12 @@ async def execute_query_with_healing(
         healing_attempts += 1
         if healing_attempts % 3 == 0:
             # Couldn't fix after 2mes, try to regenerate the query
-            query_to_execute = await tools.heal_fix_query(query_to_execute)
+            query_to_execute = await tools.heal_fix_query(
+                query_to_execute, state, execution_result
+            )
         else:
             query_to_execute = await tools.heal_regenerate_query(
-                state, query_to_execute
+                query_to_execute, state, execution_result
             )
 
 
@@ -128,7 +130,9 @@ async def agentic_loop(
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)
                 # Generate queries
-                state.queries = await tools.generate_queries(nlq, state.relevant_tables, state.relevant_catalog.provider)
+                state.queries = await tools.generate_queries(
+                    nlq, state.relevant_tables, state.relevant_catalog.provider
+                )
                 if len(state.queries) == 0:
                     raise Exception("Failed to generate queries")
 
