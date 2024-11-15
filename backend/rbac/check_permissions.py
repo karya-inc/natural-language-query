@@ -510,6 +510,7 @@ def check_query_privilages(
                     "query": query,
                     "subquery": subquery.sql(),
                     "subquery_result": str(subquery_result),
+                    "near": subquery.find_ancestor(),
                 },
             )
 
@@ -576,6 +577,8 @@ def check_query_privilages(
                     "role": active_role,
                     "query": query,
                     "reason": "No table name for column",
+                    "column": column.sql(),
+                    "near": column.find_ancestor()
                 },
             )
 

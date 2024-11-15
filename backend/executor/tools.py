@@ -16,7 +16,12 @@ class AgentTools(ABC):
     @abstractmethod
     async def invoke_llm[
         T
-    ](self, response_type: type[T], messages: list[ChatCompletionMessageParam]) -> T:
+    ](
+        self,
+        response_type: type[T],
+        messages: list[ChatCompletionMessageParam],
+        temperature=0.0,
+    ) -> T:
         raise NotImplementedError
 
     async def analaze_nlq_intent(self, nlq: str) -> str:
@@ -249,15 +254,16 @@ class AgentTools(ABC):
         system_prompt = f"""
         You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
 
+        The following kinds of queries are not not supported:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Invalid SQL Queries
+
         User Permissions: A query is allowed if:
             - The role has access to the table in the query
             - The role has access to the columns in the query
             - The row level restrictions are satisfied for the query with where clauses on the required column scopes
 
-        The following kinds of queries are not not supported:
-            - Queries with wildcard stars.
-            - Queries that don't have a table name for a column.
-            - Invalid SQL Queries
 
         Task Requirements:
         1. Analyze the Problem: Carefully review the provided SQL query and the context, including the error message or details about the unexpected outcome.
@@ -289,6 +295,16 @@ class AgentTools(ABC):
         system_prompt = """
         You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
 
+        The following kinds of queries are not not supported:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Invalid SQL Queries
+
+        User Permissions: A query is allowed if:
+            - The role has access to the table in the query
+            - The role has access to the columns in the query
+            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
+
         Task Requirements:
         1. Analyze the Problem: Carefully review the provided original SQL query. and the context, including the error message or details about the unexpected outcome.
         2. Diagnose and Fix the problem by Regenerating a completely new query based on the context that tries to fix the issue.
@@ -305,6 +321,7 @@ class AgentTools(ABC):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_query},
             ],
+            temperature=0.5,
         )
         return llm_response.query
 
