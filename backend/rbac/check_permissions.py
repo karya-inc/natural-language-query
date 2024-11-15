@@ -4,6 +4,7 @@ import sqlglot
 from sqlglot import exp, errors as sqlglot_errors
 from dataclasses import dataclass, field
 
+
 @dataclass
 class RoleTablePrivileges:
     """
@@ -446,18 +447,23 @@ def check_query_privilages(
             context={"error": str(e), "role": active_role, "query": query},
         )
 
-    # Check if the query contains a wildcard star
-    # Such queries are not allowed
-    wildcard_exists = parsed_query.find(exp.Star)
-    if wildcard_exists:
-        return PrivilageCheckResult(
-            query_allowed=False,
-            err_code=ErrorCode.WILDCARD_STAR_NOT_ALLOWED,
-            context={"role": active_role, "query": query},
-        )
-
     alias_table_map: dict[str, str] = {}
     table_privilages_for_role: dict[str, RoleTablePrivileges] = {}
+
+    # Check select queries for select all stars
+    select_queries = parsed_query.find_all(exp.Select)
+    for select_query in select_queries:
+        is_wildcard_present = next(
+            True if isinstance(expression, exp.Star) else False
+            for expression in select_query.expressions
+        )
+
+        if is_wildcard_present:
+            return PrivilageCheckResult(
+                query_allowed=False,
+                err_code=ErrorCode.WILDCARD_STAR_NOT_ALLOWED,
+                context={"role": active_role, "query": query},
+            )
 
     # Check eash subquery in the CTEs
     # A cte is allowed if all the subqueries are allowed
