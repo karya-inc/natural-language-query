@@ -49,16 +49,14 @@ def execute_query_with_healing(
     healing_attempts = 0
     while True:
         if healing_attempts >= MAX_HEALING_ATTEMPTS:
-            # TODO: Unrecoverable error
-            raise Exception("Failed to heal query")
+            raise UnRecoverableError("Failed to heal query")
 
         execution_result = query_pipeline.execute(query_to_execute)
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
         if not execution_result.recoverable:
-            # TODO: Unrecoverable error
-            raise Exception(execution_result.reason)
+            raise UnRecoverableError(execution_result.reason)
 
         # Attempt to heal the query
         healing_attempts += 1
@@ -76,6 +74,7 @@ def agentic_loop(
     config: AgentConfig,
 ) -> Any:
     def send_update(status: AgentStatus):
+        logger.info(status.value)
         if config.update_callback:
             config.update_callback(status)
 
@@ -147,7 +146,7 @@ def agentic_loop(
                 send_update(AgentStatus.REFINING_QUERY)
                 # Generate the aggregate query
                 state.aggregate_query = tools.generate_aggregate_query(
-                    state.intermediate_results
+                    state.intermediate_results, state.relevant_tables
                 )
 
             if not state.final_result:
@@ -164,6 +163,9 @@ def agentic_loop(
             send_update(AgentStatus.TASK_COMPLETED)
             return state.final_result
 
+        except UnRecoverableError as e:
+            logger.error(f"Unrecoverable error in agentic loop: {e}")
+            raise e
         except Exception as e:
             turns += 1
             logger.error(f"Error in agentic loop: {e}")
