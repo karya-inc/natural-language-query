@@ -1,5 +1,7 @@
 # config.py
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 DATABASE_URI = os.environ['DATABASE_URI']
 

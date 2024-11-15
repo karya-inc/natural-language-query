@@ -57,4 +57,18 @@ class UserQuery(Base):
         TIMESTAMP,
         server_default=func.now()
     )
+    relevant_catalog: Mapped[str] = mapped_column(nullable=True)
+    relevant_tables: Mapped[str] = mapped_column(nullable=True)
+    intermediate_results: Mapped[str] = mapped_column(nullable=True)
+    aggregate_query: Mapped[str] = mapped_column(nullable=True)
     session: Mapped["UserSession"] = relationship(back_populates='queries')
+
+class TempQueries(Base):
+    ## Table to store list of temp queries generated for the user query
+    __tablename__ = 'temp_queries'
+    temp_queries_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('queries.query_id', ondelete='CASCADE')
+    )
+    temp_query: Mapped[str] = mapped_column(nullable=True)
+    queries: Mapped[UserQuery] = relationship(back_populates='temp_queries')
