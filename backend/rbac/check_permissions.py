@@ -346,6 +346,7 @@ def check_scope_privilages(
                         "reason": "No table name for column in where clause",
                         "column": column.sql(),
                         "where_clause": where_clause.sql(),
+                        "near": column.parent.sql() if column.parent else None,
                     },
                 )
 
@@ -510,7 +511,7 @@ def check_query_privilages(
                     "query": query,
                     "subquery": subquery.sql(),
                     "subquery_result": str(subquery_result),
-                    "near": subquery.find_ancestor(),
+                    "near": subquery.parent.sql() if subquery.parent else None,
                 },
             )
 
@@ -578,7 +579,7 @@ def check_query_privilages(
                     "query": query,
                     "reason": "No table name for column",
                     "column": column.sql(),
-                    "near": column.find_ancestor()
+                    "near": column.parent.sql() if column.parent else None,
                 },
             )
 

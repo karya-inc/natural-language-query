@@ -135,7 +135,7 @@ class AgentTools(ABC):
 
         system_prompt = """
         You are a seasoned SQL Expert with over 10 years of experience.
-        Your role is to analyze user queries and identify the relevant tables in a database catalog that can provide the required data.
+        Your role is to analyze user queries and identify all the relevant tables in a database catalog that might be related or can provide the required data.
         The catalog contains metadata about databases, including descriptions, table names, and column names.
         """
         nlq_tables_info = (
@@ -164,8 +164,6 @@ class AgentTools(ABC):
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
-        IMPORTANT NOTE: When generating query, anywhere a column is specified in query (including WHERE clauses) it should be prefixed with the table name.
-
         User Permissions: A query is allowed if:
             - The role has access to the table in the query
             - The role has access to the columns in the query
@@ -173,7 +171,7 @@ class AgentTools(ABC):
 
         The following kinds of queries are not not supported:
             - Queries with wildcard stars.
-            - Queries that don't have a table name for a column.
+            - Queries that don't have a table name for a column. All occurances of columns SHOULD be prefixed with table name to avoid ambiguity. Even columns in where clauses, functions, joins, withs, subqueries, group by and order by clauses follow this requirement
             - Invalid SQL Queries
 
         ```sql
@@ -265,6 +263,16 @@ class AgentTools(ABC):
             - The row level restrictions are satisfied for the query with where clauses on the required column scopes
 
 
+        ```sql
+            <!-- Queries with wildcard stars are not allowed -->
+        SELECT * FROM employees
+
+        select employees.name from employees where employees.salary > 1000 <!--This Query is allowed -->
+        select employees.name from employees where salary > 1000 <!--This Query is not allowed -->
+        select name from employees where employees.salary > 1000 <!--This Query is not allowed -->
+        select name from employees where salary > 1000 <!--This Query is not allowed -->
+        ```
+
         Task Requirements:
         1. Analyze the Problem: Carefully review the provided SQL query and the context, including the error message or details about the unexpected outcome.
         2. Diagnose and Fix:
@@ -304,6 +312,19 @@ class AgentTools(ABC):
             - The role has access to the table in the query
             - The role has access to the columns in the query
             - The row level restrictions are satisfied for the query with where clauses on the required column scopes
+
+        NOTE: The most common issue is the absence of table names for columns in the query. Ensure that all columns are prefixed with the table name to avoid ambiguity. You will be provided information about the location of the column where the table name is absent
+
+
+        ```sql
+            <!-- Queries with wildcard stars are not allowed -->
+        SELECT * FROM employees
+
+        select employees.name from employees where employees.salary > 1000 <!--This Query is allowed -->
+        select employees.name from employees where salary > 1000 <!--This Query is not allowed -->
+        select name from employees where employees.salary > 1000 <!--This Query is not allowed -->
+        select name from employees where salary > 1000 <!--This Query is not allowed -->
+        ```
 
         Task Requirements:
         1. Analyze the Problem: Carefully review the provided original SQL query. and the context, including the error message or details about the unexpected outcome.
