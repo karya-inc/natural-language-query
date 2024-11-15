@@ -95,6 +95,13 @@ async def agentic_loop(
             raise Exception("Agentic loop did not converge")
 
         try:
+
+            if len(catalogs) == 0:
+                raise UnRecoverableError("No catalogs available")
+
+            if len(catalogs) == 1:
+                state.relevant_catalog = catalogs[0]
+
             # Get the relevant catalog
             if not state.relevant_catalog:
                 send_update(AgentStatus.CATALOGING)
