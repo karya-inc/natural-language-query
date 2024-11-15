@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from db.db_queries import ChatHistory, ChatSessionHistory, get_chat_history, get_user_session_history
+from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
 from executor.status import AgentStatus
@@ -29,14 +30,14 @@ class NLQResponseEvent:
 
 
 async def nlq_sse_wrapper(
-    user_id: str, query: str, session_id: str
+    user_info: AuthenticatedUserInfo, query: str, session_id: str
 ) -> AsyncIterator[str]:
-    async for event in do_nlq(user_id, query, session_id):
+    async for event in do_nlq(user_info, query, session_id):
         yield json.dumps(event.__dict__)
 
 
 async def do_nlq(
-    user_info: str, query: str, session_id: str
+    user_info: AuthenticatedUserInfo, query: str, session_id: str
 ) -> AsyncIterator[NLQUpdateEvent | NLQResponseEvent]:
     # Log info
     logger.info(f"Generating sql response for query : {query}")
@@ -49,7 +50,7 @@ async def do_nlq(
             events.put(NLQUpdateEvent(kind="UPDATE", status=status.value))
         )
 
-    config = AgentConfig(update_callback=update_callback)
+    config = AgentConfig(update_callback=update_callback, user_info=user_info)
 
     agent = AzureAIAgentTools()
 

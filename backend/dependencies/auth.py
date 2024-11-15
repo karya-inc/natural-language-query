@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import os
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 from fastapi import Cookie, HTTPException, Header, Depends
 from google.generativeai.client import Any
 from rbac.check_permissions import ColumnScope
@@ -22,7 +22,7 @@ class TokenVerificationResult:
 class AuthenticatedUserInfo:
     user_id: str
     role: str
-    scopes: list[ColumnScope] = field(default_factory=list)
+    scopes: dict[str, List[ColumnScope]] = field(default_factory=dict)
 
 
 async def verify_token(
@@ -100,9 +100,13 @@ async def get_authenticated_user_info(
             detail=f"Invalid Token: Missing or Invalid Role in token payload - {e}",
         )
 
-    scopes = []
-    for scope in payload.get("scopes", []):
-        scopes.append(ColumnScope(**scope))
+    scopes_json = payload.get("scopes", {})
+    common_scopes = payload.get("common_scopes", [])
+
+    scopes = {}
+    for table_name, column_scopes in scopes_json.items():
+        scopes_json[table_name] = [ColumnScope(**scope) for scope in column_scopes]
+        scopes_json[table_name].append(*common_scopes)
 
     if not user_id:
         raise HTTPException(

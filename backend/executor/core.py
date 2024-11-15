@@ -40,6 +40,4 @@ class NLQExecutor:
 
         if not self.nlq:
             self.nlq = nlq
-        return agentic_loop(
-            self.nlq, self.catalogs, self.tools, self.config, lambda x: None
-        )
+        return agentic_loop(self.nlq, self.catalogs, self.tools, self.config)

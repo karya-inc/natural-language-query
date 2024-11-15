@@ -1,8 +1,9 @@
-from typing import Any, Callable, List
+from typing import Any, List
 
 from executor.config import AgentConfig
+
 from executor.errors import UnRecoverableError
-from utils.query_pipeline import QueryExecutionResult, QueryExecutionSuccessResult
+from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
 
 from executor.catalog import Catalog
 from executor.state import AgentState
@@ -10,10 +11,13 @@ from executor.status import AgentStatus
 from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
+import sqlglot
+import sqlglot.expressions as exp
 
 TURN_LIMIT = 5
 MAX_HEALING_ATTEMPTS = 5
 FAILURE_RETRY_DELAY = 2
+INTERMIDIATE_RESULT_LIMIT = 5
 
 logger = get_logger("[AGENTIC LOOP]")
 
@@ -22,24 +26,44 @@ def execute_query_with_healing(
     state: AgentState,
     query: str,
     tools: AgentTools,
+    config: AgentConfig,
     set_limit: bool,
-    execute_query: Callable[[str], QueryExecutionResult],
 ):
+    assert state.relevant_catalog, "Relevant catalog not set"
+
+    query_pipeline = QueryExecutionPipeline(
+        catalog=state.relevant_catalog,
+        active_role=config.user_info.role,
+        scopes=config.user_info.scopes,
+    )
+
     query_to_execute = query
+
+    if set_limit:
+        query_to_execute = (
+            sqlglot.parse_one(query_to_execute, into=exp.Query)
+            .limit(INTERMIDIATE_RESULT_LIMIT)
+            .sql()
+        )
 
     healing_attempts = 0
     while True:
+        if healing_attempts >= MAX_HEALING_ATTEMPTS:
+            # TODO: Unrecoverable error
+            raise Exception("Failed to heal query")
 
-        execution_result = execute_query(query_to_execute)
+        execution_result = query_pipeline.execute(query_to_execute)
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
         if not execution_result.recoverable:
+            # TODO: Unrecoverable error
             raise Exception(execution_result.reason)
 
         # Attempt to heal the query
         healing_attempts += 1
-        if healing_attempts % 2 == 0:
+        if healing_attempts % 3 == 0:
+            # Couldn't fix after 2mes, try to regenerate the query
             query_to_execute = tools.heal_fix_query(query_to_execute)
         else:
             query_to_execute = tools.heal_regenerate_query(state, query_to_execute)
@@ -50,7 +74,6 @@ def agentic_loop(
     catalogs: List[Catalog],
     tools: AgentTools,
     config: AgentConfig,
-    execute_query: Callable,
 ) -> Any:
     def send_update(status: AgentStatus):
         if config.update_callback:
@@ -117,7 +140,7 @@ def agentic_loop(
                             query=query,
                             tools=tools,
                             set_limit=True,
-                            execute_query=execute_query,
+                            config=config,
                         )
 
             if not state.aggregate_query:
@@ -135,7 +158,7 @@ def agentic_loop(
                     query=state.aggregate_query,
                     tools=tools,
                     set_limit=False,
-                    execute_query=execute_query,
+                    config=config,
                 )
 
             send_update(AgentStatus.TASK_COMPLETED)
