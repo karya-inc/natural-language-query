@@ -69,10 +69,9 @@ class QueryExecutionPipeline:
             )
         except Exception as e:
             logger.error(f"Error while checking query privilages: {e}")
-            return QueryExecutionFailureResult(reason=str(e), recoverable=False)
+            return QueryExecutionFailureResult(reason=str(e), recoverable=True)
 
         if not query_validation_result.query_allowed:
-            recoverable = True
             err = query_validation_result.err_code
             context = query_validation_result.context
 
@@ -90,16 +89,17 @@ class QueryExecutionPipeline:
                 return QueryExecutionFailureResult(
                     reason=err.value,
                     context=context,
-                    recoverable=recoverable,
+                    recoverable=True,
                 )
 
         try:
             with self.engine.connect() as conn:
                 stmt = text(query)
                 result = conn.execute(stmt).fetchall()
-                result_formatted = [dict(row) for row in result]
+                result_formatted = [row._asdict() for row in result]
+                print(result_formatted)
                 return QueryExecutionSuccessResult(result_formatted)
 
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")
-            return QueryExecutionFailureResult(reason=str(e), recoverable=False)
+            return QueryExecutionFailureResult(reason=str(e), recoverable=True)
