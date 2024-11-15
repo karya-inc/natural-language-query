@@ -65,11 +65,18 @@ async def do_nlq(
 
     while True:
         event = await events.get()
-        if event.status == AgentStatus.TASK_COMPLETED or event.status == AgentStatus.TASK_FAILED:
+        if (
+            event.status == AgentStatus.TASK_COMPLETED.value
+            or event.status == AgentStatus.TASK_FAILED.value
+        ):
+            logger.info(
+                f"Task completed with status: {event.status}. Exiting event loop"
+            )
             break
 
         yield event
 
+    logger.info("Waiting for the nlq executor to return")
     result = await agentic_loop_future
 
     # Store chat in sql table with session id
@@ -79,6 +86,9 @@ async def do_nlq(
 
     if isinstance(result, list):
         yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result)
+
+    logger.info("NLQ Completed")
+    return
 
 
 def chat_history(user_id: str, db: Session) -> List[ChatHistory]:
