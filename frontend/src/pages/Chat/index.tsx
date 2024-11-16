@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import useChat from "./useChat";
 import {
-  Image,
   VStack,
   HStack,
   Box,
@@ -18,9 +17,12 @@ import { HiArrowUp } from "react-icons/hi";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import BotGreeting from "./BotGreeting";
+import CFImage from "../../components/CloudflareImage";
+import { downloadObjectAs } from "./utils";
+import { BACKEND_URL } from "../../config";
 
 export type Message = {
-  id: string;
+  id: number;
   message: string;
   role: "user" | "bot";
   timestamp: number;
@@ -36,21 +38,46 @@ export type MessageComponent = {
 };
 
 export type ChatBotProps = {
-  pastMessages?: Message[];
+  messages: Message[];
+  setMessages: (
+    arg: Message[] | ((prevMessages: Message[]) => Message[]),
+  ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
+  conversationStarted: boolean;
+  setConversationStarted: (arg: boolean) => void;
+};
+
+export type NLQUpdateEvent = (
+  | {
+    kind: "UPDATE";
+    status: string;
+  }
+  | {
+    kind: "RESPONSE";
+    type: "TEXT";
+    payload: string;
+  }
+  | {
+    kind: "RESPONSE";
+    type: "TABLE";
+    payload: Record<string, string>[];
+  }
+) & {
+  session_id: string;
 };
 
 export function ChatBot({
-  pastMessages = [],
+  messages = [],
+  setMessages,
   navOpen,
   setNavOpen,
+  conversationStarted,
+  setConversationStarted,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>(pastMessages);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
-  const [conversationStarted, setConversationStarted] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { postChat } = useChat({ input, sessionId });
@@ -67,8 +94,39 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    []
+    [],
   );
+
+  const handleDownload = (report: Record<string, string>[]) => {
+    const today = new Date();
+    const date = today.getDate();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+
+    downloadObjectAs(
+      report,
+      `Table-Response-${year}-${month}-${date}.csv`,
+      "csv",
+    );
+  };
+
+  function setLoaderMessage(status: string) {
+    const botMessage: Message = {
+      id: Math.random(),
+      message: status,
+      role: "bot",
+      timestamp: Date.now(),
+    };
+
+    setMessages((prevMessages: Message[]) => {
+      console.log(prevMessages);
+      if (prevMessages.at(-1)?.role === "user") {
+        return [...prevMessages, botMessage];
+      } else {
+        return [...prevMessages.slice(0, -1), botMessage];
+      }
+    });
+  }
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,11 +134,10 @@ export function ChatBot({
       if (!input.trim()) return;
 
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: Math.random(),
         message: input,
         role: "user",
         timestamp: Date.now(),
-        session_id: sessionId,
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -93,7 +150,7 @@ export function ChatBot({
         let collectedPayload = "";
         let updatedSessionId = sessionId;
 
-        const reader = await postChat(import.meta.env.VITE_ENDPOINT);
+        const reader = await postChat(`${BACKEND_URL}/chat`);
 
         const decoder = new TextDecoder();
         let done = false;
@@ -106,24 +163,24 @@ export function ChatBot({
           if (value) {
             const chunk = decoder.decode(value, { stream: true });
             try {
-              const parsedChunk = JSON.parse(chunk);
+              const parsedChunk = JSON.parse(chunk) as NLQUpdateEvent;
+              setLoaderMessage(parsedChunk.status);
               updatedSessionId = parsedChunk.session_id;
-              collectedPayload += parsedChunk.response.payload;
+              if (parsedChunk.kind === "UPDATE") {
+                collectedPayload += parsedChunk.status;
+              } else if (parsedChunk.kind === "RESPONSE") {
+                if (parsedChunk.type === "TEXT") {
+                  collectedPayload += parsedChunk.payload;
+                } else if (parsedChunk.type === "TABLE") {
+                  handleDownload(parsedChunk.payload);
+                }
+              }
             } catch {
               console.error("Failed to parse JSON");
             }
           }
         }
 
-        const botMessage: Message = {
-          id: Date.now().toString(),
-          message: collectedPayload,
-          role: "bot",
-          timestamp: Date.now(),
-          session_id: updatedSessionId,
-        };
-
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
         setSessionId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
@@ -132,7 +189,7 @@ export function ChatBot({
         setIsFetching(false);
       }
     },
-    [input, sessionId]
+    [input, sessionId],
   );
 
   return (
@@ -234,8 +291,8 @@ const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
       gap={{ base: 4, lg: 6, xl: 8 }}
     >
       {role === "bot" && (
-        <Image
-          src="../../public/karya-logo.svg"
+        <CFImage
+          cfsrc="karya-logo"
           boxSize={10}
           border="1px solid"
           borderColor="gray.600"
@@ -266,8 +323,8 @@ const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
 // Skeleton Loader Component
 const FetchingSkeleton = () => (
   <HStack w="full" gap={4}>
-    <Image
-      src="../../public/karya-logo.svg"
+    <CFImage
+      cfsrc="karya-logo"
       boxSize={10}
       border="1px solid"
       borderColor="gray.600"
@@ -281,14 +338,14 @@ const FetchingSkeleton = () => (
 // Error Message Component
 const ErrorMessage = ({ error }: { error: string }) => (
   <HStack w="full" gap={4}>
-    <Image
-      src="../../public/karya-logo.svg"
+    <CFImage
+      cfsrc="karya-logo"
       boxSize={10}
       border="1px solid"
       borderColor="gray.600"
       borderRadius={50}
       p={2}
     />
-    <Text color="red.400">{error}</Text>
+    <Text color="red.400">{error ?? "Something Went Wrong"}</Text>
   </HStack>
 );

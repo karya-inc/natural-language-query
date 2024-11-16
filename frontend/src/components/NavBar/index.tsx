@@ -1,32 +1,42 @@
 import {
-  Avatar,
   Box,
   Flex,
-  Image,
   VStack,
   Text,
   HStack,
   Heading,
   Icon,
 } from "@chakra-ui/react";
-import chatHistory from "../../data/history.json";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
 import { redirect } from "react-router-dom";
+import CFImage from "../CloudflareImage";
+import useHistory from "./useChatHistory";
+// import { useEffect } from "react";
 
 const NavBar = ({
   navOpen,
   setNavOpen,
+  handleHistoryClick,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
+  handleHistoryClick: (arg1: string, arg2: string) => void;
 }) => {
+  const {
+    history,
+    // getHistory
+  } = useHistory();
   const chatHistoryStyles = {
     ":hover": {
       color: "gray.400",
       cursor: "pointer",
     },
   };
+
+  // useEffect(() => {
+  //   getHistory(import.meta.env.VITE_CHAT_HISTORY_SESSIONS_ENDPOINT);
+  // }, []);
 
   return (
     <VStack
@@ -38,7 +48,7 @@ const NavBar = ({
       top={{ base: 0, md: "unset" }}
       left={{ base: 0, md: "unset" }}
       h="100vh"
-      w={{ base: "70%", md: "50%", xl: "20%" }}
+      w={{ base: "70%", md: "50%", xl: "25%" }}
       alignItems="flex-start"
       gap={12}
       zIndex={10}
@@ -53,7 +63,7 @@ const NavBar = ({
           onClick={() => redirect("/")}
           cursor="pointer"
         >
-          <Image src="../../../public/karya-logo.svg" boxSize={8} />
+          <CFImage cfsrc="karya-logo" boxSize={8} />
           <Box>Kalai</Box>
         </Flex>
         <Icon
@@ -85,22 +95,32 @@ const NavBar = ({
           overflow="auto"
           pr={4}
         >
-          {chatHistory &&
-            chatHistory.map((chat) => {
+          {history &&
+            history.map((chat) => {
               return (
-                <Text key={chat.id} fontSize="lg" sx={chatHistoryStyles}>
-                  {chat.message}
+                <Text
+                  key={chat.session_id}
+                  fontSize="lg"
+                  sx={chatHistoryStyles}
+                  onClick={() =>
+                    handleHistoryClick(chat.session_id, chat.user_query)
+                  }
+                >
+                  {chat.user_query}
                 </Text>
               );
             })}
         </VStack>
       </VStack>
-      <HStack color="gray.500" fontWeight="normal" gap={{ base: 2, xl: 4 }}>
-        <Avatar name="Dan Abrahmov" src="https://bit.ly/dan-abramov" />
-        <VStack align="start" gap={0}>
-          <Text>Dan Abrahmov</Text>
-        </VStack>
-      </HStack>
+      <VStack
+        color="gray.500"
+        align="flex-start"
+        fontWeight="normal"
+        gap={{ base: 2, xl: 0 }}
+      >
+        <Text>Dan Abrahmov</Text>
+        <Text>danabrahmov@gmail.com</Text>
+      </VStack>
     </VStack>
   );
 };

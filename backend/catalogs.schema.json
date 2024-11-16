@@ -1,0 +1,157 @@
+{
+  "$id": "catalogs.schema.json",
+  "title": "Database schema definitions",
+  "type": "object",
+  "properties": {
+    "databases": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^\\S+$"
+            },
+            "description": {
+              "type": "string"
+            },
+            "connection": {
+              "description": "Connection details for the database",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "const": "sqlite"
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "path"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "const": "postgres"
+                    },
+                    "host": {
+                      "type": "string"
+                    },
+                    "port": {
+                      "type": "integer"
+                    },
+                    "dbname": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "host",
+                    "port",
+                    "dbname",
+                    "user",
+                    "password"
+                  ]
+                }
+              ]
+            },
+            "tables": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {
+                  "description": "Schema for a table",
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "description": "All the columns of the table",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "constraints": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "constraints"
+                        ]
+                      }
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "allowedColumns": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "scopes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "role": {
+                            "$ref": "roles.schema.json"
+                          }
+                        },
+                        "required": [
+                          "allowedColumns",
+                          "role"
+                        ]
+                      },
+                      "required": [
+                        "columns",
+                        "permissions"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "columns",
+                    "permissions"
+                  ]
+                }
+              }
+            }
+          },
+          "required": [
+            "name",
+            "description",
+            "connection",
+            "tables"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
