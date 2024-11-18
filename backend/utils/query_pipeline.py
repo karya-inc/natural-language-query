@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from sqlalchemy import Engine, create_engine, text
 from rbac.check_permissions import ColumnScope, check_query_privilages
 from urllib.parse import quote
+import pandas as pd
 
 
 logger = get_logger("[QUERY_PIPELINE]")
@@ -18,7 +19,7 @@ class QueryExecutionSuccessResult:
 
 @dataclass
 class QueryExecutionFailureResult:
-    reason: str
+    reason: Any
     recoverable: bool
     context: Optional[dict] = field(default=None)
 
@@ -72,33 +73,23 @@ class QueryExecutionPipeline:
             return QueryExecutionFailureResult(reason=str(e), recoverable=True)
 
         if not query_validation_result.query_allowed:
-            err = query_validation_result.err_code
-            context = query_validation_result.context
-
             logger.warning(
                 "Error occurred while checking for permissions: ",
                 query_validation_result,
             )
 
-            if not err:
-                return QueryExecutionFailureResult(
-                    reason="Unknown", recoverable=False, context=context
-                )
-
-            else:
-                return QueryExecutionFailureResult(
-                    reason=err.value,
-                    context=context,
-                    recoverable=True,
-                )
+            return QueryExecutionFailureResult(
+                reason=query_validation_result,
+                recoverable=True,
+            )
 
         try:
             with self.engine.connect() as conn:
                 stmt = text(query)
                 result = conn.execute(stmt).fetchall()
-                result_formatted = [row._asdict() for row in result]
-                print(result_formatted)
-                return QueryExecutionSuccessResult(result_formatted)
+                result_df = pd.DataFrame(result)
+                print(result_df.to_dict(orient="records"))
+                return QueryExecutionSuccessResult(result_df.to_dict(orient="records"))
 
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")
