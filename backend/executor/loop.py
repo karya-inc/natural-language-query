@@ -88,7 +88,12 @@ async def agentic_loop(
     send_update(AgentStatus.ANALYZING_INTENT)
     intent = await tools.analaze_nlq_intent(nlq)
 
-    state = AgentState(nlq=nlq, intent=intent, query_type="REPORT_GENERATION")
+    state = AgentState(
+        nlq=nlq,
+        intent=intent,
+        query_type="REPORT_GENERATION",
+        active_role=config.user_info.role,
+    )
 
     turns = 0
 
@@ -113,6 +118,8 @@ async def agentic_loop(
                     for catalog in catalogs
                     if catalog.name == relevant_catalog_name
                 )
+
+            state.scopes = config.user_info.scopes[state.relevant_catalog.name]
 
             if not state.relevant_tables:
                 # Get the relevant table names
