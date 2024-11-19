@@ -80,6 +80,16 @@ class AgentTools(ABC):
             "Include the customer acquisition cost."
             "The report is missing last year's sales comparison."
 
+        4. CASUAL_CONVERSATION
+            When the user is engaging in casual conversation or asking general questions that do not require data analysis or reporting.
+
+            Examples:
+            "How are you?"
+            "How's the weather today?"
+            "What's the latest news?"
+            "What can you do"
+            "What is your name"
+
         To help you decide the query type, consider the past queries of the user as well as the response provided by the assistant.
         """
         llm_response = await self.invoke_llm(
