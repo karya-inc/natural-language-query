@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 import json
+from logging import error
 from typing import Any, List, Literal, cast
 from openai.types.chat import ChatCompletionMessageParam
+from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 from sqlalchemy.orm import context
 
 from executor.errors import UnRecoverableError
 from executor.models import AggregatedQuery, HealedQuery, QueryType, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
-from utils.query_pipeline import QueryExecutionResult
+from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
+from utils.parse_catalog import parsed_catalogs
 
 
 class AgentTools(ABC):
@@ -164,10 +167,11 @@ class AgentTools(ABC):
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
-        User Permissions: A query is allowed if:
-            - The role has access to the table in the query
-            - The role has access to the columns in the query
-            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
+        A query is allowed if:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Queries that have subqueries that are in where clasues, joins, group by, order by, etc.
+            - SQL Functions that are user defined. Inbuilt functions like SUM, AVG, COUNT, etc are allowed.
 
         The following kinds of queries are not not supported:
             - Queries with wildcard stars.
@@ -242,7 +246,11 @@ class AgentTools(ABC):
         raise NotImplementedError
 
     async def heal_fix_query(
-        self, query: str, state: AgentState, errors: QueryExecutionResult
+        self,
+        query: str,
+        state: AgentState,
+        errors: QueryExecutionFailureResult,
+        regenerate: bool = False,
     ) -> str:
         """
         Fix the query by looking at the error message and the query itself.
@@ -250,40 +258,135 @@ class AgentTools(ABC):
 
         catalog = cast(Catalog, state.relevant_catalog)
         system_prompt = f"""
-        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
-
-        The following kinds of queries are not not supported:
-            - Queries with wildcard stars.
-            - Queries that don't have a table name for a column.
-            - Invalid SQL Queries
-
-        User Permissions: A query is allowed if:
-            - The role has access to the table in the query
-            - The role has access to the columns in the query
-            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
-
-
-        ```sql
-            <!-- Queries with wildcard stars are not allowed -->
-        SELECT * FROM employees
-
-        select employees.name from employees where employees.salary > 1000 <!--This Query is allowed -->
-        select employees.name from employees where salary > 1000 <!--This Query is not allowed -->
-        select name from employees where employees.salary > 1000 <!--This Query is not allowed -->
-        select name from employees where salary > 1000 <!--This Query is not allowed -->
-        ```
-
-        Task Requirements:
-        1. Analyze the Problem: Carefully review the provided SQL query and the context, including the error message or details about the unexpected outcome.
-        2. Diagnose and Fix:
-            Identify the root cause of the issue in the query.
-            Correct the SQL query to ensure it performs as expected and meets the desired requirements.
-        3. Generate the Solution: Provide the fixed SQL query and, if necessary, a brief explanation of the changes made and why they resolve the issue.
-
-        Your expertise is key in resolving issues swiftly and effectively, resulting in a functional and optimized SQL query.
+        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. 
+        You will be provided with the original SQL query, the relevant information related to the query and the query execution result.
         """
 
-        user_prompt = f"SQL Query: {query}, Errors: {errors}, Context: {context}"
+        if regenerate:
+            system_prompt += f"""
+            Others have tried to fix this query but failed. There's probably something wrong with the approach or the query itself
+            Your task is to regenerate an SQL query that servers the same purpose as the current one. 
+            The query should be syntactically correct and should adhere to the best practices.
+            """
+        else:
+            system_prompt += f"""
+            Your task is to troubleshoot and fix all the issue with the provided SQL query 
+            """
+
+        example_tables = f"""
+        departments:
+        id | name
+        1  | IT
+        2  | HR
+
+        employees:
+        id | name | dept_id | salary
+        1  | John | 1       | 1000
+        2  | Jane | 2       | 1500
+
+        """
+
+        if isinstance(errors.reason, PrivilageCheckResult):
+            err = errors.reason.err_code
+            match err:
+                case ErrorCode.MISSING_TABLE_NAME_PREFIX:
+                    system_prompt += f""" 
+                    Your task is to ensure that all columns in the query are prefixed with the table name to avoid 
+                    ambiguity about the table the column orignates from.
+                    Example:
+
+                    Assuming the following tables:
+
+                    {example_tables}
+
+                    The following queries are not allowed:
+                         select employees.name from employees where salary > 1000
+                         select name from employees where employees.salary > 1000
+                         select name from employees where salary > 1000
+                         select employees.name, departments.name as dept_name join departments on departments.id = dept_id from employees where employees.salary > 1000
+                    
+                    The following queries are allowed:
+                         select employees.name from employees where employees.salary > 1000
+                         select employees.name from employees join departments on departments.id = employees.dept_id where employees.salary > 1000
+                    """
+
+                case ErrorCode.INVALID_SQL_QUERY:
+                    system_prompt += """
+                    The query is not valid SQL. Please check the syntax and ensure that all SQL keywords are 
+                    used correctly and it is syntactically correct.
+                    """
+
+                case ErrorCode.WILDCARD_STAR_NOT_ALLOWED:
+                    system_prompt += f"""
+                    Your task is to remove the wildcard stars from the select clauses and 
+                    replace them with explicit column names. This will ensure that the query is more specific and avoids ambiguity. 
+
+                    Example: 
+                    Assuming the following tables:
+
+                    {example_tables}
+
+                    The following queries are not allowed:
+
+                    SELECT * FROM employees
+                    SELECT employees.name, departments.* FROM employees JOIN departments ON employees.dept_id = departments.id
+
+                    You need to use the table information provided with the context to replace the wildcard stars.
+                    """
+                case ErrorCode.ROLE_NO_COLUMN_ACCESS:
+                    system_prompt += f"""
+                    Your task is to remove the columns that the role does not have access to. You will be given the 
+                    information about the columns that the role has access to i the context.
+                    """
+                case ErrorCode.ROLE_NO_ROWS_ACCESS:
+                    system_prompt += f"""
+                    Your task is to add where clauses to the query to restrict the rows that the role has access to. 
+                    A column scope defines the filters/restrictions that are applied to a column to restrict the rows that a role has access to.
+
+                    Privilages defined for the tables are as follows
+                    {parsed_catalogs.database_privileges}
+                    """
+
+                case ErrorCode.CTE_ERROR:
+                    system_prompt += f"""
+                    Your task is to fix the specified Common Table Expression (CTE) in the query. You will be provided information about exactly what is wrong with the CTE.
+                    """
+                case ErrorCode.SUBQUERY_ERROR:
+                    system_prompt += f"""
+                    Your task is to fix the specified subquery in the query. You will be provided information about exactly what is wrong with the subquery.
+                    """
+
+                case _:
+                    system_prompt += f"""
+                    Your task is to fix the query based on the error message provided. You will be given the context of the query and the error message to help you identify the issue.
+                    """
+        else:
+            system_prompt += f"""
+            The error is most likely from the database driver, which means that the query is not valid SQL. 
+            Please check the syntax and ensure that all SQL keywords are used correctly and it is syntactically correct.
+            """
+
+        system_prompt += f"""
+        ### Intent of the query: 
+        {state.intent}
+
+        ### Table Schema
+        ```json
+        {json.dumps(catalog.schema)}
+        ```
+
+        ### Relevant Tables: 
+        The following tables are relevant to the query:
+        {state.relevant_tables}
+        """
+
+        user_prompt = f"""
+        ## SQL Query: 
+        {query}
+
+        ## Errors: 
+        {errors}
+        """
         llm_response = await self.invoke_llm(
             HealedQuery,
             [
@@ -300,21 +403,27 @@ class AgentTools(ABC):
         Regenerate the query by trying to understand the intent of the query.
         Take reference from the previous SQL query and error message.
         """
-        system_prompt = """
-        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
+
+        catalog = cast(Catalog, state.relevant_catalog)
+
+        system_prompt = f"""
+        You are a seasoned SQL Expert with over 10 years of experience with {catalog.provider} dialect.
+        You will be provided with the original SQL query, the relevant information related to the query and the query
+        execution result which includes any errors or unexpected results. Your task is to troubleshoot and fix SQL
+        queries that are incorrect, not allowed or have improper permissions.
+
+        The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
+
+        A query is allowed if:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Queries that have subqueries that are in where clasues, joins, group by, order by, etc.
+            - SQL Functions that are user defined. Inbuilt functions like SUM, AVG, COUNT, etc are allowed.
 
         The following kinds of queries are not not supported:
             - Queries with wildcard stars.
-            - Queries that don't have a table name for a column.
+            - Queries that don't have a table name for a column. All occurances of columns SHOULD be prefixed with table name to avoid ambiguity. Even columns in where clauses, functions, joins, withs, subqueries, group by and order by clauses follow this requirement
             - Invalid SQL Queries
-
-        User Permissions: A query is allowed if:
-            - The role has access to the table in the query
-            - The role has access to the columns in the query
-            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
-
-        NOTE: The most common issue is the absence of table names for columns in the query. Ensure that all columns are prefixed with the table name to avoid ambiguity. You will be provided information about the location of the column where the table name is absent
-
 
         ```sql
             <!-- Queries with wildcard stars are not allowed -->
@@ -326,15 +435,19 @@ class AgentTools(ABC):
         select name from employees where salary > 1000 <!--This Query is not allowed -->
         ```
 
-        Task Requirements:
-        1. Analyze the Problem: Carefully review the provided original SQL query. and the context, including the error message or details about the unexpected outcome.
-        2. Diagnose and Fix the problem by Regenerating a completely new query based on the context that tries to fix the issue.
+        Make sure the query is distint from the original query and serves the same purpose. Also make sure the query answers the 
+        user's intent
 
-        Guidelines:
-        1. Accuracy: Ensure that the corrected query adheres to best practices and produces the intended result.
-        2. Efficiency: Optimize the query where possible to improve performance without altering its functionality.
+        Schems for the tables are as follows:
+        ```json
+        {catalog.schema}
+        ```
         """
-        user_query = f"""Fix Query: {query}, Context: {state}, Errors: {errors}"""
+        user_query = f"""
+        ### Schema: {state}
+        ### Original Query: 
+        {query}
+        Errors: {errors}"""
 
         llm_response = await self.invoke_llm(
             HealedQuery,

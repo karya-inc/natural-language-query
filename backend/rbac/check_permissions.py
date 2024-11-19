@@ -73,7 +73,7 @@ class ErrorCode(Enum):
     SUBQUERY_ERROR = (
         "The subquery is either invalid, not supported or is not allowed for the role."
     )
-    UNSUPPORTED_SQL_QUERY = "The provided SQL query is not supported."
+    MISSING_TABLE_NAME_PREFIX = "The provided SQL query is not supported."
     TABLE_NOT_IN_PRIVILAGES = "The specified table is not found in the privileges map."
     ROLE_NO_TABLE_ACCESS = "The role does not have access to the specified table."
     ROLE_NO_COLUMN_ACCESS = "The role does not have access to the specified column."
@@ -341,7 +341,7 @@ def check_scope_privilages(
             if not is_valid_table_name_for_column:
                 return PrivilageCheckResult(
                     query_allowed=False,
-                    err_code=ErrorCode.UNSUPPORTED_SQL_QUERY,
+                    err_code=ErrorCode.MISSING_TABLE_NAME_PREFIX,
                     context={
                         "reason": "No table name for column in where clause",
                         "column": column.sql(),
@@ -573,7 +573,7 @@ def check_query_privilages(
         if column.table is None or column.table == "":
             return PrivilageCheckResult(
                 query_allowed=False,
-                err_code=ErrorCode.UNSUPPORTED_SQL_QUERY,
+                err_code=ErrorCode.MISSING_TABLE_NAME_PREFIX,
                 context={
                     "role": active_role,
                     "query": query,
