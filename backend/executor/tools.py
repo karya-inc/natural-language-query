@@ -7,7 +7,7 @@ from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 from sqlalchemy.orm import context
 
 from executor.errors import UnRecoverableError
-from executor.models import AggregatedQuery, HealedQuery, QueryType, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
+from executor.models import AggregatedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
@@ -49,18 +49,38 @@ class AgentTools(ABC):
         )
         return response.intent
 
-    async def analyze_query_type(
-        self, nlq: str
-    ) -> Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]:
+    async def analyze_query_type(self, nlq: str) -> QueryTypeLiteral:
         """
         Analyze the natural language query (NLQ) and return the type of query.
         Type can be Question Answering, or Report Generation
         """
         system_prompt = """
-        Your role is to analyze natural language queries and categorize them into specific buckets based on their context. The primary categories are:
-        1. Question Answering: This includes queries where the user is asking for explanations or insights related to data or information that has already been generated or discussed.
-        2. Report Generation: This encompasses queries where the user is requesting new data compilations, reports, or detailed data summaries that have not been previously generated.
-        Evaluate the user's input and correctly assign it to one of the defined buckets: Question Answering or Report Generation.
+        Your task is to categorize natural language queries into one of three types based on the user's intent:
+        1.  QUESTION_ANSWERING
+            When the user asks for a specific summary or analysis of existing data. This is only applicable required data is already available in the conversation history.
+
+            Examples:
+            "Summarize the marketing campaign performance."
+            "What are the key insights from the sales data?"
+            "Is the payout for the last quarter higher than the previous quarter?"
+
+        2.  REPORT_GENERATION
+            When the user requests new data or information that has not been previously generated or summarized. This typically requires querying a database.
+
+            Examples:
+            "What are the total sales by product category?"
+            "Show me the top 10 customers by revenue."
+            "Provide a detailed report on the marketing campaign's performance."
+
+        3.  REPORT_FEEDBACK
+            When the user gives feedback on an existing report, often asking for additional details or adjustments.
+
+            Examples:
+            "Add a breakdown of sales by region."
+            "Include the customer acquisition cost."
+            "The report is missing last year's sales comparison."
+
+        To help you decide the query type, consider the past queries of the user as well as the response provided by the assistant.
         """
         llm_response = await self.invoke_llm(
             QueryType,

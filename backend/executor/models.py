@@ -2,8 +2,9 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+QueryTypeLiteral = Literal["REPORT_GENERATION", "REPORT_FEEDBACK", "QUESTION_ANSWERING"]
 class QueryType(BaseModel):
-    query_type: Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]
+    query_type: QueryTypeLiteral
 
 
 class RelevantCatalog(BaseModel):
