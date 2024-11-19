@@ -167,7 +167,7 @@ class AgentTools(ABC):
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
-        User Permissions: A query is allowed if:
+        A query is allowed if:
             - Queries with wildcard stars.
             - Queries that don't have a table name for a column.
             - Queries that have subqueries that are in where clasues, joins, group by, order by, etc.
@@ -403,21 +403,27 @@ class AgentTools(ABC):
         Regenerate the query by trying to understand the intent of the query.
         Take reference from the previous SQL query and error message.
         """
-        system_prompt = """
-        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. Your task is to troubleshoot and fix SQL queries that are incorrect or have improper permissions. You will be provided with the original SQL query, the relevant information related to the query and the query execution result which includes any errors or unexpected results.
+
+        catalog = cast(Catalog, state.relevant_catalog)
+
+        system_prompt = f"""
+        You are a seasoned SQL Expert with over 10 years of experience with {catalog.provider} dialect.
+        You will be provided with the original SQL query, the relevant information related to the query and the query
+        execution result which includes any errors or unexpected results. Your task is to troubleshoot and fix SQL
+        queries that are incorrect, not allowed or have improper permissions.
+
+        The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
+
+        A query is allowed if:
+            - Queries with wildcard stars.
+            - Queries that don't have a table name for a column.
+            - Queries that have subqueries that are in where clasues, joins, group by, order by, etc.
+            - SQL Functions that are user defined. Inbuilt functions like SUM, AVG, COUNT, etc are allowed.
 
         The following kinds of queries are not not supported:
             - Queries with wildcard stars.
-            - Queries that don't have a table name for a column.
+            - Queries that don't have a table name for a column. All occurances of columns SHOULD be prefixed with table name to avoid ambiguity. Even columns in where clauses, functions, joins, withs, subqueries, group by and order by clauses follow this requirement
             - Invalid SQL Queries
-
-        User Permissions: A query is allowed if:
-            - The role has access to the table in the query
-            - The role has access to the columns in the query
-            - The row level restrictions are satisfied for the query with where clauses on the required column scopes
-
-        NOTE: The most common issue is the absence of table names for columns in the query. Ensure that all columns are prefixed with the table name to avoid ambiguity. You will be provided information about the location of the column where the table name is absent
-
 
         ```sql
             <!-- Queries with wildcard stars are not allowed -->
@@ -429,15 +435,19 @@ class AgentTools(ABC):
         select name from employees where salary > 1000 <!--This Query is not allowed -->
         ```
 
-        Task Requirements:
-        1. Analyze the Problem: Carefully review the provided original SQL query. and the context, including the error message or details about the unexpected outcome.
-        2. Diagnose and Fix the problem by Regenerating a completely new query based on the context that tries to fix the issue.
+        Make sure the query is distint from the original query and serves the same purpose. Also make sure the query answers the 
+        user's intent
 
-        Guidelines:
-        1. Accuracy: Ensure that the corrected query adheres to best practices and produces the intended result.
-        2. Efficiency: Optimize the query where possible to improve performance without altering its functionality.
+        Schems for the tables are as follows:
+        ```json
+        {catalog.schema}
+        ```
         """
-        user_query = f"""Fix Query: {query}, Context: {state}, Errors: {errors}"""
+        user_query = f"""
+        ### Schema: {state}
+        ### Original Query: 
+        {query}
+        Errors: {errors}"""
 
         llm_response = await self.invoke_llm(
             HealedQuery,
