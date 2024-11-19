@@ -44,6 +44,8 @@ class AzureAIAgentTools(AgentTools):
         )
         parsed_content = response.choices[0].message.parsed
 
+        logger.info(f"Generated Response: {response.choices[0].message.content}")
+
         if parsed_content:
             return parsed_content
 
