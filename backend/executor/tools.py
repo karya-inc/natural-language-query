@@ -197,16 +197,11 @@ class AgentTools(ABC):
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
-        A query is allowed if:
+        The following types of queries are not supported:
             - Queries with wildcard stars.
             - Queries that don't have a table name for a column.
             - Queries that have subqueries that are in where clasues, joins, group by, order by, etc.
             - SQL Functions that are user defined. Inbuilt functions like SUM, AVG, COUNT, etc are allowed.
-
-        The following kinds of queries are not not supported:
-            - Queries with wildcard stars.
-            - Queries that don't have a table name for a column. All occurances of columns SHOULD be prefixed with table name to avoid ambiguity. Even columns in where clauses, functions, joins, withs, subqueries, group by and order by clauses follow this requirement
-            - Invalid SQL Queries
 
         ```sql
             <!-- Queries with wildcard stars are not allowed -->
