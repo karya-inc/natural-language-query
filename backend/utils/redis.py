@@ -59,10 +59,10 @@ def get_or_execute_query_result(
 
 def get_cached_categorical_values(catalog: Catalog, table: str) -> Optional[set]:
     key = get_redis_key("categorical", catalog.name, table)
-    cached_result = str(redis_client.get(key))
+    cached_result = redis_client.get(key)
 
     if cached_result:
-        return set(json.loads(cached_result))
+        return json.loads(str(cached_result))
 
     return None
 
@@ -72,6 +72,6 @@ def get_cached_sample_rows(catalog: Catalog, table: str) -> Optional[set]:
     cached_result = str(redis_client.get(key))
 
     if cached_result:
-        return set(json.loads(cached_result))
+        return json.loads(cached_result)
 
     return None

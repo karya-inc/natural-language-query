@@ -5,13 +5,16 @@ from redis import Connection
 from executor.catalog import Catalog
 from sqlalchemy import text, Connection
 from executor.catalog import Catalog
+from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from utils.query_pipeline import get_engine
 from utils.redis import get_redis_key, redis_client
 from utils.rows_to_json import convert_rows_to_json
 
 CACHE_INTERVAL_SEC = int(environ.get("CACHE_INTERVAL_SEC", 60))
-DB_SEED_LIMIT = int(environ.get("DB_SEED_LIMIT", 5))
+DB_SEED_LIMIT = int(environ.get("DB_SEED_LIMIT", 2))
+
+logger = get_logger("[CRON - REDIS CACHE]")
 
 
 def cache_sample_table_rows(
@@ -69,16 +72,23 @@ def seed_sample_data_redis() -> None:
             for table_name, table_info in catalog.schema.items():
                 cache_sample_table_rows(connection, catalog, table_name)
 
-                if table_info.get("categorical_columns", False):
+                if table_info.get("is_categorical", False):
+                    columns_to_cache = table_info.get("columns_to_cache", [])
+                    if len(columns_to_cache) == 0:
+                        logger.warning(
+                            f"No categorical columns to cache for {table_name} even though is_categorical is set to true"
+                        )
+                        continue
+
+                    logger.info(f"Caching categorical columns for {table_name}")
                     cache_categorical_tables(
-                        connection,
-                        catalog,
-                        table_name,
-                        table_info["categorical_columns"],
+                        connection, catalog, table_name, columns_to_cache
                     )
 
 
 if __name__ == "__main__":
     while True:
+        logger.info("Seeding sample data in redis")
         seed_sample_data_redis()
+        logger.info("Sample data seeded in redis. Sleeping...")
         time.sleep(CACHE_INTERVAL_SEC)

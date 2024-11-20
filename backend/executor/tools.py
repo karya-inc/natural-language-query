@@ -10,8 +10,12 @@ from executor.errors import UnRecoverableError
 from executor.models import AggregatedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
+from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
+from utils.table_to_markdown import get_table_markdown
+
+logger = get_logger("[AGENTIC TOOLS]")
 
 
 class AgentTools(ABC):
@@ -185,15 +189,15 @@ class AgentTools(ABC):
 
         return llm_response.tables
 
-    async def generate_queries(
-        self, nlq: str, relevant_tables: dict[str, Any], provider: str
-    ) -> List[str]:
+    async def generate_queries(self, state: AgentState) -> List[str]:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
 
+        catalog = cast(Catalog, state.relevant_catalog)
+
         system_prompt = f"""
-        You are a seasoned SQL Expert with over 10 years of experience with {provider} dialect.
+        You are a seasoned SQL Expert with over 10 years of experience with {catalog.provider} dialect.
         Your task is to create SQL queries based on the given user intent, using metadata from a provided database catalog.
         The catalog includes database descriptions, table names, column names, and other relevant metadata to guide your query generation.
 
@@ -213,20 +217,59 @@ class AgentTools(ABC):
         select name from employees where salary > 1000 <!--This Query is not allowed -->
         ```
 
-        Guidelines:
+        ## Guidelines:
         1. Leverage the Catalog: Use the metadata to align your queries with the correct database, tables, and columns.
         2. Output: Create multiple simple queries to address the user intent comprehensively and efficiently.
         3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
+
+        ##  Schema for Relevant Tables:
+        {state.relevant_tables}
         """
-        nlq_relevant_tables = f"{nlq} Relevant Tables: {relevant_tables}"
+
+        if len(state.categorical_tables) > 0:
+            system_prompt += f"""
+            ## Categorical Tables:
+            The following tables contains all possible categorical values. These can be used in the queries to filter the data based on specific categories or values.
+            """
+
+            for table_name, data in state.categorical_tables.items():
+                if len(data) == 0:
+                    continue
+
+                system_prompt += f"""
+                ### {table_name}:
+                {get_table_markdown(data)}
+
+                """
+
+        if len(state.table_sample_rows) > 0:
+            system_prompt += f"""
+            ## Sample Rows from the relevant tables:
+            The following JSON contains sample rows from the relevant tables. These can be used to understand the format of the data, especially with columns that contain JSONB.
+            """
+
+            for table_name, data in state.table_sample_rows.items():
+                if len(data) == 0:
+                    continue
+
+                system_prompt += f"""
+                ### {table_name}:
+                {get_table_markdown(data)}
+
+                """
+
+        print(system_prompt)
+
+        user_prompt = f"""{state.intent}"""
         llm_response = await self.invoke_llm(
             GeneratedQueryList,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq_relevant_tables},
+                {"role": "user", "content": user_prompt},
             ],
         )
+        logger.info(f"Generated Queries: {llm_response.queries}")
         return llm_response.queries
 
     async def generate_aggregate_query(

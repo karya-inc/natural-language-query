@@ -14,7 +14,7 @@ import time
 import sqlglot
 import sqlglot.expressions as exp
 
-from utils.redis import get_cached_categorical_values, get_cached_sample_rows, get_cached_samples
+from utils.redis import get_cached_categorical_values, get_cached_sample_rows, get_cached_sample_rows
 
 TURN_LIMIT = 5
 MAX_HEALING_ATTEMPTS = 5
@@ -138,16 +138,16 @@ async def agentic_loop(
                     if table_name in relevant_table_names:
                         relevant_tables[table_name] = table_info
 
-                        if table_info.get("is_categorical"):
-                            categorical_info = get_cached_categorical_values(
-                                state.relevant_catalog, table_name
-                            )
-                            categorical_tables[table_name] = categorical_info
-
                         sample_rows = get_cached_sample_rows(
                             state.relevant_catalog, table_name
                         )
                         table_sample_rows[table_name] = sample_rows
+
+                    if table_info.get("is_categorical"):
+                        categorical_info = get_cached_categorical_values(
+                            state.relevant_catalog, table_name
+                        )
+                        categorical_tables[table_name] = categorical_info
 
                 state.relevant_tables = relevant_tables
                 state.categorical_tables = categorical_tables
@@ -156,9 +156,7 @@ async def agentic_loop(
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)
                 # Generate queries
-                state.queries = await tools.generate_queries(
-                    nlq, state.relevant_tables, state.relevant_catalog.provider
-                )
+                state.queries = await tools.generate_queries(state)
                 if len(state.queries) == 0:
                     raise Exception("Failed to generate queries")
 
