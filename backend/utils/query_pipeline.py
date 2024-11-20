@@ -27,6 +27,23 @@ class QueryExecutionFailureResult:
 QueryExecutionResult = Union[QueryExecutionSuccessResult, QueryExecutionFailureResult]
 
 
+def get_engine(catalog: Catalog) -> Engine:
+    if catalog.provider == "postgres":
+        host = quote(catalog.connection_params["host"])
+        dbname = quote(catalog.connection_params["dbname"])
+        user = quote(catalog.connection_params["user"])
+        password = quote(catalog.connection_params["password"])
+        port = catalog.connection_params.get("port", 5432)
+
+        # Setup connection to postgres
+        engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{dbname}")
+
+        return engine
+
+    else:
+        raise NotImplementedError("Only postgres is supported at the moment")
+
+
 class QueryExecutionPipeline:
     catalog: Catalog
     engine: Engine
@@ -42,22 +59,7 @@ class QueryExecutionPipeline:
         self.catalog = catalog
         self.scopes = scopes
         self.active_role = active_role
-
-        if self.catalog.provider == "postgres":
-            host = quote(self.catalog.connection_params["host"])
-            dbname = quote(self.catalog.connection_params["dbname"])
-            user = quote(self.catalog.connection_params["user"])
-            password = quote(self.catalog.connection_params["password"])
-            port = self.catalog.connection_params.get("port", 5432)
-
-            # Setup connection to postgres
-            engine = create_engine(
-                f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
-            )
-            self.engine = engine
-
-        else:
-            raise NotImplementedError("Only postgres is supported at the moment")
+        self.engine = get_engine(catalog)
 
     def execute(self, query: str) -> QueryExecutionResult:
         table_privilages = parsed_catalogs.database_privileges[self.catalog.name]
