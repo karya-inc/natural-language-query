@@ -13,7 +13,7 @@ class User(Base):
     """User model representing user information"""
     __tablename__ = 'users'
 
-    user_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()
@@ -28,7 +28,7 @@ class Session(Base):
     __tablename__ = 'sessions'
 
     session_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.user_id'))
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.user_id'))
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()
@@ -82,7 +82,7 @@ class SavedQuery(Base):
     __tablename__ = 'saved_queries'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.user_id'))
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.user_id'))
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey('sql_queries.sqid'))
 
     created_at: Mapped[datetime] = mapped_column(

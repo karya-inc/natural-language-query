@@ -1,8 +1,8 @@
 """created initial tables
 
-Revision ID: ef0ad616ecf0
+Revision ID: c51f9a9bfe4a
 Revises: 
-Create Date: 2024-11-19 22:32:42.977808
+Create Date: 2024-11-20 13:59:59.947757
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ef0ad616ecf0'
+revision: str = 'c51f9a9bfe4a'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,13 +27,13 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('sqid')
     )
     op.create_table('users',
-    sa.Column('user_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('saved_queries',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('sqid', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['sqid'], ['sql_queries.sqid'], ),
@@ -42,7 +42,7 @@ def upgrade() -> None:
     )
     op.create_table('sessions',
     sa.Column('session_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('last_updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
