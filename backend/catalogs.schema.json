@@ -77,6 +77,15 @@
                     "description": {
                       "type": "string"
                     },
+                    "is_categorical": {
+                      "type": "boolean"
+                    },
+                    "columns_to_cache": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "columns": {
                       "type": "array",
                       "description": "All the columns of the table",
