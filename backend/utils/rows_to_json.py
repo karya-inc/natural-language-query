@@ -10,7 +10,7 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
     for column in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[column]):
             try:
-                df[column] = df[column].dt.isoformat()
+                df[column] = df[column].astype(str)
             except Exception as e:
                 print(f"Error converting column {column} to isoformat: {e}")
 
