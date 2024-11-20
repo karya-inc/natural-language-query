@@ -119,7 +119,7 @@ async def agentic_loop(
                     if catalog.name == relevant_catalog_name
                 )
 
-            state.scopes = config.user_info.scopes[state.relevant_catalog.name]
+            state.scopes = config.user_info.scopes.get(state.relevant_catalog.name, [])
 
             if not state.relevant_tables:
                 # Get the relevant table names
