@@ -8,6 +8,8 @@ from rbac.check_permissions import ColumnScope, check_query_privilages
 from urllib.parse import quote
 import pandas as pd
 
+from utils.rows_to_json import convert_rows_to_serializable
+
 
 logger = get_logger("[QUERY_PIPELINE]")
 
@@ -89,9 +91,9 @@ class QueryExecutionPipeline:
             with self.engine.connect() as conn:
                 stmt = text(query)
                 result = conn.execute(stmt).fetchall()
-                result_df = pd.DataFrame(result)
-                print(result_df.to_dict(orient="records"))
-                return QueryExecutionSuccessResult(result_df.to_dict(orient="records"))
+                result_serializable = convert_rows_to_serializable(result)
+                print(result_serializable)
+                return QueryExecutionSuccessResult(result_serializable)
 
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")
