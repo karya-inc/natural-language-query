@@ -14,6 +14,8 @@ import time
 import sqlglot
 import sqlglot.expressions as exp
 
+from utils.redis import get_cached_categorical_values, get_cached_sample_rows, get_cached_samples
+
 TURN_LIMIT = 5
 MAX_HEALING_ATTEMPTS = 5
 FAILURE_RETRY_DELAY = 0.2
@@ -127,12 +129,29 @@ async def agentic_loop(
                 relevant_table_names = await tools.get_relevant_tables(
                     nlq, state.relevant_catalog
                 )
+
                 relevant_tables = {}
+                categorical_tables = {}
+                table_sample_rows = {}
+
                 for table_name, table_info in state.relevant_catalog.schema.items():
                     if table_name in relevant_table_names:
                         relevant_tables[table_name] = table_info
 
+                        if table_info.get("is_categorical"):
+                            categorical_info = get_cached_categorical_values(
+                                state.relevant_catalog, table_name
+                            )
+                            categorical_tables[table_name] = categorical_info
+
+                        sample_rows = get_cached_sample_rows(
+                            state.relevant_catalog, table_name
+                        )
+                        table_sample_rows[table_name] = sample_rows
+
                 state.relevant_tables = relevant_tables
+                state.categorical_tables = categorical_tables
+                state.table_sample_rows = table_sample_rows
 
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)

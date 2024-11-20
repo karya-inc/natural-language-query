@@ -67,7 +67,7 @@ def get_cached_categorical_values(catalog: Catalog, table: str) -> Optional[set]
     return None
 
 
-def get_cached_samples(catalog: Catalog, table: str) -> Optional[set]:
+def get_cached_sample_rows(catalog: Catalog, table: str) -> Optional[set]:
     key = get_redis_key("samples", catalog.name, table)
     cached_result = str(redis_client.get(key))
 

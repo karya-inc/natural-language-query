@@ -18,6 +18,8 @@ class AgentState:
     scopes: list[ColumnScope] = field(default_factory=list)
     relevant_catalog: Optional[Catalog] = field(default=None)
     relevant_tables: Optional[dict[str, Any]] = field(default=None)
+    categorical_tables: dict[str, QueryResults] = field(default_factory=dict)
+    table_sample_rows: dict[str, QueryResults] = field(default_factory=dict)
     queries: list[str] = field(default_factory=list)
     intermediate_results: dict[str, QueryResults] = field(default_factory=dict)
     aggregate_query: Optional[str] = field(default=None)
