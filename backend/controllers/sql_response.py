@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_user_fav_query, get_saved_queries
-from db.models import SavedQuery
+from db.models import SavedQuery, UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -31,14 +31,14 @@ class NLQResponseEvent:
 
 
 async def nlq_sse_wrapper(
-    user_info: AuthenticatedUserInfo, query: str, session_id: str
+    user_info: AuthenticatedUserInfo, query: str, session: UserSession
 ) -> AsyncIterator[str]:
-    async for event in do_nlq(user_info, query, session_id):
+    async for event in do_nlq(user_info, query, session):
         yield json.dumps(event.__dict__)
 
 
 async def do_nlq(
-    user_info: AuthenticatedUserInfo, query: str, session_id: str
+    user_info: AuthenticatedUserInfo, query: str, session: UserSession
 ) -> AsyncIterator[NLQUpdateEvent | NLQResponseEvent]:
     # Log info
     logger.info(f"Generating sql response for query : {query}")
@@ -92,11 +92,17 @@ async def do_nlq(
     return
 
 
-def chat_history(db_session: Session, session_id: UUID, user_id: str)-> List[ChatHistoryResponse]:
+def chat_history(
+    db_session: Session, session_id: UUID, user_id: str
+) -> List[ChatHistoryResponse]:
     # Log info
-    logger.info(f"History for session_id: {session_id} is requested! for user {user_id}")
+    logger.info(
+        f"History for session_id: {session_id} is requested! for user {user_id}"
+    )
     # check if session exist of the user
-    session = get_session_for_user(db_session=db_session, user_id=user_id, session_id=session_id)
+    session = get_session_for_user(
+        db_session=db_session, user_id=user_id, session_id=session_id
+    )
     if not session:
         return []
     logger.info(f"History for user_id: {user_id} is requested!")
@@ -111,8 +117,11 @@ def get_session_history(user_id: str, db: Session) -> List[UserSessionsResponse]
 
 def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
     # Log info
-    logger.info(f"Saving fav query of user : {user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}")
+    logger.info(
+        f"Saving fav query of user : {user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}"
+    )
     return save_user_fav_query(db, user_id, turn_id, sql_query_id)
+
 
 def get_fav_queries_user(db: Session, user_id: str) -> List[SavedQueriesResponse]:
     # Log info

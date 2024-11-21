@@ -1,19 +1,21 @@
 from dotenv import load_dotenv
 
+from db.models import UserSession
+
 load_dotenv()
 
 import os
 import uuid
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends
+from fastapi import Body, FastAPI, HTTPException, Depends, Header
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_fav_queries_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, create_session, get_session_for_user
 from db.config import Config
 from db.session import Database
 from sqlalchemy.orm import Session
@@ -100,17 +102,24 @@ async def stream_sql_query_responses(
     # Dependency check to validate user
 
     # If no session_id is provided, generate a new UUID for the session
+    current_session: Optional[UserSession] = None
     if not chat_request.session_id:
-        session_id = str(uuid.uuid4())
-        logger.info(f"Generated new session_id: {session_id}")
+        current_session = create_session(db, user_info.user_id)
     else:
+        current_session = get_session_for_user(
+            db, user_info.user_id, UUID(chat_request.session_id)
+        )
         session_id = chat_request.session_id
 
+    if not current_session:
+        raise HTTPException(status_code=400, detail="Session not found for the user.")
+
+    session_id = str(current_session.session_id)
     try:
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
-            nlq_sse_wrapper(user_info, chat_request.query, session_id),
+            nlq_sse_wrapper(user_info, chat_request.query, current_session),
             media_type="text/event-stream",
         )
 
@@ -183,6 +192,7 @@ async def get_session_history_for_user(
         )
         raise HTTPException(status_code=500, detail="Failed to get session history.")
 
+
 @app.get("/fetch_favorite_queries")
 async def get_favorite_queries(
     db: Annotated[Session, Depends(get_db)],
@@ -209,14 +219,18 @@ async def get_favorite_queries(
         logger.error(
             f"Error while returning favorite queries for user : {user_info.user_id}. Error: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="Failed to return favorite queries.")
+        raise HTTPException(
+            status_code=500, detail="Failed to return favorite queries."
+        )
+
 
 @app.post("/save_favorite_query/{turn_id}/{sql_query_id}")
 async def save_favorite_query(
     turn_id: int,
     sql_query_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]):
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
     """
     Save favorite query for the user
 
@@ -229,7 +243,9 @@ async def save_favorite_query(
     Returns:
         None
     """
-    logger.info(f"Saving fav query of user : {user_info.user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}")
+    logger.info(
+        f"Saving fav query of user : {user_info.user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}"
+    )
     try:
         response = save_fav(db, user_info.user_id, turn_id, sql_query_id)
         logger.info("Favorite query saved successfully!!")
