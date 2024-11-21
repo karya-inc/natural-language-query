@@ -93,6 +93,21 @@ def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
         db_session.rollback()
         return None
 
+# check if session exists for that user
+def get_session_for_user(db_session: Session, user_id: str, session_id: UUID) -> Optional[UserSession]:
+    """
+    Check if session id is for the user; if not, return None
+    """
+    try:
+        session = db_session.query(UserSession).filter_by(user_id=user_id, session_id=session_id).first()
+        if not session:
+            logger.warning(f"Session not found for user: {user_id}, session_id: {session_id}")
+            return None
+        return session
+    except Exception as e:
+        logger.error(f"Error getting or creating session: {e}")
+        db_session.rollback()
+        return None
 
 # Get data from database functions
 

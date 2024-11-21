@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from db.db_queries import ChatHistoryResponse, get_chat_history
+from db.db_queries import ChatHistoryResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -91,17 +91,18 @@ async def do_nlq(
     return
 
 
-def chat_history(user_id: str, session_id:int ,db: Session) -> List[ChatHistoryResponse]:
+def chat_history(db_session: Session, session_id: UUID, user_id: str)-> List[ChatHistoryResponse]:
     # Log info
+    logger.info(f"History for session_id: {session_id} is requested! for user {user_id}")
+    # check if session exist of the user
+    session = get_session_for_user(db_session=db_session, user_id=user_id, session_id=session_id)
+    if not session:
+        return []
     logger.info(f"History for user_id: {user_id} is requested!")
-    return get_chat_history(user_id, db)
+    return get_chat_history(db_session, session_id)
 
 
-def get_session_history(
-    session_id: UUID, user_id: str, db: Session
-) -> List[ChatSessionHistory]:
+def get_session_history(session_id: UUID, user_id: str, db: Session) -> List[UserSessionsResponse]:
     # Log info
-    logger.info(
-        f"History for session_id: {session_id} is requested! for user {user_id}"
-    )
-    return get_user_session_history(session_id, user_id, db)
+    logger.info(f"History for session_id: {session_id} is requested! for user {user_id}")
+    return get_history_sessions(db_session=db, user_id=user_id)
