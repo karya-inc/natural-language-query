@@ -20,10 +20,10 @@ class User(Base):
     )
 
     # Relationships
-    sessions: Mapped[List['Session']] = relationship('Session', back_populates='user')
+    sessions: Mapped[List['UserSession']] = relationship('UserSession', back_populates='user')
     saved_queries: Mapped[List['SavedQuery']] = relationship('SavedQuery', back_populates='user')
 
-class Session(Base):
+class UserSession(Base):
     """Session model representing user sessions"""
     __tablename__ = 'sessions'
 
@@ -59,8 +59,9 @@ class Turn(Base):
     )
 
     # Relationships
-    session: Mapped['Session'] = relationship('Session', back_populates='turns')
-    sql_query: Mapped['SqlQuery'] = relationship('SqlQuery')
+    saved_queries: Mapped[List['SavedQuery']] = relationship('SavedQuery', back_populates='turns')
+    session: Mapped['UserSession'] = relationship('UserSession', back_populates='turns')
+    sql_query: Mapped['SqlQuery'] = relationship('SqlQuery', back_populates='turns')
 
 class SqlQuery(Base):
     """SQL Query model for storing generated SQL queries"""
@@ -82,8 +83,10 @@ class SavedQuery(Base):
     __tablename__ = 'saved_queries'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey('users.user_id'))
+
+    turn_id: Mapped[int] = mapped_column(ForeignKey('turns.turn_id'))
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey('sql_queries.sqid'))
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.user_id'))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -91,5 +94,6 @@ class SavedQuery(Base):
     )
 
     # Relationships
+    turns: Mapped['Turn'] = relationship('Turn', back_populates='saved_queries')
     user: Mapped['User'] = relationship('User', back_populates='saved_queries')
     sql_query: Mapped['SqlQuery'] = relationship('SqlQuery')
