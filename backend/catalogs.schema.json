@@ -103,6 +103,9 @@
                           },
                           "constraints": {
                             "type": "string"
+                          },
+                          "json_schema": {
+                            "type": "object"
                           }
                         },
                         "required": [
