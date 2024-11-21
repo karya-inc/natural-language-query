@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from db.models import User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from uuid import UUID
 from typing import List, Optional
 from utils.logger import get_logger
@@ -39,8 +39,19 @@ def get_or_create_user(db_session: Session, user_id: str) -> Optional[User]:
         db_session.rollback()
         return None
 
-# Saving to database functions
+def create_session(db_session: Session, user_id: str) -> Optional[UserSession]:
+    """Create a new session for a user."""
+    try:
+        session = UserSession(user_id=user_id)
+        db_session.add(session)
+        db_session.commit()
+        return session
+    except Exception as e:
+        logger.error(f"Error creating session: {e}")
+        db_session.rollback()
+        return None
 
+# Saving to database functions
 def store_turn(db_session: Session, session_id: UUID, nlq: str, database_used: str, sql_query_id: UUID) -> Optional[Turn]:
     """
     Stores a new turn for a session.
