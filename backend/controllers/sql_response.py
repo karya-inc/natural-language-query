@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from db.db_queries import ChatHistoryResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_user_fav_query, get_saved_queries
+from db.models import SavedQuery
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -102,7 +103,18 @@ def chat_history(db_session: Session, session_id: UUID, user_id: str)-> List[Cha
     return get_chat_history(db_session, session_id)
 
 
-def get_session_history(session_id: UUID, user_id: str, db: Session) -> List[UserSessionsResponse]:
+def get_session_history(user_id: str, db: Session) -> List[UserSessionsResponse]:
     # Log info
-    logger.info(f"History for session_id: {session_id} is requested! for user {user_id}")
+    logger.info(f"History requested for user {user_id}")
     return get_history_sessions(db_session=db, user_id=user_id)
+
+
+def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
+    # Log info
+    logger.info(f"Saving fav query of user : {user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}")
+    return save_user_fav_query(db, user_id, turn_id, sql_query_id)
+
+def get_fav_queries_user(db: Session, user_id: str) -> List[SavedQueriesResponse]:
+    # Log info
+    logger.info(f"Get saved queries for user: {user_id} is requested!")
+    return get_saved_queries(db, user_id)

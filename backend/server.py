@@ -11,9 +11,9 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_session_history, nlq_sse_wrapper
+from controllers.sql_response import chat_history, get_fav_queries_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistory, ChatSessionHistory
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse
 from db.config import Config
 from db.session import Database
 from sqlalchemy.orm import Session
@@ -130,7 +130,7 @@ async def stream_sql_query_responses(
 async def get_chat_history(
     db: Annotated[Session, Depends(get_db)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
-) -> List[ChatHistory]:
+) -> List[UserSessionsResponse]:
     """
     Get chat history for the user
 
@@ -143,7 +143,7 @@ async def get_chat_history(
         logger.info(f"User chat history for user_id: {user_info.user_id}")
 
         # Create a StreamingResponse for the chat history generator
-        response = chat_history(user_info.user_id, db)
+        response = get_session_history(db=db, user_id=user_info.user_id)
 
         logger.info("Chat history for user return successfully!!")
         return response
@@ -160,7 +160,7 @@ async def get_session_history_for_user(
     session_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
-) -> List[ChatSessionHistory]:
+) -> List[ChatHistoryResponse]:
     """
     Get session id from query params and fetch the session history for the user
 
@@ -174,7 +174,7 @@ async def get_session_history_for_user(
     """
     logger.info(f"Session history for session_id: {session_id}")
     try:
-        response = get_session_history(session_id, user_info.user_id, db)
+        response = chat_history(db, session_id, user_info.user_id)
         logger.info("Session history for session_id return successfully!!")
         return response
     except Exception as e:
@@ -182,3 +182,60 @@ async def get_session_history_for_user(
             f"Error while retrieving session history for session_id: {session_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get session history.")
+
+@app.get("/fetch_favorite_queries")
+async def get_favorite_queries(
+    db: Annotated[Session, Depends(get_db)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> List[SavedQueriesResponse]:
+    """
+    Get favorite queries for the user
+
+    Returns:
+       User favorite queries
+    """
+
+    try:
+        # Log the start of chat history streaming
+        logger.info(f"User chat history for user_id: {user_info.user_id}")
+
+        # Create a StreamingResponse for the chat history generator
+        response = get_fav_queries_user(db=db, user_id=user_info.user_id)
+
+        logger.info("Return user favorite queries successfully!!")
+        return response
+
+    except Exception as e:
+        logger.error(
+            f"Error while returning favorite queries for user : {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to return favorite queries.")
+
+@app.post("/save_favorite_query/{turn_id}/{sql_query_id}")
+async def save_favorite_query(
+    turn_id: int,
+    sql_query_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]):
+    """
+    Save favorite query for the user
+
+    Args:
+        turn_id (int): Turn ID
+        sql_query_id (UUID): SQL Query ID
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        None
+    """
+    logger.info(f"Saving fav query of user : {user_info.user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}")
+    try:
+        response = save_fav(db, user_info.user_id, turn_id, sql_query_id)
+        logger.info("Favorite query saved successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while saving favorite query for user : {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to save favorite query.")

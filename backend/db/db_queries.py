@@ -79,6 +79,7 @@ def save_user_fav_query(db_session: Session, user_id: str, turn_id: int, sql_que
         db_session.rollback()
         return None
 
+# Save the generated SQL query by AI agent
 def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
     """
     Save a generated SQL query.
