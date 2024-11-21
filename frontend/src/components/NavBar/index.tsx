@@ -4,8 +4,12 @@ import {
   VStack,
   Text,
   HStack,
-  Heading,
   Icon,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
 } from "@chakra-ui/react";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
@@ -27,6 +31,7 @@ const NavBar = ({
     history,
     // getHistory
   } = useHistory();
+
   const chatHistoryStyles = {
     ":hover": {
       color: "gray.400",
@@ -75,32 +80,31 @@ const NavBar = ({
           onClick={() => setNavOpen(!navOpen)}
         />
       </HStack>
-      <VStack
-        align="start"
-        gap={4}
-        flex={1}
-        color="gray.500"
+
+      <Accordion
+        defaultIndex={[0]}
+        allowMultiple
+        allowToggle
         w="full"
-        fontWeight="normal"
-        overflow="auto"
+        color="gray.500"
+        flex={1}
+        border={"none"}
+        pr={4}
       >
-        <Heading fontSize="sm" color="gray.400">
-          Chat History
-        </Heading>
-        <VStack
-          gap={4}
-          align="flex-start"
-          w="full"
-          h="full"
-          overflow="auto"
-          pr={4}
-        >
-          {history &&
-            history.map((chat) => {
-              return (
+        <AccordionItem border={"none"}>
+          <h2>
+            <AccordionButton>
+              <Box flex="1" textAlign="left" fontWeight="bold">
+                Chat History
+              </Box>
+              <AccordionIcon />
+            </AccordionButton>
+          </h2>
+          <AccordionPanel display="flex" flexDirection="column" gap={2}>
+            {history && history.length > 0 ? (
+              history.map((chat) => (
                 <Text
                   key={chat.session_id}
-                  fontSize="lg"
                   sx={chatHistoryStyles}
                   onClick={() =>
                     handleHistoryClick(chat.session_id, chat.user_query)
@@ -108,10 +112,28 @@ const NavBar = ({
                 >
                   {chat.user_query}
                 </Text>
-              );
-            })}
-        </VStack>
-      </VStack>
+              ))
+            ) : (
+              <Text fontSize="sm">No chat history available.</Text>
+            )}
+          </AccordionPanel>
+        </AccordionItem>
+
+        <AccordionItem border={"none"}>
+          <h2>
+            <AccordionButton>
+              <Box flex="1" textAlign="left" fontWeight="bold">
+                Saved Queries
+              </Box>
+              <AccordionIcon />
+            </AccordionButton>
+          </h2>
+          <AccordionPanel>
+            <Text fontSize="sm">No saved queries yet.</Text>
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
+
       <VStack
         color="gray.500"
         align="flex-start"
