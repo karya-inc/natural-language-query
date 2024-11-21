@@ -10,10 +10,10 @@
     "previe../w": "vite preview"
   },
   "dependencies": {
-    "@chakra-ui/react": "^2.9.3",
+    "@chakra-ui/react": "^2.10.4",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
-    "framer-motion": "^11.10.0",
+    "framer-motion": "^11.11.17",
     "github-markdown-css": "^5.7.0",
     "papaparse": "^5.4.1",
     "react": "^18.3.1",

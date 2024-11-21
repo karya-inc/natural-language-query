@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import useChat from "./useChat";
 import {
   VStack,
   HStack,
-  Box,
   InputGroup,
   Input,
   InputRightElement,
@@ -14,18 +13,19 @@ import {
 } from "@chakra-ui/react";
 import { GoSidebarCollapse } from "react-icons/go";
 import { HiArrowUp } from "react-icons/hi";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import BotGreeting from "./BotGreeting";
 import CFImage from "../../components/CloudflareImage";
-import { downloadObjectAs } from "./utils";
 import { BACKEND_URL } from "../../config";
+import MemoizedMessage from "./MemoizedMessage";
 
 export type Message = {
   id: number;
   message: string;
   role: "user" | "bot";
   timestamp: number;
+  kind?: "UPDATE" | "TEXT" | "TABLE";
+  type?: "text" | "table" | "error";
+  query?: string;
   components?: MessageComponent[];
   newMessage?: boolean;
   session_id?: string;
@@ -40,7 +40,7 @@ export type MessageComponent = {
 export type ChatBotProps = {
   messages: Message[];
   setMessages: (
-    arg: Message[] | ((prevMessages: Message[]) => Message[]),
+    arg: Message[] | ((prevMessages: Message[]) => Message[])
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -50,19 +50,20 @@ export type ChatBotProps = {
 
 export type NLQUpdateEvent = (
   | {
-    kind: "UPDATE";
-    status: string;
-  }
+      kind: "UPDATE";
+      status: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TEXT";
-    payload: string;
-  }
+      kind: "RESPONSE";
+      type: "TEXT";
+      payload: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TABLE";
-    payload: Record<string, string>[];
-  }
+      kind: "RESPONSE";
+      type: "TABLE";
+      payload: Record<string, string>[];
+      query: string;
+    }
 ) & {
   session_id: string;
 };
@@ -77,7 +78,6 @@ export function ChatBot({
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { postChat } = useChat({ input, sessionId });
@@ -94,39 +94,8 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    [],
+    []
   );
-
-  const handleDownload = (report: Record<string, string>[]) => {
-    const today = new Date();
-    const date = today.getDate();
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
-
-    downloadObjectAs(
-      report,
-      `Table-Response-${year}-${month}-${date}.csv`,
-      "csv",
-    );
-  };
-
-  function setLoaderMessage(status: string) {
-    const botMessage: Message = {
-      id: Math.random(),
-      message: status,
-      role: "bot",
-      timestamp: Date.now(),
-    };
-
-    setMessages((prevMessages: Message[]) => {
-      console.log(prevMessages);
-      if (prevMessages.at(-1)?.role === "user") {
-        return [...prevMessages, botMessage];
-      } else {
-        return [...prevMessages.slice(0, -1), botMessage];
-      }
-    });
-  }
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -136,18 +105,24 @@ export function ChatBot({
       const newMessage: Message = {
         id: Math.random(),
         message: input,
+        type: "text",
         role: "user",
         timestamp: Date.now(),
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
       setInput("");
-      setError("");
       setIsFetching(true);
       setConversationStarted(true);
 
+      const botMessage: Message = {
+        id: Math.random(),
+        message: "",
+        role: "bot",
+        timestamp: Date.now(),
+      };
+
       try {
-        let collectedPayload = "";
         let updatedSessionId = sessionId;
 
         const reader = await postChat(`${BACKEND_URL}/chat`);
@@ -164,19 +139,37 @@ export function ChatBot({
             const chunk = decoder.decode(value, { stream: true });
             try {
               const parsedChunk = JSON.parse(chunk) as NLQUpdateEvent;
-              setLoaderMessage(parsedChunk.status);
               updatedSessionId = parsedChunk.session_id;
               if (parsedChunk.kind === "UPDATE") {
-                collectedPayload += parsedChunk.status;
+                botMessage.message = parsedChunk.status;
+                botMessage.type = "text";
+                botMessage.kind = "UPDATE";
               } else if (parsedChunk.kind === "RESPONSE") {
                 if (parsedChunk.type === "TEXT") {
-                  collectedPayload += parsedChunk.payload;
+                  botMessage.message = parsedChunk.payload;
+                  botMessage.type = "text";
+                  botMessage.kind = "TEXT";
                 } else if (parsedChunk.type === "TABLE") {
-                  handleDownload(parsedChunk.payload);
+                  botMessage.message = JSON.stringify(parsedChunk.payload);
+                  botMessage.type = "table";
+                  botMessage.kind = "TABLE";
+                  botMessage.query = "SELECT * FROM table";
                 }
               }
-            } catch {
-              console.error("Failed to parse JSON");
+              setMessages((prevMessages) => {
+                if (prevMessages[prevMessages.length - 1].role === "bot") {
+                  const updatedMessages = [...prevMessages];
+                  updatedMessages[updatedMessages.length - 1] = {
+                    ...botMessage,
+                  };
+                  return [...updatedMessages];
+                }
+                return [...prevMessages, botMessage];
+              });
+              setIsFetching(false);
+            } catch (error) {
+              console.error("Failed to parse JSON chunk", error);
+              setIsFetching(false);
             }
           }
         }
@@ -184,12 +177,21 @@ export function ChatBot({
         setSessionId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
-        setError("Failed to fetch response");
-      } finally {
-        setIsFetching(false);
+        botMessage.message = "Failed to fetch response";
+        botMessage.type = "error";
+        setMessages((prevMessages) => {
+          if (prevMessages[prevMessages.length - 1].role === "bot") {
+            const updatedMessages = [...prevMessages];
+            updatedMessages[updatedMessages.length - 1] = {
+              ...botMessage,
+            };
+            return [...updatedMessages];
+          }
+          return [...prevMessages, botMessage];
+        });
       }
     },
-    [input, sessionId],
+    [input, sessionId]
   );
 
   return (
@@ -220,7 +222,7 @@ export function ChatBot({
           w="full"
           flex={1}
           overflowY="auto"
-          px={{ base: "10vw", lg: "10vw", xl: "20vw" }}
+          px={{ base: "10vw", xl: "20vw" }}
           py={12}
           gap={10}
         >
@@ -228,7 +230,6 @@ export function ChatBot({
             <MemoizedMessage key={msg.id} msg={msg} />
           ))}
           {isFetching && <FetchingSkeleton />}
-          {error && <ErrorMessage error={error} />}
           <div ref={messagesEndRef} />
         </VStack>
       )}
@@ -243,7 +244,7 @@ export function ChatBot({
         <form onSubmit={handleSubmit} style={{ flex: 1, width: "100%" }}>
           <InputGroup size="lg">
             <Input
-              placeholder="Type your message here"
+              placeholder="Please type the message here"
               size="lg"
               bg="gray.900"
               rounded="xl"
@@ -278,48 +279,6 @@ export function ChatBot({
   );
 }
 
-// Memoized Message Component
-const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
-  const { message, role } = msg;
-
-  return (
-    <HStack
-      color="gray.50"
-      w="full"
-      justify={role === "user" ? "flex-end" : "flex-start"}
-      align={role === "user" ? "flex-end" : "flex-start"}
-      gap={{ base: 4, lg: 6, xl: 8 }}
-    >
-      {role === "bot" && (
-        <CFImage
-          cfsrc="karya-logo"
-          boxSize={10}
-          border="1px solid"
-          borderColor="gray.600"
-          borderRadius="full"
-          fit="contain"
-          p={2}
-        />
-      )}
-      <VStack
-        w="auto"
-        align="flex-start"
-        bg={role === "user" ? "#2a2d3d" : ""}
-        color="gray.400"
-        borderRadius="xl"
-      >
-        {role === "bot" ? (
-          <Box className="markdown-body" pt={2}>
-            <Markdown children={message} remarkPlugins={[remarkGfm]} />
-          </Box>
-        ) : (
-          <Text p={3}>{message}</Text>
-        )}
-      </VStack>
-    </HStack>
-  );
-});
-
 // Skeleton Loader Component
 const FetchingSkeleton = () => (
   <HStack w="full" gap={4}>
@@ -332,20 +291,5 @@ const FetchingSkeleton = () => (
       p={2}
     />
     <SkeletonCircle size="4" />
-  </HStack>
-);
-
-// Error Message Component
-const ErrorMessage = ({ error }: { error: string }) => (
-  <HStack w="full" gap={4}>
-    <CFImage
-      cfsrc="karya-logo"
-      boxSize={10}
-      border="1px solid"
-      borderColor="gray.600"
-      borderRadius={50}
-      p={2}
-    />
-    <Text color="red.400">{error ?? "Something Went Wrong"}</Text>
   </HStack>
 );
