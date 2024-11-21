@@ -8,6 +8,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "user",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM sales",
     },
     {
       id: 2,
@@ -15,6 +18,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "bot",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM cars",
     },
     {
       id: 3,
@@ -22,6 +28,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "user",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM bikes",
     },
     {
       id: 4,
@@ -29,6 +38,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "bot",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM operations",
     },
     {
       id: 5,
@@ -36,6 +48,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "user",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM computers",
     },
     {
       id: 6,
@@ -43,6 +58,9 @@ function getData(session_id: string, user_query: string): Message[] {
       role: "bot",
       timestamp: Date.now(),
       session_id: session_id,
+      kind: "TEXT",
+      type: "text",
+      query: "SELECT * FROM laptops",
     },
   ] as const;
 }
