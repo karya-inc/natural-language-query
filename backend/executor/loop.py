@@ -132,17 +132,8 @@ async def agentic_loop(
 
                 relevant_tables = {}
                 categorical_tables = {}
-                table_sample_rows = {}
 
                 for table_name, table_info in state.relevant_catalog.schema.items():
-                    if table_name in relevant_table_names:
-                        relevant_tables[table_name] = table_info
-
-                        sample_rows = get_cached_sample_rows(
-                            state.relevant_catalog, table_name
-                        )
-                        table_sample_rows[table_name] = sample_rows
-
                     if table_info.get("is_categorical"):
                         categorical_info = get_cached_categorical_values(
                             state.relevant_catalog, table_name
@@ -151,7 +142,6 @@ async def agentic_loop(
 
                 state.relevant_tables = relevant_tables
                 state.categorical_tables = categorical_tables
-                state.table_sample_rows = table_sample_rows
 
             if len(state.queries) == 0:
                 send_update(AgentStatus.GENERATING_QUERIES)

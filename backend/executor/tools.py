@@ -243,22 +243,6 @@ class AgentTools(ABC):
 
                 """
 
-        if len(state.table_sample_rows) > 0:
-            system_prompt += f"""
-            ## Sample Rows from the relevant tables:
-            The following JSON contains sample rows from the relevant tables. These can be used to understand the format of the data, especially with columns that contain JSONB.
-            """
-
-            for table_name, data in state.table_sample_rows.items():
-                if len(data) == 0:
-                    continue
-
-                system_prompt += f"""
-                ### {table_name}:
-                {get_table_markdown(data)}
-
-                """
-
         print(system_prompt)
 
         user_prompt = f"""{state.intent}"""
