@@ -104,8 +104,8 @@
                           "constraints": {
                             "type": "string"
                           },
-                          "json_schema": {
-                            "type": "object"
+                          "json_schema_id": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -162,6 +162,14 @@
             "tables"
           ],
           "additionalProperties": false
+        }
+      }
+    },
+    "json_schemas": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object"
         }
       }
     }

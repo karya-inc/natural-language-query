@@ -1,10 +1,8 @@
-from typing import Any, List
-
+from typing import Any, List, cast
 from executor.config import AgentConfig
-
 from executor.errors import UnRecoverableError
 from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
-
+from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from executor.state import AgentState
 from executor.status import AgentStatus
@@ -12,10 +10,10 @@ from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
 
-from utils.redis import get_cached_categorical_values, get_cached_sample_rows, get_cached_sample_rows
+from utils.redis import get_cached_categorical_values
 
 TURN_LIMIT = 3
-MAX_HEALING_ATTEMPTS = 4
+MAX_HEALING_ATTEMPTS = 5
 FAILURE_RETRY_DELAY = 1
 
 logger = get_logger("[AGENTIC LOOP]")
@@ -118,6 +116,7 @@ async def agentic_loop(
 
                 relevant_tables = {}
                 categorical_tables = {}
+                json_schema = parsed_catalogs.json_schema
 
                 for table_name, table_info in state.relevant_catalog.schema.items():
                     if table_info.get("is_categorical"):
@@ -126,6 +125,14 @@ async def agentic_loop(
                         )
                         categorical_tables[table_name] = categorical_info
 
+                    for column in table_info["columns"]:
+                        column = cast(dict[str, Any], column)
+                        json_schema_id = column.get("json_schema_id")
+
+                        if json_schema_id and json_schema_id in json_schema:
+                            column["schema"] = json_schema[json_schema_id]
+
+                    relevant_tables[table_name] = table_info
                 state.relevant_tables = relevant_tables
                 state.categorical_tables = categorical_tables
 

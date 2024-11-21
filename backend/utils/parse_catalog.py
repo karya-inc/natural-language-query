@@ -41,6 +41,7 @@ TablePrivilagesMap = dict[str, List[RoleTablePrivileges]]
 class ParsedCatalogConfiguration:
     catalogs: List[Catalog]
     database_privileges: dict[str, TablePrivilagesMap]
+    json_schema: dict[str, dict[str, Any]]
 
 
 def parse_catalog_configuration() -> ParsedCatalogConfiguration:
@@ -65,6 +66,7 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
 
     catalogs: List[Catalog] = []
     database_privileges: dict[str, TablePrivilagesMap] = {}
+
     for dbname, dbinfo in databases.items():
         logger.info(f"Parsing Database: {dbname}")
         catalogs.append(
@@ -97,7 +99,9 @@ def parse_catalog_configuration() -> ParsedCatalogConfiguration:
             database_privileges[dbname] = table_permisions
 
     return ParsedCatalogConfiguration(
-        catalogs=catalogs, database_privileges=database_privileges
+        catalogs=catalogs,
+        database_privileges=database_privileges,
+        json_schema=catalog_defs.get("json_schemas", {}),
     )
 
 

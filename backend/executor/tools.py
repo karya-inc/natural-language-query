@@ -219,6 +219,7 @@ class AgentTools(ABC):
         1. Leverage the Catalog: Use the metadata to align your queries with the correct database, tables, and columns.
         2. Output: Create a single query that is optimized to retrieve the required data efficiently.
         3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
+        4. JSON Data: Do not return JSON data stored in columns directly. If required, only select the necessary fields from the JSON columns.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
 
         ##  Schema for Relevant Tables:
@@ -228,7 +229,12 @@ class AgentTools(ABC):
         if len(state.categorical_tables) > 0:
             system_prompt += f"""
             ## Categorical Tables:
-            The following tables contains all possible categorical values. These can be used in the queries to filter the data based on specific categories or values.
+            These can be used in the queries to filter the data based on specific categories or values.
+            If you get a query task requires filtring by specific values, identify the list of relevant values from these tables, and use primary key fields to filter the data.
+
+            For example, if you have a table 'departments' with columns 'id' and 'name', you can use the 'id' field to filter the data in other tables that have a 'dept_id' field.
+
+            You will find all the categorical values for the categorical tables below:
             """
 
             for table_name, data in state.categorical_tables.items():
@@ -238,7 +244,6 @@ class AgentTools(ABC):
                 system_prompt += f"""
                 ### {table_name}:
                 {get_table_markdown(data)}
-
                 """
 
         print(system_prompt)
@@ -251,6 +256,7 @@ class AgentTools(ABC):
                 {"role": "user", "content": user_prompt},
             ],
         )
+        print(system_prompt)
         logger.info(f"Generated Queries: {llm_response.query}")
         return llm_response.query
 
