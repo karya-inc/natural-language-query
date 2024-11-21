@@ -41,7 +41,7 @@ def get_or_create_user(db_session: Session, user_id: str) -> Optional[User]:
 
 # Saving to database functions
 
-def store_turn(db_session: Session, session_id: int, nlq: str, database_used: str, sql_query_id: UUID) -> Optional[Turn]:
+def store_turn(db_session: Session, session_id: UUID, nlq: str, database_used: str, sql_query_id: UUID) -> Optional[Turn]:
     """
     Stores a new turn for a session.
     """
@@ -96,7 +96,7 @@ def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
 
 # Get data from database functions
 
-def get_chat_history(db_session: Session, session_id: int) -> List[ChatHistoryResponse]:
+def get_chat_history(db_session: Session, session_id: UUID) -> List[ChatHistoryResponse]:
     """
     Get chat history for a session.
     """
@@ -128,7 +128,7 @@ def get_chat_history(db_session: Session, session_id: int) -> List[ChatHistoryRe
 
 
 class UserSessionsResponse(BaseModel):
-    session_id: int
+    session_id: UUID
     nlq: str
 
 # Get the list of session by user and first turn nlq

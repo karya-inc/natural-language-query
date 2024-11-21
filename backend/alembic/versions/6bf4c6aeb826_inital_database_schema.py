@@ -1,8 +1,8 @@
 """inital database schema
 
-Revision ID: f5ea5096c1b0
+Revision ID: 6bf4c6aeb826
 Revises: 
-Create Date: 2024-11-20 18:36:59.802314
+Create Date: 2024-11-21 16:46:33.465382
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f5ea5096c1b0'
+revision: str = '6bf4c6aeb826'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,7 +32,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('sessions',
-    sa.Column('session_id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('session_id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('last_updated_at', sa.DateTime(timezone=True), nullable=True),
@@ -41,7 +41,7 @@ def upgrade() -> None:
     )
     op.create_table('turns',
     sa.Column('turn_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('session_id', sa.Integer(), nullable=False),
+    sa.Column('session_id', sa.Uuid(), nullable=False),
     sa.Column('nlq', sa.Text(), nullable=False),
     sa.Column('sqid', sa.Uuid(), nullable=False),
     sa.Column('database_used', sa.Text(), nullable=False),

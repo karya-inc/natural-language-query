@@ -27,7 +27,7 @@ class UserSession(Base):
     """Session model representing user sessions"""
     __tablename__ = 'sessions'
 
-    session_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey('users.user_id'))
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -48,7 +48,7 @@ class Turn(Base):
     __tablename__ = 'turns'
 
     turn_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey('sessions.session_id'))
+    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sessions.session_id'))
     nlq: Mapped[str] = mapped_column(Text)
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey('sql_queries.sqid'))
     database_used: Mapped[str] = mapped_column(Text)

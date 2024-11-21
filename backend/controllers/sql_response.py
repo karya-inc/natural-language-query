@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from db.db_queries import ChatHistory, ChatSessionHistory, get_chat_history, get_user_session_history
+from db.db_queries import ChatHistoryResponse, get_chat_history
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -91,7 +91,7 @@ async def do_nlq(
     return
 
 
-def chat_history(user_id: str, db: Session) -> List[ChatHistory]:
+def chat_history(user_id: str, session_id:int ,db: Session) -> List[ChatHistoryResponse]:
     # Log info
     logger.info(f"History for user_id: {user_id} is requested!")
     return get_chat_history(user_id, db)
