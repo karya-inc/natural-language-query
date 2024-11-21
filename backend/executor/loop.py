@@ -1,4 +1,4 @@
-from typing import Any, List, cast
+from typing import Any, List
 
 from executor.config import AgentConfig
 
@@ -11,15 +11,12 @@ from executor.status import AgentStatus
 from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
-import sqlglot
-import sqlglot.expressions as exp
 
 from utils.redis import get_cached_categorical_values, get_cached_sample_rows, get_cached_sample_rows
 
-TURN_LIMIT = 5
-MAX_HEALING_ATTEMPTS = 5
-FAILURE_RETRY_DELAY = 0.2
-INTERMIDIATE_RESULT_LIMIT = 5
+TURN_LIMIT = 3
+MAX_HEALING_ATTEMPTS = 4
+FAILURE_RETRY_DELAY = 1
 
 logger = get_logger("[AGENTIC LOOP]")
 
@@ -29,7 +26,6 @@ async def execute_query_with_healing(
     query: str,
     tools: AgentTools,
     config: AgentConfig,
-    set_limit: bool,
 ):
     assert state.relevant_catalog, "Relevant catalog not set"
 
@@ -40,16 +36,6 @@ async def execute_query_with_healing(
     )
 
     query_to_execute = query
-
-    if set_limit:
-        query_to_execute = (
-            cast(
-                exp.Query,
-                sqlglot.parse_one(query_to_execute),
-            )
-            .limit(INTERMIDIATE_RESULT_LIMIT)
-            .sql()
-        )
 
     healing_attempts = 0
     while True:
@@ -143,46 +129,20 @@ async def agentic_loop(
                 state.relevant_tables = relevant_tables
                 state.categorical_tables = categorical_tables
 
-            if len(state.queries) == 0:
+            if not state.query:
                 send_update(AgentStatus.GENERATING_QUERIES)
                 # Generate queries
-                state.queries = await tools.generate_queries(state)
-                if len(state.queries) == 0:
+                state.query = await tools.generate_queries(state)
+                if not state.query:
                     raise Exception("Failed to generate queries")
-
-            if len(state.intermediate_results) == 0:
-                send_update(AgentStatus.EXECUTING_QUERIES)
-                # Execute the queries
-                for query in state.queries:
-                    if query not in state.intermediate_results:
-                        state.intermediate_results[query] = (
-                            await execute_query_with_healing(
-                                state=state,
-                                query=query,
-                                tools=tools,
-                                set_limit=True,
-                                config=config,
-                            )
-                        )
-
-            if len(state.queries) == 1:
-                state.aggregate_query = state.queries[0]
-
-            if not state.aggregate_query:
-                send_update(AgentStatus.REFINING_QUERY)
-                # Generate the aggregate query
-                state.aggregate_query = await tools.generate_aggregate_query(
-                    state.intermediate_results, state.relevant_tables
-                )
 
             if not state.final_result:
                 send_update(AgentStatus.EXECUTE_REFINED_QUERY)
                 # Execute the aggregate query
                 state.final_result = await execute_query_with_healing(
                     state=state,
-                    query=state.aggregate_query,
+                    query=state.query,
                     tools=tools,
-                    set_limit=False,
                     config=config,
                 )
 

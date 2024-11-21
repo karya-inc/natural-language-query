@@ -20,11 +20,7 @@ class RelevantTables(BaseModel):
     tables: list[str]
 
 
-class GeneratedQueryList(BaseModel):
-    queries: list[str]
-
-
-class AggregatedQuery(BaseModel):
+class GeneratedQuery(BaseModel):
     query: str
 
 class HealedQuery(BaseModel):

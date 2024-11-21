@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
 import json
-from logging import error
-from typing import Any, List, Literal, cast
+from typing import Any, List, cast
 from openai.types.chat import ChatCompletionMessageParam
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
-from sqlalchemy.orm import context
 
 from executor.errors import UnRecoverableError
-from executor.models import AggregatedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, GeneratedQueryList, RelevantTables, NLQIntent
+from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
@@ -189,7 +187,7 @@ class AgentTools(ABC):
 
         return llm_response.tables
 
-    async def generate_queries(self, state: AgentState) -> List[str]:
+    async def generate_queries(self, state: AgentState) -> str:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
@@ -219,7 +217,7 @@ class AgentTools(ABC):
 
         ## Guidelines:
         1. Leverage the Catalog: Use the metadata to align your queries with the correct database, tables, and columns.
-        2. Output: Create multiple simple queries to address the user intent comprehensively and efficiently.
+        2. Output: Create a single query that is optimized to retrieve the required data efficiently.
         3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
 
@@ -247,48 +245,13 @@ class AgentTools(ABC):
 
         user_prompt = f"""{state.intent}"""
         llm_response = await self.invoke_llm(
-            GeneratedQueryList,
+            GeneratedQuery,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
-        logger.info(f"Generated Queries: {llm_response.queries}")
-        return llm_response.queries
-
-    async def generate_aggregate_query(
-        self,
-        intermediate_results: dict[str, QueryResults],
-        relevant_tables: dict[str, Any],
-    ) -> str:
-        """
-        Generate an aggregate query by looking at the queries used to generate results
-        in the ephimeral storage. Use subqueries and CTES (with clause) to generate the aggregate query.
-        """
-        system_prompt = """
-            You are a SQL Expert with over 10 years of experience. Your task is to consolidate multiple provided queries into an optimal single SQL query or the minimum number of queries needed to achieve the desired result. You will be provided with a json containing queries and sample responses from them.
-
-            Task Requirements:
-            1. Analyze Provided Queries: Carefully review the given individual queries to understand the data they retrieve and their intended outcomes.
-            2. Aggregate Query Construction: Combine and refactor the individual queries into one comprehensive SQL query that can deliver the same result set. You can convert these provided queries in CTEs (With clasuses), subqueries or joings to achieve this.
-            3. Ensure that the final query is optimized for performance and adheres to SQL best practices.
-
-            Guidelines:
-            1. Efficiency and Performance: Design the aggregated query to minimize computation time and resource usage.
-            2. Simplicity and Clarity: Strive for clear and maintainable SQL code, even when aggregating complex logic.
-            3. Output Format: Return the complete aggregated query and, if necessary, include brief comments explaining non-standard operations or logic.
-            Ensure that the final result is accurate, optimized, and reflects your expertise in SQL.
-            """
-
-        user_prompt = f"Intermediate Results: {intermediate_results}, Relevant Tables: {relevant_tables}"
-
-        llm_response = await self.invoke_llm(
-            AggregatedQuery,
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+        logger.info(f"Generated Queries: {llm_response.query}")
         return llm_response.query
 
     async def is_result_relevant(self, results: QueryResults, nlq: str) -> bool:
