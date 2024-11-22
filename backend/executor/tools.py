@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, cast
+from typing import Any, List, Optional, cast
 from openai.types.chat import ChatCompletionMessageParam
+from db.db_queries import get_saved_queries
 from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
@@ -109,12 +110,15 @@ class AgentTools(ABC):
             QueryType,
             [
                 {"role": "system", "content": system_prompt},
+                *old_messages,
                 {"role": "user", "content": nlq},
             ],
         )
         return llm_response.query_type
 
-    async def get_relevant_catalog(self, nlq: str, catalogs: List[Catalog]) -> str:
+    async def get_relevant_catalog(
+        self, nlq: str, catalogs: List[Catalog], prev_turn: Optional[Turn] = None
+    ) -> str:
         """
         Get the subset of database catalogs that might be relevant to the given natural language query (NLQ).
         """
@@ -152,22 +156,40 @@ class AgentTools(ABC):
             For multi-database queries: False
         Ensure that your analysis is thorough, leveraging your extensive experience to provide precise and contextually accurate responses.
         """
-        nlq_database_info = (
-            f"User asked query: {nlq}, ## Database Catalogs: {database_info_json}"
-        )
+
+        user_prompt = ""
+        if prev_turn:
+            user_prompt = f"""
+            ## Previous Query:
+            The following query was executed previously. You can use this information to determine the relevant database catalog.
+            {prev_turn.sql_query}
+
+            ## Original User Query:
+            This was the query used to generate the above SQL query.
+            {prev_turn.nlq}
+            """
+
+        user_prompt += f"""
+            ## User asked query: 
+            {nlq}
+            ## Database Catalogs: 
+            {database_info_json}
+            """
 
         llm_resp = await self.invoke_llm(
             RelevantCatalog,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq_database_info},
+                {"role": "user", "content": user_prompt},
             ],
         )
         if llm_resp.requires_multiple_catalogs:
             raise UnRecoverableError("Multiple catalogs/databases are required")
         return llm_resp.database_name
 
-    async def get_relevant_tables(self, nlq: str, catalog: Catalog) -> List[str]:
+    async def get_relevant_tables(
+        self, nlq: str, catalog: Catalog, prev_turn: Optional[Turn] = None
+    ) -> List[str]:
         tables_info = []
         for tablename, tableinfo in catalog.schema.items():
             curr_table_info = {
@@ -184,21 +206,38 @@ class AgentTools(ABC):
         Your role is to analyze user queries and identify all the relevant tables in a database catalog that might be related or can provide the required data.
         The catalog contains metadata about databases, including descriptions, table names, and column names.
         """
-        nlq_tables_info = (
-            f"User asked query: {nlq}, ## Database Catalog: {tables_info_json}"
-        )
+        user_prompt = ""
+        if prev_turn:
+            user_prompt = f"""
+            ## Previous Query:
+            The following query was executed previously. You can use this information to determine the relevant tables
+            {prev_turn.sql_query}
+
+            ## Original User Query:
+            This was the query used to generate the above SQL query.
+            {prev_turn.nlq}
+            """
+
+        user_prompt += f"""
+        ## User asked query: 
+        {nlq} 
+        ## Database Catalog: 
+        {tables_info_json}
+        """
 
         llm_response = await self.invoke_llm(
             RelevantTables,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq_tables_info},
+                {"role": "user", "content": user_prompt},
             ],
         )
 
         return llm_response.tables
 
-    async def generate_queries(self, state: AgentState) -> str:
+    async def generate_queries(
+        self, state: AgentState, prev_turn: Optional[Turn] = None
+    ) -> str:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
@@ -231,6 +270,7 @@ class AgentTools(ABC):
         2. Output: Create a single query that is optimized to retrieve the required data efficiently.
         3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
         4. JSON Data: Do not return JSON data stored in columns directly. If required, only select the necessary fields from the JSON columns.
+        5. Feedback: In case you have already generated queries for user's queries, treat the user's most recent message as the feedback for previously generated queries.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
 
         ##  Schema for Relevant Tables:
@@ -257,15 +297,21 @@ class AgentTools(ABC):
                 {get_table_markdown(data)}
                 """
 
-        print(system_prompt)
-
         user_prompt = f"""{state.intent}"""
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if prev_turn:
+            messages.append({"role": "user", "content": prev_turn.nlq})
+            messages.append(
+                {"role": "assistant", "content": prev_turn.sql_query.sqlquery}
+            )
+
+        messages.append({"role": "user", "content": user_prompt})
+
         llm_response = await self.invoke_llm(
             GeneratedQuery,
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages,
         )
         print(system_prompt)
         logger.info(f"Generated Queries: {llm_response.query}")

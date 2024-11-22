@@ -143,7 +143,7 @@ async def agentic_loop(
             )
 
         try:
-            answer = await tools.answer_question(nlq, prev_turn_result.result)
+            answer = await tools.answer_question(intent, prev_turn_result.result)
             send_update(AgentStatus.TASK_COMPLETED)
             return AgenticLoopQuestionAnsweringResult(answer=answer)
         except UnRecoverableError as e:
