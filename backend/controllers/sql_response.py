@@ -1,13 +1,15 @@
-from dataclasses import dataclass
-from db.db_queries import ChatHistory, ChatSessionHistory, get_chat_history, get_user_session_history
+from dataclasses import dataclass, field
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_query, save_user_fav_query, get_saved_queries, store_turn
+from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
+from executor.loop import AgenticLoopFailure, AgenticLoopQueryResult
 from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from typing import AsyncIterator, List, Literal
+from typing import AsyncIterator, List, Literal, Optional
 from sqlalchemy.orm import Session
 from uuid import UUID
 import json
@@ -25,22 +27,30 @@ class NLQUpdateEvent:
 @dataclass
 class NLQResponseEvent:
     kind: Literal["RESPONSE"]
-    type: Literal["TEXT", "TABLE"]
+    type: Literal["TEXT", "TABLE", "ERROR"]
     payload: str | List[dict]
+    session_id: str
+    query: Optional[str] = field(default=None)
 
 
 async def nlq_sse_wrapper(
-    user_info: AuthenticatedUserInfo, query: str, session_id: str
+    user_info: AuthenticatedUserInfo,
+    query: str,
+    session: UserSession,
+    db_session: Session,
 ) -> AsyncIterator[str]:
-    async for event in do_nlq(user_info, query, session_id):
+    async for event in do_nlq(user_info, query, session, db_session):
         yield json.dumps(event.__dict__)
 
 
 async def do_nlq(
-    user_info: AuthenticatedUserInfo, query: str, session_id: str
+    user_info: AuthenticatedUserInfo,
+    nlq: str,
+    session: UserSession,
+    db_session: Session,
 ) -> AsyncIterator[NLQUpdateEvent | NLQResponseEvent]:
     # Log info
-    logger.info(f"Generating sql response for query : {query}")
+    logger.info(f"Generating sql response for query : {nlq}")
 
     events = asyncio.Queue[NLQUpdateEvent]()
 
@@ -61,7 +71,7 @@ async def do_nlq(
         .with_catalogs(parsed_catalogs.catalogs)
     )
 
-    agentic_loop_future = asyncio.create_task(nlq_executor.execute(query))
+    agentic_loop_future = asyncio.create_task(nlq_executor.execute(nlq))
 
     while True:
         event = await events.get()
@@ -81,27 +91,69 @@ async def do_nlq(
 
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
-    if isinstance(result, str):
-        yield NLQResponseEvent(kind="RESPONSE", type="TEXT", payload=result)
+    if isinstance(result, AgenticLoopQueryResult):
+        sql_query_entry = save_query(db_session=db_session, sql_query=result.query)
+        turn = store_turn(
+            db_session=db_session,
+            session_id=session.session_id,
+            nlq=nlq,
+            sql_query_id=sql_query_entry.sqid,
+            database_used=result.db_name,
+        )
+        logger.info(f"Saved query: {sql_query_entry.sqid}")
+        logger.info(f"Created turn for session '{session.session_id}' - {turn}")
+        yield NLQResponseEvent(
+            kind="RESPONSE",
+            type="TABLE",
+            payload=result.result,
+            session_id=str(session.session_id),
+            query=result.query,
+        )
 
-    if isinstance(result, list):
-        yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result)
+    if isinstance(result, AgenticLoopFailure):
+        yield NLQResponseEvent(
+            kind="RESPONSE",
+            type="ERROR",
+            payload=result.reason,
+            session_id=str(session.session_id),
+        )
 
     logger.info("NLQ Completed")
     return
 
 
-def chat_history(user_id: str, db: Session) -> List[ChatHistory]:
-    # Log info
-    logger.info(f"History for user_id: {user_id} is requested!")
-    return get_chat_history(user_id, db)
-
-
-def get_session_history(
-    session_id: UUID, user_id: str, db: Session
-) -> List[ChatSessionHistory]:
+def chat_history(
+    db_session: Session, session_id: UUID, user_id: str
+) -> List[ChatHistoryResponse]:
     # Log info
     logger.info(
         f"History for session_id: {session_id} is requested! for user {user_id}"
     )
-    return get_user_session_history(session_id, user_id, db)
+    # check if session exist of the user
+    session = get_session_for_user(
+        db_session=db_session, user_id=user_id, session_id=session_id
+    )
+    if not session:
+        return []
+    logger.info(f"History for user_id: {user_id} is requested!")
+    return get_chat_history(db_session, session_id)
+
+
+def get_session_history(user_id: str, db: Session) -> List[UserSessionsResponse]:
+    # Log info
+    logger.info(f"History requested for user {user_id}")
+    return get_history_sessions(db_session=db, user_id=user_id)
+
+
+def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
+    # Log info
+    logger.info(
+        f"Saving fav query of user : {user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}"
+    )
+    return save_user_fav_query(db, user_id, turn_id, sql_query_id)
+
+
+def get_fav_queries_user(db: Session, user_id: str) -> List[SavedQueriesResponse]:
+    # Log info
+    logger.info(f"Get saved queries for user: {user_id} is requested!")
+    return get_saved_queries(db, user_id)

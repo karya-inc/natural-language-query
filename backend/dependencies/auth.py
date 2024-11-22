@@ -3,7 +3,11 @@ import os
 from typing import Annotated, List, Optional
 from fastapi import Cookie, HTTPException, Header, Depends
 from google.generativeai.client import Any
+from sqlalchemy.orm import Session
+from db.db_queries import get_or_create_user
+from db.models import User
 from rbac.check_permissions import ColumnScope
+from dependencies.db import get_db
 from utils.auth import get_auth_provider
 from utils.parse_catalog import roles_validator
 
@@ -20,6 +24,7 @@ class TokenVerificationResult:
 
 @dataclass
 class AuthenticatedUserInfo:
+    user: User
     user_id: str
     role: str
     scopes: dict[str, List[ColumnScope]] = field(default_factory=dict)
@@ -68,7 +73,8 @@ async def verify_token(
 
 
 async def get_authenticated_user_info(
-    auth_result: Annotated[TokenVerificationResult, Depends(verify_token)]
+    db: Annotated[Session, Depends(get_db)],
+    auth_result: Annotated[TokenVerificationResult, Depends(verify_token)],
 ) -> AuthenticatedUserInfo:
     """
     Dependency that extracts user_id from the token verification result.
@@ -89,6 +95,12 @@ async def get_authenticated_user_info(
 
     # Extract the user id from the token
     user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=403, detail="Invalid token: Missing user identification"
+        )
+
+    user = get_or_create_user(db, user_id)
 
     # Extract the role field from the token and ensure it is a valid supported field
     try:
@@ -113,4 +125,4 @@ async def get_authenticated_user_info(
             status_code=403, detail="Invalid token: Missing user identification"
         )
 
-    return AuthenticatedUserInfo(user_id=user_id, role=role, scopes=scopes)
+    return AuthenticatedUserInfo(user=user, user_id=user_id, role=role, scopes=scopes)
