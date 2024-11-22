@@ -2,7 +2,11 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-QueryTypeLiteral = Literal["REPORT_GENERATION", "REPORT_FEEDBACK", "QUESTION_ANSWERING", "CASUAL_CONVERSATION"]
+QueryTypeLiteral = Literal[
+    "REPORT_GENERATION", "REPORT_FEEDBACK", "QUESTION_ANSWERING", "CASUAL_CONVERSATION"
+]
+
+
 class QueryType(BaseModel):
     query_type: QueryTypeLiteral
 
@@ -23,5 +27,10 @@ class RelevantTables(BaseModel):
 class GeneratedQuery(BaseModel):
     query: str
 
+
 class HealedQuery(BaseModel):
     query: str
+
+
+class QuestionAnsweringResult(BaseModel):
+    answer: str

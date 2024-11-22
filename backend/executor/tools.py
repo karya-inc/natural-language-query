@@ -2,10 +2,11 @@ from abc import ABC, abstractmethod
 import json
 from typing import Any, List, cast
 from openai.types.chat import ChatCompletionMessageParam
+from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
-from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, RelevantTables, NLQIntent
+from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
@@ -51,7 +52,9 @@ class AgentTools(ABC):
         )
         return response.intent
 
-    async def analyze_query_type(self, nlq: str) -> QueryTypeLiteral:
+    async def analyze_query_type(
+        self, nlq: str, nlq_turns: list[Turn]
+    ) -> QueryTypeLiteral:
         """
         Analyze the natural language query (NLQ) and return the type of query.
         Type can be Question Answering, or Report Generation
@@ -60,6 +63,7 @@ class AgentTools(ABC):
         Your task is to categorize natural language queries into one of three types based on the user's intent:
         1.  QUESTION_ANSWERING
             When the user asks for a specific summary or analysis of existing data. This is only applicable required data is already available in the conversation history.
+            If answering the query requires additional information, prefer REPORT_GENERATION or REPORT_FEEDBACK over QUESTION_ANSWERING.
 
             Examples:
             "Summarize the marketing campaign performance."
@@ -92,8 +96,15 @@ class AgentTools(ABC):
             "What can you do"
             "What is your name"
 
-        To help you decide the query type, consider the past queries of the user as well as the response provided by the assistant.
+        To help you decide the query type, you will have access to the historical interaction between the user and the assistant. You need to do the classification based on the most recent user message
         """
+        old_messages: list[ChatCompletionMessageParam] = []
+        for turn in nlq_turns:
+            old_messages.append({"role": "user", "content": turn.nlq})
+            old_messages.append(
+                {"role": "assistant", "content": json.dumps(turn.sql_query)}
+            )
+
         llm_response = await self.invoke_llm(
             QueryType,
             [
@@ -477,8 +488,34 @@ class AgentTools(ABC):
         )
         return llm_response.query
 
-    async def answer_question(self, nlq: str) -> Any:
+    async def answer_question(self, nlq: str, data: QueryResults) -> str:
         """
         Answer the question asked by the user
         """
-        raise NotImplementedError
+        system_prompt = f"""
+        You are a Data Analyst. You need to analyze the following data:
+
+        {get_table_markdown(data)}
+
+        Your task is to analyze the data and provide a clear and concise answer to the user's question.
+
+        """
+
+        if len(system_prompt) > 32000:
+            raise UnRecoverableError(
+                "Cannot answer the question. The data is too large"
+            )
+
+        user_prompt = f"""
+        {nlq}
+        """
+
+        llm_response = await self.invoke_llm(
+            QuestionAnsweringResult,
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+
+        return llm_response.answer

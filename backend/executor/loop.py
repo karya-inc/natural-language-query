@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union, cast
+from db.models import UserSession
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
+from executor.models import QueryTypeLiteral
 from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
@@ -25,6 +27,11 @@ class AgenticLoopQueryResult:
     result: QueryResults
     query: str
     db_name: str
+
+
+@dataclass
+class AgenticLoopQuestionAnsweringResult:
+    answer: str
 
 
 @dataclass
@@ -56,6 +63,7 @@ async def execute_query_with_healing(
         execution_result = get_or_execute_query_result(
             query_to_execute, state.relevant_catalog, query_pipeline.execute
         )
+
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
@@ -80,15 +88,24 @@ async def agentic_loop(
     catalogs: List[Catalog],
     tools: AgentTools,
     config: AgentConfig,
-) -> Union[AgenticLoopQueryResult, AgenticLoopFailure]:
+    session: UserSession,
+) -> Union[
+    AgenticLoopQueryResult, AgenticLoopQuestionAnsweringResult, AgenticLoopFailure
+]:
     def send_update(status: AgentStatus):
         logger.info(status.value)
         if config.update_callback:
             config.update_callback(status)
 
     send_update(AgentStatus.ANALYZING_INTENT)
-    intent = await tools.analaze_nlq_intent(nlq)
 
+    nlq_type: QueryTypeLiteral
+    if len(session.turns) == 0:
+        nlq_type = "REPORT_GENERATION"
+    else:
+        nlq_type = await tools.analyze_query_type(nlq, session.turns)
+
+    intent = await tools.analaze_nlq_intent(nlq)
     state = AgentState(
         nlq=nlq,
         intent=intent,
@@ -97,6 +114,42 @@ async def agentic_loop(
     )
 
     turns = 0
+
+    if nlq_type == "CASUAL_CONVERSATION":
+        send_update(AgentStatus.TASK_FAILED)
+        return AgenticLoopFailure(
+            reason="Sorry, I am not trained to handle casual conversations. Please try being more specific."
+        )
+
+    if nlq_type == "QUESTION_ANSWERING":
+        prev_turn = session.turns[-1]
+        catalog = next(
+            catalog for catalog in catalogs if catalog.name == prev_turn.database_used
+        )
+        send_update(AgentStatus.EXECUTING_QUERIES)
+        query_pipeline = QueryExecutionPipeline(
+            catalog=catalog,
+            active_role=config.user_info.role,
+            scopes=config.user_info.scopes,
+        )
+        prev_turn_result = get_or_execute_query_result(
+            query=prev_turn.nlq, catalog=catalog, execute_query=query_pipeline.execute
+        )
+
+        if not isinstance(prev_turn_result, QueryExecutionSuccessResult):
+            send_update(AgentStatus.TASK_FAILED)
+            return AgenticLoopFailure(
+                reason="Unable to find data for the previous query"
+            )
+
+        try:
+            answer = await tools.answer_question(nlq, prev_turn_result.result)
+            send_update(AgentStatus.TASK_COMPLETED)
+            return AgenticLoopQuestionAnsweringResult(answer=answer)
+        except UnRecoverableError as e:
+            return AgenticLoopFailure(reason=e.message)
+        except Exception as e:
+            return AgenticLoopFailure(reason=str(e))
 
     while True:
         if turns >= TURN_LIMIT:
