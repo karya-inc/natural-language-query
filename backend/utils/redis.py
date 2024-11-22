@@ -34,10 +34,10 @@ def get_redis_key(
 
 def get_cached_query_result(query: str, catalog: Catalog) -> Optional[QueryResults]:
     key = get_redis_key("query_results", catalog.name, query.strip())
-    cached_result = str(redis_client.get(key))
+    cached_result = redis_client.get(key)
 
     if cached_result:
-        return QueryResults(json.loads(cached_result))
+        return QueryResults(json.loads(str(cached_result)))
 
     return None
 

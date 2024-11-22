@@ -31,7 +31,7 @@ class AgentTools(ABC):
     ) -> T:
         raise NotImplementedError
 
-    async def analaze_nlq_intent(self, nlq: str) -> str:
+    async def analaze_nlq_intent(self, nlq: str, turns: list[Turn] = []) -> str:
         """
         Analyze the natural language query (NLQ) and return the intent of the query.
         """
@@ -44,11 +44,28 @@ class AgentTools(ABC):
         3. Insightful Guidance: If applicable, offer additional insights, best practices, or recommendations related to SQL or technology to enhance user understanding.
         4. Clarity and Relevance: Ensure your response is easy to understand and directly relevant to the user's intent.
         """
+
+        user_prompt = ""
+        if len(turns) > 0:
+            user_prompt += f"""
+            ## Previous Queries:
+            These are the previously asked questions by the user. You can use this information to determine the intent of the current query.
+            """
+        for turn in turns:
+            user_prompt += f"""
+            - {turn.nlq}
+            """
+
+        user_prompt += f"""
+        ## User asked query:
+        {nlq}
+        """
+
         response = await self.invoke_llm(
             NLQIntent,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq},
+                {"role": "user", "content": user_prompt},
             ],
         )
         return response.intent
@@ -103,7 +120,7 @@ class AgentTools(ABC):
         for turn in nlq_turns:
             old_messages.append({"role": "user", "content": turn.nlq})
             old_messages.append(
-                {"role": "assistant", "content": json.dumps(turn.sql_query)}
+                {"role": "assistant", "content": turn.sql_query.sqlquery}
             )
 
         llm_response = await self.invoke_llm(

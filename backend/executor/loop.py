@@ -105,7 +105,7 @@ async def agentic_loop(
     else:
         nlq_type = await tools.analyze_query_type(nlq, session.turns)
 
-    intent = await tools.analaze_nlq_intent(nlq)
+    intent = await tools.analaze_nlq_intent(nlq, session.turns)
     state = AgentState(
         nlq=nlq,
         intent=intent,
@@ -242,3 +242,4 @@ async def agentic_loop(
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             time.sleep(FAILURE_RETRY_DELAY)
+            raise e
