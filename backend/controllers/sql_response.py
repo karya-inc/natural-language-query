@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_user_fav_query, get_saved_queries
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_query, save_user_fav_query, get_saved_queries, store_turn
 from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
@@ -32,17 +32,23 @@ class NLQResponseEvent:
 
 
 async def nlq_sse_wrapper(
-    user_info: AuthenticatedUserInfo, query: str, session: UserSession
+    user_info: AuthenticatedUserInfo,
+    query: str,
+    session: UserSession,
+    db_session: Session,
 ) -> AsyncIterator[str]:
-    async for event in do_nlq(user_info, query, session):
+    async for event in do_nlq(user_info, query, session, db_session):
         yield json.dumps(event.__dict__)
 
 
 async def do_nlq(
-    user_info: AuthenticatedUserInfo, query: str, session: UserSession
+    user_info: AuthenticatedUserInfo,
+    nlq: str,
+    session: UserSession,
+    db_session: Session,
 ) -> AsyncIterator[NLQUpdateEvent | NLQResponseEvent]:
     # Log info
-    logger.info(f"Generating sql response for query : {query}")
+    logger.info(f"Generating sql response for query : {nlq}")
 
     events = asyncio.Queue[NLQUpdateEvent]()
 
@@ -63,7 +69,7 @@ async def do_nlq(
         .with_catalogs(parsed_catalogs.catalogs)
     )
 
-    agentic_loop_future = asyncio.create_task(nlq_executor.execute(query))
+    agentic_loop_future = asyncio.create_task(nlq_executor.execute(nlq))
 
     while True:
         event = await events.get()
@@ -84,6 +90,15 @@ async def do_nlq(
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
+        nlq = result.query
+        sql_query_entry = save_query(db_session=db_session, sql_query=result.query)
+        store_turn(
+            db_session=db_session,
+            session_id=session.session_id,
+            nlq=nlq,
+            sql_query_id=sql_query_entry.sqid,
+            database_used=result.db_name,
+        )
         yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result.result)
 
     if isinstance(result, AgenticLoopFailure):

@@ -22,8 +22,9 @@ logger = get_logger("[AGENTIC LOOP]")
 
 @dataclass
 class AgenticLoopQueryResult:
-    result: QueryResults = field(default_factory=QueryResults)
-    query: Optional[str] = field(default=None)
+    result: QueryResults
+    query: str
+    db_name: str
 
 
 @dataclass
@@ -171,7 +172,11 @@ async def agentic_loop(
                 )
 
             send_update(AgentStatus.TASK_COMPLETED)
-            return AgenticLoopQueryResult(result=state.final_result, query=state.query)
+            return AgenticLoopQueryResult(
+                result=state.final_result,
+                query=state.query,
+                db_name=state.relevant_catalog.name,
+            )
 
         except UnRecoverableError as e:
             logger.error(f"Unrecoverable error in agentic loop: {e}")

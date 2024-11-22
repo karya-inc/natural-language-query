@@ -111,7 +111,9 @@ async def stream_sql_query_responses(
         # Returning the StreamingResponse with the proper media type for SSE
         logger.info(f"Started streaming SQL responses for query: {chat_request.query}")
         response = StreamingResponse(
-            nlq_sse_wrapper(user_info, chat_request.query, current_session),
+            nlq_sse_wrapper(
+                user_info, chat_request.query, current_session, db_session=db
+            ),
             media_type="text/event-stream",
         )
 

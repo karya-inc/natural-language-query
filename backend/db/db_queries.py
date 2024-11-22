@@ -100,7 +100,7 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
+def save_query(db_session: Session, sql_query: str) -> SqlQuery:
     """
     Save a generated SQL query.
     """
@@ -112,7 +112,7 @@ def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
     except Exception as e:
         logger.error(f"Error saving query: {e}")
         db_session.rollback()
-        return None
+        raise e
 
 
 # check if session exists for that user
