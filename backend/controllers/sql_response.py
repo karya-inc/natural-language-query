@@ -69,6 +69,7 @@ async def do_nlq(
         .with_tools(agent)
         .with_config(config)
         .with_catalogs(parsed_catalogs.catalogs)
+        .with_session(session)
     )
 
     agentic_loop_future = asyncio.create_task(nlq_executor.execute(nlq))

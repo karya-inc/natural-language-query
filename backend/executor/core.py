@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
+from db.models import UserSession
 from executor.config import AgentConfig
 from executor.tools import AgentTools
 
@@ -14,6 +15,7 @@ class NLQExecutor:
     config: Optional[AgentConfig] = field(default=None)
     nlq: Optional[str] = field(default=None)
     catalogs: List[Catalog] = field(default_factory=list)
+    session: Optional[UserSession] = field(default=None)
 
     def with_tools(self, tools) -> "NLQExecutor":
         """Sets the tools to be used by the executor."""
@@ -30,14 +32,25 @@ class NLQExecutor:
         self.catalogs = catalogs
         return self
 
+    def with_session(self, session: UserSession) -> "NLQExecutor":
+        """Sets the session for the executor."""
+        self.session = session
+        return self
+
     async def execute(self, nlq: str):
         """Executes the agentic loop with the given natural language query (NLQ)."""
-
-        if not self.tools or not self.config or len(self.catalogs) == 0:
+        if (
+            not self.tools
+            or not self.config
+            or not self.session
+            or len(self.catalogs) == 0
+        ):
             raise ValueError(
                 "NLQExecutor requires tools, config, and catalogs to be set before execution."
             )
 
         if not self.nlq:
             self.nlq = nlq
-        return await agentic_loop(self.nlq, self.catalogs, self.tools, self.config)
+        return await agentic_loop(
+            self.nlq, self.catalogs, self.tools, self.config, session=self.session
+        )
