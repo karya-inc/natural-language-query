@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_user_fav_query, get_saved_queries
-from db.models import SavedQuery, UserSession
+from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
+from executor.loop import AgenticLoopFailure, AgenticLoopQueryResult
 from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
@@ -26,7 +27,7 @@ class NLQUpdateEvent:
 @dataclass
 class NLQResponseEvent:
     kind: Literal["RESPONSE"]
-    type: Literal["TEXT", "TABLE"]
+    type: Literal["TEXT", "TABLE", "ERROR"]
     payload: str | List[dict]
 
 
@@ -82,11 +83,15 @@ async def do_nlq(
 
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
-    if isinstance(result, str):
-        yield NLQResponseEvent(kind="RESPONSE", type="TEXT", payload=result)
+    if isinstance(result, AgenticLoopQueryResult):
+        yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result.result)
 
-    if isinstance(result, list):
-        yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result)
+    if isinstance(result, AgenticLoopFailure):
+        yield NLQResponseEvent(
+            kind="RESPONSE",
+            type="ERROR",
+            payload=result.reason,
+        )
 
     logger.info("NLQ Completed")
     return

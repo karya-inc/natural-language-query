@@ -1,10 +1,11 @@
-from typing import Any, List, cast
+from dataclasses import dataclass, field
+from typing import Any, List, Optional, Union, cast
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
 from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
-from executor.state import AgentState
+from executor.state import AgentState, QueryResults
 from executor.status import AgentStatus
 from executor.tools import AgentTools
 from utils.logger import get_logger
@@ -17,6 +18,17 @@ MAX_HEALING_ATTEMPTS = 5
 FAILURE_RETRY_DELAY = 1
 
 logger = get_logger("[AGENTIC LOOP]")
+
+
+@dataclass
+class AgenticLoopQueryResult:
+    result: QueryResults = field(default_factory=QueryResults)
+    query: Optional[str] = field(default=None)
+
+
+@dataclass
+class AgenticLoopFailure(Exception):
+    reason: str
 
 
 async def execute_query_with_healing(
@@ -65,7 +77,7 @@ async def agentic_loop(
     catalogs: List[Catalog],
     tools: AgentTools,
     config: AgentConfig,
-) -> Any:
+) -> Union[AgenticLoopQueryResult, AgenticLoopFailure]:
     def send_update(status: AgentStatus):
         logger.info(status.value)
         if config.update_callback:
@@ -118,7 +130,12 @@ async def agentic_loop(
                 categorical_tables = {}
                 json_schema = parsed_catalogs.json_schema
 
-                for table_name, table_info in state.relevant_catalog.schema.items():
+                relevant_tables_schemas = filter(
+                    lambda x: x[0] in relevant_table_names,
+                    state.relevant_catalog.schema.items(),
+                )
+
+                for table_name, table_info in relevant_tables_schemas:
                     if table_info.get("is_categorical"):
                         categorical_info = get_cached_categorical_values(
                             state.relevant_catalog, table_name
@@ -154,15 +171,14 @@ async def agentic_loop(
                 )
 
             send_update(AgentStatus.TASK_COMPLETED)
-            return state.final_result
+            return AgenticLoopQueryResult(result=state.final_result, query=state.query)
 
         except UnRecoverableError as e:
             logger.error(f"Unrecoverable error in agentic loop: {e}")
             send_update(AgentStatus.TASK_FAILED)
-            raise e
+            return AgenticLoopFailure(reason=e.message)
         except Exception as e:
             turns += 1
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             time.sleep(FAILURE_RETRY_DELAY)
-            raise e
