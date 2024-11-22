@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, cast
+from typing import Any, List, Optional, cast
 from openai.types.chat import ChatCompletionMessageParam
+from db.db_queries import get_saved_queries
+from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
-from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, RelevantCatalog, RelevantTables, NLQIntent
+from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
@@ -29,7 +31,7 @@ class AgentTools(ABC):
     ) -> T:
         raise NotImplementedError
 
-    async def analaze_nlq_intent(self, nlq: str) -> str:
+    async def analaze_nlq_intent(self, nlq: str, turns: list[Turn] = []) -> str:
         """
         Analyze the natural language query (NLQ) and return the intent of the query.
         """
@@ -42,16 +44,35 @@ class AgentTools(ABC):
         3. Insightful Guidance: If applicable, offer additional insights, best practices, or recommendations related to SQL or technology to enhance user understanding.
         4. Clarity and Relevance: Ensure your response is easy to understand and directly relevant to the user's intent.
         """
+
+        user_prompt = ""
+        if len(turns) > 0:
+            user_prompt += f"""
+            ## Previous Queries:
+            These are the previously asked questions by the user. You can use this information to determine the intent of the current query.
+            """
+        for turn in turns:
+            user_prompt += f"""
+            - {turn.nlq}
+            """
+
+        user_prompt += f"""
+        ## User asked query:
+        {nlq}
+        """
+
         response = await self.invoke_llm(
             NLQIntent,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq},
+                {"role": "user", "content": user_prompt},
             ],
         )
         return response.intent
 
-    async def analyze_query_type(self, nlq: str) -> QueryTypeLiteral:
+    async def analyze_query_type(
+        self, nlq: str, nlq_turns: list[Turn]
+    ) -> QueryTypeLiteral:
         """
         Analyze the natural language query (NLQ) and return the type of query.
         Type can be Question Answering, or Report Generation
@@ -60,6 +81,7 @@ class AgentTools(ABC):
         Your task is to categorize natural language queries into one of three types based on the user's intent:
         1.  QUESTION_ANSWERING
             When the user asks for a specific summary or analysis of existing data. This is only applicable required data is already available in the conversation history.
+            If answering the query requires additional information, prefer REPORT_GENERATION or REPORT_FEEDBACK over QUESTION_ANSWERING.
 
             Examples:
             "Summarize the marketing campaign performance."
@@ -92,18 +114,28 @@ class AgentTools(ABC):
             "What can you do"
             "What is your name"
 
-        To help you decide the query type, consider the past queries of the user as well as the response provided by the assistant.
+        To help you decide the query type, you will have access to the historical interaction between the user and the assistant. You need to do the classification based on the most recent user message
         """
+        old_messages: list[ChatCompletionMessageParam] = []
+        for turn in nlq_turns:
+            old_messages.append({"role": "user", "content": turn.nlq})
+            old_messages.append(
+                {"role": "assistant", "content": turn.sql_query.sqlquery}
+            )
+
         llm_response = await self.invoke_llm(
             QueryType,
             [
                 {"role": "system", "content": system_prompt},
+                *old_messages,
                 {"role": "user", "content": nlq},
             ],
         )
         return llm_response.query_type
 
-    async def get_relevant_catalog(self, nlq: str, catalogs: List[Catalog]) -> str:
+    async def get_relevant_catalog(
+        self, nlq: str, catalogs: List[Catalog], prev_turn: Optional[Turn] = None
+    ) -> str:
         """
         Get the subset of database catalogs that might be relevant to the given natural language query (NLQ).
         """
@@ -141,22 +173,40 @@ class AgentTools(ABC):
             For multi-database queries: False
         Ensure that your analysis is thorough, leveraging your extensive experience to provide precise and contextually accurate responses.
         """
-        nlq_database_info = (
-            f"User asked query: {nlq}, ## Database Catalogs: {database_info_json}"
-        )
+
+        user_prompt = ""
+        if prev_turn:
+            user_prompt = f"""
+            ## Previous Query:
+            The following query was executed previously. You can use this information to determine the relevant database catalog.
+            {prev_turn.sql_query}
+
+            ## Original User Query:
+            This was the query used to generate the above SQL query.
+            {prev_turn.nlq}
+            """
+
+        user_prompt += f"""
+            ## User asked query: 
+            {nlq}
+            ## Database Catalogs: 
+            {database_info_json}
+            """
 
         llm_resp = await self.invoke_llm(
             RelevantCatalog,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq_database_info},
+                {"role": "user", "content": user_prompt},
             ],
         )
         if llm_resp.requires_multiple_catalogs:
             raise UnRecoverableError("Multiple catalogs/databases are required")
         return llm_resp.database_name
 
-    async def get_relevant_tables(self, nlq: str, catalog: Catalog) -> List[str]:
+    async def get_relevant_tables(
+        self, nlq: str, catalog: Catalog, prev_turn: Optional[Turn] = None
+    ) -> List[str]:
         tables_info = []
         for tablename, tableinfo in catalog.schema.items():
             curr_table_info = {
@@ -173,21 +223,38 @@ class AgentTools(ABC):
         Your role is to analyze user queries and identify all the relevant tables in a database catalog that might be related or can provide the required data.
         The catalog contains metadata about databases, including descriptions, table names, and column names.
         """
-        nlq_tables_info = (
-            f"User asked query: {nlq}, ## Database Catalog: {tables_info_json}"
-        )
+        user_prompt = ""
+        if prev_turn:
+            user_prompt = f"""
+            ## Previous Query:
+            The following query was executed previously. You can use this information to determine the relevant tables
+            {prev_turn.sql_query}
+
+            ## Original User Query:
+            This was the query used to generate the above SQL query.
+            {prev_turn.nlq}
+            """
+
+        user_prompt += f"""
+        ## User asked query: 
+        {nlq} 
+        ## Database Catalog: 
+        {tables_info_json}
+        """
 
         llm_response = await self.invoke_llm(
             RelevantTables,
             [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": nlq_tables_info},
+                {"role": "user", "content": user_prompt},
             ],
         )
 
         return llm_response.tables
 
-    async def generate_queries(self, state: AgentState) -> str:
+    async def generate_queries(
+        self, state: AgentState, prev_turn: Optional[Turn] = None
+    ) -> str:
         """
         Generate a list of queries as simple as possible for the given natural language query (NLQ) and catalogs
         """
@@ -220,6 +287,7 @@ class AgentTools(ABC):
         2. Output: Create a single query that is optimized to retrieve the required data efficiently.
         3. Column Prefixing: Ensure that all columns are prefixed with the table name to avoid ambiguity.
         4. JSON Data: Do not return JSON data stored in columns directly. If required, only select the necessary fields from the JSON columns.
+        5. Feedback: In case you have already generated queries for user's queries, treat the user's most recent message as the feedback for previously generated queries.
         Ensure that your generated queries are precise, efficient, and easy to understand, showcasing your extensive experience.
 
         ##  Schema for Relevant Tables:
@@ -246,15 +314,21 @@ class AgentTools(ABC):
                 {get_table_markdown(data)}
                 """
 
-        print(system_prompt)
-
         user_prompt = f"""{state.intent}"""
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if prev_turn:
+            messages.append({"role": "user", "content": prev_turn.nlq})
+            messages.append(
+                {"role": "assistant", "content": prev_turn.sql_query.sqlquery}
+            )
+
+        messages.append({"role": "user", "content": user_prompt})
+
         llm_response = await self.invoke_llm(
             GeneratedQuery,
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages,
         )
         print(system_prompt)
         logger.info(f"Generated Queries: {llm_response.query}")
@@ -477,8 +551,34 @@ class AgentTools(ABC):
         )
         return llm_response.query
 
-    async def answer_question(self, nlq: str) -> Any:
+    async def answer_question(self, nlq: str, data: QueryResults) -> str:
         """
         Answer the question asked by the user
         """
-        raise NotImplementedError
+        system_prompt = f"""
+        You are a Data Analyst. You need to analyze the following data:
+
+        {get_table_markdown(data)}
+
+        Your task is to analyze the data and provide a clear and concise answer to the user's question.
+
+        """
+
+        if len(system_prompt) > 32000:
+            raise UnRecoverableError(
+                "Cannot answer the question. The data is too large"
+            )
+
+        user_prompt = f"""
+        {nlq}
+        """
+
+        llm_response = await self.invoke_llm(
+            QuestionAnsweringResult,
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+
+        return llm_response.answer

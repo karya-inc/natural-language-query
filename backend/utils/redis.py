@@ -4,6 +4,7 @@ from redis import Redis
 from os import environ
 from executor.catalog import Catalog
 from executor.state import QueryResults
+from utils.query_pipeline import QueryExecutionResult, QueryExecutionSuccessResult
 
 REDIS_HOSTNAME = environ.get("REDIS_HOSTNAME", "localhost")
 REDIS_PORT = int(environ.get("REDIS_PORT", 6379))
@@ -33,28 +34,29 @@ def get_redis_key(
 
 def get_cached_query_result(query: str, catalog: Catalog) -> Optional[QueryResults]:
     key = get_redis_key("query_results", catalog.name, query.strip())
-    cached_result = str(redis_client.get(key))
+    cached_result = redis_client.get(key)
 
     if cached_result:
-        return QueryResults(json.loads(cached_result))
+        return QueryResults(json.loads(str(cached_result)))
 
     return None
 
 
 def get_or_execute_query_result(
-    query: str, catalog: Catalog, execute_query: Callable[[str], QueryResults]
-) -> QueryResults:
+    query: str, catalog: Catalog, execute_query: Callable[[str], QueryExecutionResult]
+) -> QueryExecutionResult:
     cached_result = get_cached_query_result(query, catalog)
     if cached_result:
-        return cached_result
+        return QueryExecutionSuccessResult(cached_result)
 
-    result = execute_query(query)
+    execution_result = execute_query(query)
 
-    # Cache the result for 30 minutes
-    key = get_redis_key("query_results", catalog.name, query.strip())
-    redis_client.set(key, json.dumps(result), ex=REDIS_TTL)
+    if isinstance(execution_result, QueryExecutionSuccessResult):
+        # Cache the result for 30 minutes
+        key = get_redis_key("query_results", catalog.name, query.strip())
+        redis_client.set(key, json.dumps(execution_result.result), ex=REDIS_TTL)
 
-    return result
+    return execution_result
 
 
 def get_cached_categorical_values(catalog: Catalog, table: str) -> Optional[set]:

@@ -4,7 +4,7 @@ from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
-from executor.loop import AgenticLoopFailure, AgenticLoopQueryResult
+from executor.loop import AgenticLoopFailure, AgenticLoopQueryResult, AgenticLoopQuestionAnsweringResult
 from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
@@ -69,6 +69,7 @@ async def do_nlq(
         .with_tools(agent)
         .with_config(config)
         .with_catalogs(parsed_catalogs.catalogs)
+        .with_session(session)
     )
 
     agentic_loop_future = asyncio.create_task(nlq_executor.execute(nlq))
@@ -108,6 +109,14 @@ async def do_nlq(
             payload=result.result,
             session_id=str(session.session_id),
             query=result.query,
+        )
+
+    if isinstance(result, AgenticLoopQuestionAnsweringResult):
+        yield NLQResponseEvent(
+            kind="RESPONSE",
+            type="TEXT",
+            payload=result.answer,
+            session_id=str(session.session_id),
         )
 
     if isinstance(result, AgenticLoopFailure):
