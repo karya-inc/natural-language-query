@@ -29,6 +29,8 @@ class NLQResponseEvent:
     kind: Literal["RESPONSE"]
     type: Literal["TEXT", "TABLE", "ERROR"]
     payload: str | List[dict]
+    session_id: str
+    query: Optional[str] = field(default=None)
 
 
 async def nlq_sse_wrapper(
@@ -104,6 +106,8 @@ async def do_nlq(
             kind="RESPONSE",
             type="TABLE",
             payload=result.result,
+            session_id=str(session.session_id),
+            query=result.query,
         )
 
     if isinstance(result, AgenticLoopFailure):
@@ -111,6 +115,7 @@ async def do_nlq(
             kind="RESPONSE",
             type="ERROR",
             payload=result.reason,
+            session_id=str(session.session_id),
         )
 
     logger.info("NLQ Completed")
