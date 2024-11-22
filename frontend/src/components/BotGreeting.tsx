@@ -1,6 +1,6 @@
 import { Heading, HStack } from "@chakra-ui/react";
-import CFImage from "../../components/CloudflareImage";
-import { BotName } from "../../components/RenderBotName";
+import CFImage from "./CloudflareImage";
+import { BotName } from "./RenderBotName";
 
 const BotGreeting = () => {
   return (

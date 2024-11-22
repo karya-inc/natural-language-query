@@ -13,3 +13,4 @@ PyJWT==2.9.0
 jsonschema==4.23
 referencing==0.35
 sqlglot
+redis
