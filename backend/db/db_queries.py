@@ -62,7 +62,7 @@ def store_turn(
     nlq: str,
     database_used: str,
     sql_query_id: UUID,
-) -> Optional[Turn]:
+) -> Turn:
     """
     Stores a new turn for a session.
     """
@@ -79,7 +79,7 @@ def store_turn(
     except Exception as e:
         logger.error(f"Error storing turn: {e}")
         db_session.rollback()
-        return None
+        raise e
 
 
 def save_user_fav_query(

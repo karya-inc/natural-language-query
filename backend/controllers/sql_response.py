@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, save_query, save_user_fav_query, get_saved_queries, store_turn
 from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
@@ -9,7 +9,7 @@ from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from typing import AsyncIterator, List, Literal
+from typing import AsyncIterator, List, Literal, Optional
 from sqlalchemy.orm import Session
 from uuid import UUID
 import json
@@ -90,16 +90,21 @@ async def do_nlq(
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
-        nlq = result.query
         sql_query_entry = save_query(db_session=db_session, sql_query=result.query)
-        store_turn(
+        turn = store_turn(
             db_session=db_session,
             session_id=session.session_id,
             nlq=nlq,
             sql_query_id=sql_query_entry.sqid,
             database_used=result.db_name,
         )
-        yield NLQResponseEvent(kind="RESPONSE", type="TABLE", payload=result.result)
+        logger.info(f"Saved query: {sql_query_entry.sqid}")
+        logger.info(f"Created turn for session '{session.session_id}' - {turn}")
+        yield NLQResponseEvent(
+            kind="RESPONSE",
+            type="TABLE",
+            payload=result.result,
+        )
 
     if isinstance(result, AgenticLoopFailure):
         yield NLQResponseEvent(
