@@ -34,8 +34,10 @@ const NavBar = ({
 
   const chatHistoryStyles = {
     ":hover": {
-      color: "gray.400",
+      background: "gray.700",
+      color: "gray.300",
       cursor: "pointer",
+      rounded: "md",
     },
   };
 
@@ -45,8 +47,6 @@ const NavBar = ({
 
   return (
     <VStack
-      p="6"
-      pr={0}
       bg="#2a2d3d"
       align="center"
       position={{ base: "absolute", md: "inherit" }}
@@ -55,10 +55,9 @@ const NavBar = ({
       h="100vh"
       w={{ base: "70%", md: "50%", xl: "25%" }}
       alignItems="flex-start"
-      gap={12}
       zIndex={10}
     >
-      <HStack w="full" justify="space-between" pr={4}>
+      <HStack w="full" justify="space-between" p="6">
         <Flex
           fontSize="2xl"
           bgGradient="linear(to-br, impactGreen, #C8E56E)"
@@ -80,31 +79,30 @@ const NavBar = ({
           onClick={() => setNavOpen(!navOpen)}
         />
       </HStack>
-
       <Accordion
         defaultIndex={[0]}
         allowMultiple
         allowToggle
         w="full"
-        color="gray.500"
+        color="gray.400"
         flex={1}
-        border={"none"}
-        pr={4}
       >
         <AccordionItem border={"none"}>
           <h2>
             <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold">
+              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
                 Chat History
               </Box>
               <AccordionIcon />
             </AccordionButton>
           </h2>
-          <AccordionPanel display="flex" flexDirection="column" gap={2}>
+          <AccordionPanel display="flex" flexDirection="column">
             {history && history.length > 0 ? (
               history.map((chat) => (
                 <Text
+                  pl={2}
                   key={chat.session_id}
+                  py={3}
                   sx={chatHistoryStyles}
                   onClick={() =>
                     handleHistoryClick(chat.session_id, chat.user_query)
@@ -122,23 +120,25 @@ const NavBar = ({
         <AccordionItem border={"none"}>
           <h2>
             <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold">
+              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
                 Saved Queries
               </Box>
               <AccordionIcon />
             </AccordionButton>
           </h2>
           <AccordionPanel>
-            <Text fontSize="sm">No saved queries yet.</Text>
+            <Text fontSize="sm" pl={2}>
+              No saved queries yet.
+            </Text>
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
-
       <VStack
-        color="gray.500"
+        color="gray.400"
         align="flex-start"
         fontWeight="normal"
         gap={{ base: 2, xl: 0 }}
+        p={6}
       >
         <Text>Dan Abrahmov</Text>
         <Text>danabrahmov@gmail.com</Text>

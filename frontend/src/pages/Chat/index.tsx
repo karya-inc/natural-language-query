@@ -13,10 +13,10 @@ import {
 } from "@chakra-ui/react";
 import { GoSidebarCollapse } from "react-icons/go";
 import { HiArrowUp } from "react-icons/hi";
-import BotGreeting from "./BotGreeting";
+import BotGreeting from "../../components/BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { BACKEND_URL } from "../../config";
-import MemoizedMessage from "./MemoizedMessage";
+import MemoizedMessage from "../../components/MemoizedMessage";
 
 export type Message = {
   id: number;
@@ -151,9 +151,12 @@ export function ChatBot({
                   botMessage.kind = "TEXT";
                 } else if (parsedChunk.type === "TABLE") {
                   botMessage.message = JSON.stringify(parsedChunk.payload);
+                  botMessage.query = parsedChunk.query;
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
-                  botMessage.query = "SELECT * FROM table";
+                } else {
+                  botMessage.message = "Invalid response type";
+                  botMessage.type = "error";
                 }
               }
               setMessages((prevMessages) => {

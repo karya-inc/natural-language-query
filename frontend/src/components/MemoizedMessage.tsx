@@ -1,9 +1,9 @@
 import { memo } from "react";
-import { Message } from ".";
 import { HStack, VStack, Text } from "@chakra-ui/react";
-import CFImage from "../../components/CloudflareImage";
-import ChatTable from "../../components/ChatTable";
 import ChatActions from "./ChatActions";
+import CFImage from "./CloudflareImage";
+import ChatTable from "./ChatTable";
+import { Message } from "../pages/Chat";
 
 const MemoizedMessage = memo(({ msg }: { msg: Message }) => {
   const { message, role, type } = msg;
