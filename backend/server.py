@@ -1,14 +1,14 @@
 from dotenv import load_dotenv
 
 from db.models import UserSession
+from dependencies.db import get_db
 
 load_dotenv()
 
 import os
-import uuid
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends, Header
+from fastapi import Body, FastAPI, HTTPException, Depends
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
@@ -16,17 +16,12 @@ from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_fav_queries_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, create_session, get_session_for_user
-from db.config import Config
-from db.session import Database
 from sqlalchemy.orm import Session
 from uuid import UUID
 from utils.parse_catalog import parsed_catalogs
 
 parsed_catalogs.database_privileges
 
-
-config = Config()
-db = Database(config)
 
 # Create the FastAPI app
 app = FastAPI()
@@ -41,11 +36,6 @@ app.add_middleware(
 
 # Set up logging configuration
 logger = get_logger("NLQ-Server")
-
-
-# Dependency to get database session
-def get_db():
-    return next(db.get_session())
 
 
 class ChatRequest(BaseModel):
@@ -107,7 +97,9 @@ async def stream_sql_query_responses(
         current_session = create_session(db, user_info.user_id)
     else:
         current_session = get_session_for_user(
-            db, user_info.user_id, UUID(chat_request.session_id)
+            db_session=db,
+            user_id=user_info.user_id,
+            session_id=UUID(chat_request.session_id),
         )
         session_id = chat_request.session_id
 

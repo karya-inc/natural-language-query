@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import ForeignKey, Text, DateTime, func
+from sqlalchemy import ForeignKey, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 
 
@@ -50,7 +50,7 @@ class UserSession(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship(back_populates="sessions", default=None)
+    user: Mapped["User"] = relationship(back_populates="sessions", init=False)
     turns: Mapped[List["Turn"]] = relationship(
         back_populates="session", default_factory=list
     )
@@ -78,8 +78,8 @@ class Turn(Base):
     saved_queries: Mapped[List["SavedQuery"]] = relationship(
         back_populates="turns", default_factory=list
     )
-    session: Mapped["UserSession"] = relationship(back_populates="turns", default=None)
-    sql_query: Mapped["SqlQuery"] = relationship(back_populates="turns", default=None)
+    session: Mapped["UserSession"] = relationship(back_populates="turns", init=False)
+    sql_query: Mapped["SqlQuery"] = relationship(back_populates="turns", init=False)
 
 
 class SqlQuery(Base):
@@ -121,9 +121,9 @@ class SavedQuery(Base):
 
     # Relationships
     turns: Mapped["Turn"] = relationship(
-        "Turn", back_populates="saved_queries", default=None
+        "Turn", back_populates="saved_queries", init=False
     )
     user: Mapped["User"] = relationship(
-        "User", back_populates="saved_queries", default=None
+        "User", back_populates="saved_queries", init=False
     )
-    sql_query: Mapped["SqlQuery"] = relationship("SqlQuery", default=None)
+    sql_query: Mapped["SqlQuery"] = relationship("SqlQuery", init=False)

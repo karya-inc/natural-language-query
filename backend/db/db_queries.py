@@ -10,10 +10,12 @@ import enum
 
 logger = get_logger("[DATABASE_QUERIES]")
 
+
 # Enums
 class Roles(enum.Enum):
     USER = "user"
     BOT = "bot"
+
 
 # Pydantic Models
 class ChatHistoryResponse(BaseModel):
@@ -23,7 +25,7 @@ class ChatHistoryResponse(BaseModel):
     timestamp: datetime
 
 
-def get_or_create_user(db_session: Session, user_id: str) -> Optional[User]:
+def get_or_create_user(db_session: Session, user_id: str) -> User:
     """Check if a user exists; if not, create a new user."""
     try:
         user = db_session.query(User).filter_by(user_id=user_id).first()
@@ -37,7 +39,8 @@ def get_or_create_user(db_session: Session, user_id: str) -> Optional[User]:
     except Exception as e:
         logger.error(f"Error getting or creating user: {e}")
         db_session.rollback()
-        return None
+        raise e
+
 
 def create_session(db_session: Session, user_id: str) -> Optional[UserSession]:
     """Create a new session for a user."""
@@ -51,8 +54,15 @@ def create_session(db_session: Session, user_id: str) -> Optional[UserSession]:
         db_session.rollback()
         return None
 
+
 # Saving to database functions
-def store_turn(db_session: Session, session_id: UUID, nlq: str, database_used: str, sql_query_id: UUID) -> Optional[Turn]:
+def store_turn(
+    db_session: Session,
+    session_id: UUID,
+    nlq: str,
+    database_used: str,
+    sql_query_id: UUID,
+) -> Optional[Turn]:
     """
     Stores a new turn for a session.
     """
@@ -61,7 +71,7 @@ def store_turn(db_session: Session, session_id: UUID, nlq: str, database_used: s
             session_id=session_id,
             nlq=nlq,
             database_used=database_used,
-            sqid=sql_query_id
+            sqid=sql_query_id,
         )
         db_session.add(turn)
         db_session.commit()
@@ -72,16 +82,14 @@ def store_turn(db_session: Session, session_id: UUID, nlq: str, database_used: s
         return None
 
 
-def save_user_fav_query(db_session: Session, user_id: str, turn_id: int, sql_query_id: UUID) -> Optional[SavedQuery]:
+def save_user_fav_query(
+    db_session: Session, user_id: str, turn_id: int, sql_query_id: UUID
+) -> Optional[SavedQuery]:
     """
     Save a query as the user's favorite.
     """
     try:
-        saved_query = SavedQuery(
-            user_id=user_id,
-            turn_id=turn_id,
-            sqid=sql_query_id
-        )
+        saved_query = SavedQuery(user_id=user_id, turn_id=turn_id, sqid=sql_query_id)
         db_session.add(saved_query)
         db_session.commit()
         return saved_query
@@ -89,6 +97,7 @@ def save_user_fav_query(db_session: Session, user_id: str, turn_id: int, sql_que
         logger.error(f"Error saving query: {e}")
         db_session.rollback()
         return None
+
 
 # Save the generated SQL query by AI agent
 def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
@@ -105,15 +114,24 @@ def save_query(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
         db_session.rollback()
         return None
 
+
 # check if session exists for that user
-def get_session_for_user(db_session: Session, user_id: str, session_id: UUID) -> Optional[UserSession]:
+def get_session_for_user(
+    db_session: Session, user_id: str, session_id: UUID
+) -> Optional[UserSession]:
     """
     Check if session id is for the user; if not, return None
     """
     try:
-        session = db_session.query(UserSession).filter_by(user_id=user_id, session_id=session_id).first()
+        session = (
+            db_session.query(UserSession)
+            .filter_by(user_id=user_id, session_id=session_id)
+            .first()
+        )
         if not session:
-            logger.warning(f"Session not found for user: {user_id}, session_id: {session_id}")
+            logger.warning(
+                f"Session not found for user: {user_id}, session_id: {session_id}"
+            )
             return None
         return session
     except Exception as e:
@@ -121,14 +139,23 @@ def get_session_for_user(db_session: Session, user_id: str, session_id: UUID) ->
         db_session.rollback()
         return None
 
+
 # Get data from database functions
 
-def get_chat_history(db_session: Session, session_id: UUID) -> List[ChatHistoryResponse]:
+
+def get_chat_history(
+    db_session: Session, session_id: UUID
+) -> List[ChatHistoryResponse]:
     """
     Get chat history for a session.
     """
     try:
-        turns = db_session.query(Turn).filter_by(session_id=session_id).order_by(desc(Turn.created_at)).all()
+        turns = (
+            db_session.query(Turn)
+            .filter_by(session_id=session_id)
+            .order_by(desc(Turn.created_at))
+            .all()
+        )
         chat_history = []
         for turn in turns:
             chat_history.append(
@@ -136,7 +163,7 @@ def get_chat_history(db_session: Session, session_id: UUID) -> List[ChatHistoryR
                     id=turn.turn_id,
                     message=turn.nlq,
                     role=Roles.USER,
-                    timestamp=turn.created_at
+                    timestamp=turn.created_at,
                 )
             )
             chat_history.append(
@@ -144,7 +171,7 @@ def get_chat_history(db_session: Session, session_id: UUID) -> List[ChatHistoryR
                     id=turn.sql_query.sqid,
                     message=turn.sql_query.sqlquery,
                     role=Roles.BOT,
-                    timestamp=turn.sql_query.created_at
+                    timestamp=turn.sql_query.created_at,
                 )
             )
         return chat_history
@@ -158,8 +185,11 @@ class UserSessionsResponse(BaseModel):
     session_id: UUID
     nlq: str
 
+
 # Get the list of session by user and first turn nlq
-def get_history_sessions(db_session: Session, user_id: str) -> List[UserSessionsResponse]:
+def get_history_sessions(
+    db_session: Session, user_id: str
+) -> List[UserSessionsResponse]:
     """
     Get all sessions for a user, along with first NLQ turn for each session.
     """
@@ -169,20 +199,21 @@ def get_history_sessions(db_session: Session, user_id: str) -> List[UserSessions
         if not sessions:
             return sessions_list
         for session in sessions:
-            first_turn = db_session.query(Turn).filter_by(session_id=session.session_id).order_by(Turn.created_at).first()
+            first_turn = (
+                db_session.query(Turn)
+                .filter_by(session_id=session.session_id)
+                .order_by(Turn.created_at)
+                .first()
+            )
             if first_turn:
                 sessions_list.append(
                     UserSessionsResponse(
-                        session_id=session.session_id,
-                        nlq=f"{first_turn.nlq}"
+                        session_id=session.session_id, nlq=f"{first_turn.nlq}"
                     )
                 )
             else:
                 sessions_list.append(
-                    UserSessionsResponse(
-                        session_id=session.session_id,
-                        nlq=""
-                    )
+                    UserSessionsResponse(session_id=session.session_id, nlq="")
                 )
 
         return sessions_list
@@ -196,6 +227,7 @@ class SavedQueriesResponse(BaseModel):
     sqid: UUID
     nlq: str
     sqlquery: str
+
 
 def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesResponse]:
     """
@@ -211,7 +243,7 @@ def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesRes
                 SavedQueriesResponse(
                     sqid=saved_query.sqid,
                     nlq=saved_query.turns.nlq,
-                    sqlquery=saved_query.sql_query.sqlquery
+                    sqlquery=saved_query.sql_query.sqlquery,
                 )
             )
         return saved_queries_list
