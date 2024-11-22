@@ -242,4 +242,3 @@ async def agentic_loop(
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             time.sleep(FAILURE_RETRY_DELAY)
-            raise e
