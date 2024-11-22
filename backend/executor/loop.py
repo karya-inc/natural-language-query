@@ -11,7 +11,7 @@ from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
 
-from utils.redis import get_cached_categorical_values
+from utils.redis import get_cached_categorical_values, get_or_execute_query_result
 
 TURN_LIMIT = 3
 MAX_HEALING_ATTEMPTS = 5
@@ -53,7 +53,9 @@ async def execute_query_with_healing(
         if healing_attempts >= MAX_HEALING_ATTEMPTS:
             raise UnRecoverableError("Failed to heal query")
 
-        execution_result = query_pipeline.execute(query_to_execute)
+        execution_result = get_or_execute_query_result(
+            query_to_execute, state.relevant_catalog, query_pipeline.execute
+        )
         if isinstance(execution_result, QueryExecutionSuccessResult):
             return execution_result.result
 
