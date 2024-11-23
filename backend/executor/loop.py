@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, List, Optional, Union, cast
 from db.models import UserSession
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
 from executor.models import QueryTypeLiteral
-from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionSuccessResult
+from rbac.check_permissions import PrivilageCheckResult
+from utils.query_pipeline import QueryExecutionPipeline, QueryExecutionResult, QueryExecutionSuccessResult
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from executor.state import AgentState, QueryResults
@@ -56,31 +57,53 @@ async def execute_query_with_healing(
     query_to_execute = query
 
     healing_attempts = 0
-    while True:
-        if healing_attempts >= MAX_HEALING_ATTEMPTS:
-            raise UnRecoverableError("Failed to heal query")
+    execution_result: Optional[QueryExecutionResult] = None
+    while healing_attempts >= MAX_HEALING_ATTEMPTS:
+        try:
+            execution_result = get_or_execute_query_result(
+                query_to_execute, state.relevant_catalog, query_pipeline.execute
+            )
 
-        execution_result = get_or_execute_query_result(
-            query_to_execute, state.relevant_catalog, query_pipeline.execute
+            if isinstance(execution_result, QueryExecutionSuccessResult):
+                return execution_result.result
+
+            if not execution_result.recoverable:
+                raise UnRecoverableError(execution_result.reason)
+
+            # Attempt to heal the query
+            healing_attempts += 1
+            if healing_attempts % 3 == 0:
+                # Couldn't fix after 2mes, try to regenerate the query
+                query_to_execute = await tools.heal_fix_query(
+                    query_to_execute, state, execution_result
+                )
+            else:
+                query_to_execute = await tools.heal_regenerate_query(
+                    query_to_execute, state, execution_result
+                )
+        except UnRecoverableError as e:
+            raise e
+
+        except Exception as e:
+            logger.error(f"Error in execute_query_with_healing: {e}")
+            continue
+
+    # If the query was successfully executed, return the result
+    if isinstance(execution_result, QueryExecutionSuccessResult):
+        return execution_result.result
+
+    # If there is not execution result, or it is not recoverable
+    if not execution_result or not execution_result.recoverable:
+        raise UnRecoverableError("Failed to get a result for the query")
+
+    # If the permissions are not sufficient even after healing, raise UnRecoverableError
+    if isinstance(execution_result.reason, PrivilageCheckResult):
+        raise UnRecoverableError(
+            "Failed to execute this query. You may not have the required permissions."
         )
 
-        if isinstance(execution_result, QueryExecutionSuccessResult):
-            return execution_result.result
-
-        if not execution_result.recoverable:
-            raise UnRecoverableError(execution_result.reason)
-
-        # Attempt to heal the query
-        healing_attempts += 1
-        if healing_attempts % 3 == 0:
-            # Couldn't fix after 2mes, try to regenerate the query
-            query_to_execute = await tools.heal_fix_query(
-                query_to_execute, state, execution_result
-            )
-        else:
-            query_to_execute = await tools.heal_regenerate_query(
-                query_to_execute, state, execution_result
-            )
+    # Unknow error
+    raise UnRecoverableError("Failed to execute this query")
 
 
 async def agentic_loop(
@@ -152,10 +175,11 @@ async def agentic_loop(
             return AgenticLoopFailure(reason=str(e))
 
     while True:
-        if turns >= TURN_LIMIT:
-            raise Exception("Agentic loop did not converge")
-
         try:
+            if turns >= TURN_LIMIT:
+                raise UnRecoverableError(
+                    "Failed to generate a result for your query. Try rephrasing your question."
+                )
 
             if len(catalogs) == 0:
                 raise UnRecoverableError("No catalogs available")
@@ -241,4 +265,8 @@ async def agentic_loop(
             turns += 1
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
+            send_update(AgentStatus.FIXING)
             time.sleep(FAILURE_RETRY_DELAY)
+            return AgenticLoopFailure(
+                reason="Encountered problems while fixing permissions"
+            )

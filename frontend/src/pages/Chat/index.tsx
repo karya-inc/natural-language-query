@@ -55,7 +55,7 @@ export type NLQUpdateEvent = (
     }
   | {
       kind: "RESPONSE";
-      type: "TEXT";
+      type: "TEXT" | "ERROR";
       payload: string;
     }
   | {
@@ -154,8 +154,9 @@ export function ChatBot({
                   botMessage.query = parsedChunk.query;
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
-                } else {
-                  botMessage.message = "Invalid response type";
+                } else if (parsedChunk.type === "ERROR") {
+                  console.log(parsedChunk.payload)
+                  botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";
                 }
               }
