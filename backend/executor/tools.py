@@ -10,6 +10,7 @@ from executor.errors import UnRecoverableError
 from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
+from utils import table_to_markdown
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
@@ -187,9 +188,9 @@ class AgentTools(ABC):
             """
 
         user_prompt += f"""
-            ## User asked query: 
+            ## User asked query:
             {nlq}
-            ## Database Catalogs: 
+            ## Database Catalogs:
             {database_info_json}
             """
 
@@ -236,9 +237,9 @@ class AgentTools(ABC):
             """
 
         user_prompt += f"""
-        ## User asked query: 
-        {nlq} 
-        ## Database Catalog: 
+        ## User asked query:
+        {nlq}
+        ## Database Catalog:
         {tables_info_json}
         """
 
@@ -334,11 +335,43 @@ class AgentTools(ABC):
         logger.info(f"Generated Queries: {llm_response.query}")
         return llm_response.query
 
-    async def is_result_relevant(self, results: QueryResults, nlq: str) -> bool:
+    async def is_result_relevant(
+        self, results: QueryResults, nlq: str, sql: str
+    ) -> bool:
         """
         Check if the aggregated result is relevant to the original natural language query (NLQ).
         """
-        raise NotImplementedError
+
+        system_prompt = f"""
+        You are a Data Analyst. You had previously asked your intern to get you some data for a query you had.
+        You now have to determine if the data provided to you by the intern is relevant to the query you had asked for.
+
+        Your intern will only provide you with a single row of the data. You will also know the number of rows in the data and
+        the sql query that was used to generate the data.
+
+        ## Your Query:
+        {nlq}
+        """
+        user_prompt = f"""
+        ## Sample Data:
+        {get_table_markdown(results[:1])}
+
+        ## Number of Rows:
+        {len(results)}
+
+        ## SQL Query:
+        {sql}
+        """
+
+        llm_response = await self.invoke_llm(
+            QuestionAnsweringResult,
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+
+        return llm_response
 
     async def heal_fix_query(
         self,
@@ -353,19 +386,19 @@ class AgentTools(ABC):
 
         catalog = cast(Catalog, state.relevant_catalog)
         system_prompt = f"""
-        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect. 
+        You are a SQL Expert with over 10 years of experience in {catalog.provider} dialect.
         You will be provided with the original SQL query, the relevant information related to the query and the query execution result.
         """
 
         if regenerate:
             system_prompt += f"""
             Others have tried to fix this query but failed. There's probably something wrong with the approach or the query itself
-            Your task is to regenerate an SQL query that servers the same purpose as the current one. 
+            Your task is to regenerate an SQL query that servers the same purpose as the current one.
             The query should be syntactically correct and should adhere to the best practices.
             """
         else:
             system_prompt += f"""
-            Your task is to troubleshoot and fix all the issue with the provided SQL query 
+            Your task is to troubleshoot and fix all the issue with the provided SQL query
             """
 
         example_tables = f"""
@@ -385,8 +418,8 @@ class AgentTools(ABC):
             err = errors.reason.err_code
             match err:
                 case ErrorCode.MISSING_TABLE_NAME_PREFIX:
-                    system_prompt += f""" 
-                    Your task is to ensure that all columns in the query are prefixed with the table name to avoid 
+                    system_prompt += f"""
+                    Your task is to ensure that all columns in the query are prefixed with the table name to avoid
                     ambiguity about the table the column orignates from.
                     Example:
 
@@ -399,7 +432,7 @@ class AgentTools(ABC):
                          select name from employees where employees.salary > 1000
                          select name from employees where salary > 1000
                          select employees.name, departments.name as dept_name join departments on departments.id = dept_id from employees where employees.salary > 1000
-                    
+                   
                     The following queries are allowed:
                          select employees.name from employees where employees.salary > 1000
                          select employees.name from employees join departments on departments.id = employees.dept_id where employees.salary > 1000
@@ -407,16 +440,16 @@ class AgentTools(ABC):
 
                 case ErrorCode.INVALID_SQL_QUERY:
                     system_prompt += """
-                    The query is not valid SQL. Please check the syntax and ensure that all SQL keywords are 
+                    The query is not valid SQL. Please check the syntax and ensure that all SQL keywords are
                     used correctly and it is syntactically correct.
                     """
 
                 case ErrorCode.WILDCARD_STAR_NOT_ALLOWED:
                     system_prompt += f"""
-                    Your task is to remove the wildcard stars from the select clauses and 
-                    replace them with explicit column names. This will ensure that the query is more specific and avoids ambiguity. 
+                    Your task is to remove the wildcard stars from the select clauses and
+                    replace them with explicit column names. This will ensure that the query is more specific and avoids ambiguity.
 
-                    Example: 
+                    Example:
                     Assuming the following tables:
 
                     {example_tables}
@@ -430,12 +463,12 @@ class AgentTools(ABC):
                     """
                 case ErrorCode.ROLE_NO_COLUMN_ACCESS:
                     system_prompt += f"""
-                    Your task is to remove the columns that the role does not have access to. You will be given the 
+                    Your task is to remove the columns that the role does not have access to. You will be given the
                     information about the columns that the role has access to i the context.
                     """
                 case ErrorCode.ROLE_NO_ROWS_ACCESS:
                     system_prompt += f"""
-                    Your task is to add where clauses to the query to restrict the rows that the role has access to. 
+                    Your task is to add where clauses to the query to restrict the rows that the role has access to.
                     A column scope defines the filters/restrictions that are applied to a column to restrict the rows that a role has access to.
 
                     Privilages defined for the tables are as follows
@@ -457,12 +490,12 @@ class AgentTools(ABC):
                     """
         else:
             system_prompt += f"""
-            The error is most likely from the database driver, which means that the query is not valid SQL. 
+            The error is most likely from the database driver, which means that the query is not valid SQL.
             Please check the syntax and ensure that all SQL keywords are used correctly and it is syntactically correct.
             """
 
         system_prompt += f"""
-        ### Intent of the query: 
+        ### Intent of the query:
         {state.intent}
 
         ### Table Schema
@@ -470,16 +503,16 @@ class AgentTools(ABC):
         {json.dumps(catalog.schema)}
         ```
 
-        ### Relevant Tables: 
+        ### Relevant Tables:
         The following tables are relevant to the query:
         {state.relevant_tables}
         """
 
         user_prompt = f"""
-        ## SQL Query: 
+        ## SQL Query:
         {query}
 
-        ## Errors: 
+        ## Errors:
         {errors}
         """
         llm_response = await self.invoke_llm(
@@ -525,7 +558,7 @@ class AgentTools(ABC):
         select name from employees where salary > 1000 <!--This Query is not allowed -->
         ```
 
-        Make sure the query is distint from the original query and serves the same purpose. Also make sure the query answers the 
+        Make sure the query is distint from the original query and serves the same purpose. Also make sure the query answers the
         user's intent
 
         Schems for the tables are as follows:
@@ -534,10 +567,10 @@ class AgentTools(ABC):
         ```
         """
         user_query = f"""
-        ### Original Query: 
+        ### Original Query:
         {query}
 
-        ### Errors: 
+        ### Errors:
         {errors}
         """
 
