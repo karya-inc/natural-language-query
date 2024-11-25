@@ -181,6 +181,8 @@ async def agentic_loop(
                     "Failed to generate a result for your query. Try rephrasing your question."
                 )
 
+            turns += 1
+
             if len(catalogs) == 0:
                 raise UnRecoverableError("No catalogs available")
 
@@ -271,7 +273,7 @@ async def agentic_loop(
             # Try to improve the query by providing feedback to make it more relevant
             elif relevance.relevance_score >= 3:
                 logger.info(
-                    f"Relevance score: {relevance.relevance_score}. Refining query..."
+                    f"Relevance score: {relevance.relevance_score}. Reason - {relevance.reason}. Refining query..."
                 )
                 send_update(AgentStatus.REFINING_QUERY)
                 state.query = None
@@ -299,7 +301,6 @@ async def agentic_loop(
             send_update(AgentStatus.TASK_FAILED)
             return AgenticLoopFailure(reason=e.message)
         except Exception as e:
-            turns += 1
             logger.error(f"Error in agentic loop: {e}")
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             send_update(AgentStatus.FIXING)
