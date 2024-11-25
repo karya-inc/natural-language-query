@@ -102,7 +102,8 @@ async def do_nlq(
             database_used=result.db_name,
         )
         logger.info(f"Saved query: {sql_query_entry.sqid}")
-        logger.info(f"Created turn for session '{session.session_id}' - {turn}")
+        logger.info(f"Created turn for session '{session.session_id}' - {turn.turn_id}")
+        logger.info(f"Sending table result. Sample result - {result.result}")
         yield NLQResponseEvent(
             kind="RESPONSE",
             type="TABLE",
@@ -112,6 +113,7 @@ async def do_nlq(
         )
 
     if isinstance(result, AgenticLoopQuestionAnsweringResult):
+        logger.info(f"Sending question answering result - {result.answer}")
         yield NLQResponseEvent(
             kind="RESPONSE",
             type="TEXT",
@@ -120,6 +122,7 @@ async def do_nlq(
         )
 
     if isinstance(result, AgenticLoopFailure):
+        logger.info(f"Sending agentic loop failure event with reason - {result.reason}")
         yield NLQResponseEvent(
             kind="RESPONSE",
             type="ERROR",

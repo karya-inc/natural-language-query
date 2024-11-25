@@ -255,6 +255,7 @@ async def agentic_loop(
                 state.result_relevance = await tools.is_result_relevant(
                     state.final_result, state.intent, state.query
                 )
+                logger.info(f"Result relevance: {state.result_relevance}")
 
             relevance = state.result_relevance
 
@@ -269,6 +270,9 @@ async def agentic_loop(
 
             # Try to improve the query by providing feedback to make it more relevant
             elif relevance.relevance_score >= 3:
+                logger.info(
+                    f"Relevance score: {relevance.relevance_score}. Refining query..."
+                )
                 send_update(AgentStatus.REFINING_QUERY)
                 state.query = None
                 state.final_result = None
@@ -276,11 +280,15 @@ async def agentic_loop(
 
             # If the result is not relevant, raise an error
             elif relevance.reason:
+                logger.warning(f"Generated result is not relevant: {relevance.reason}")
                 send_update(AgentStatus.TASK_FAILED)
                 raise UnRecoverableError(relevance.reason)
 
             # If the result is not relevant and no reason is provided, raise an error
             else:
+                logger.error(
+                    "Failed to generate a relevant result. Reason not provided."
+                )
                 send_update(AgentStatus.TASK_FAILED)
                 raise UnRecoverableError(
                     "Failed to generate a result for your query. Try rephrasing your question."
