@@ -22,5 +22,5 @@ class AgentState:
     categorical_tables: dict[str, QueryResults] = field(default_factory=dict)
     table_sample_rows: dict[str, QueryResults] = field(default_factory=dict)
     query: Optional[str] = field(default=None)
-    final_result: QueryResults = field(default_factory=QueryResults)
+    final_result: Optional[QueryResults] = field(default=None)
     result_relevance: Optional[IsResultRelevant] = field(default=None)

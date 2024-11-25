@@ -187,7 +187,7 @@ async def agentic_loop(
             if len(catalogs) == 1:
                 state.relevant_catalog = catalogs[0]
 
-            # Get the relevant catalog
+            # Select the relevant catalog if it is not already selected
             if not state.relevant_catalog:
                 send_update(AgentStatus.CATALOGING)
                 relevant_catalog_name = await tools.get_relevant_catalog(nlq, catalogs)
@@ -199,8 +199,8 @@ async def agentic_loop(
 
             state.scopes = config.user_info.scopes.get(state.relevant_catalog.name, [])
 
+            # Get the relevant tables if they are not already selected
             if not state.relevant_tables:
-                # Get the relevant table names
                 send_update(AgentStatus.CATALOGING)
                 relevant_table_names = await tools.get_relevant_tables(
                     nlq, state.relevant_catalog
@@ -233,16 +233,16 @@ async def agentic_loop(
                 state.relevant_tables = relevant_tables
                 state.categorical_tables = categorical_tables
 
+            # Generate the query if it is not already generated
             if not state.query:
                 send_update(AgentStatus.GENERATING_QUERIES)
-                # Generate queries
                 state.query = await tools.generate_queries(state)
                 if not state.query:
                     raise Exception("Failed to generate queries")
 
+            # Execute the final query if it is not already executed
             if not state.final_result:
                 send_update(AgentStatus.EXECUTING_QUERIES)
-                # Execute the final query
                 state.final_result = await execute_query_with_healing(
                     state=state,
                     query=state.query,
@@ -257,6 +257,8 @@ async def agentic_loop(
                 )
 
             relevance = state.result_relevance
+
+            # If the result is relevant, return the result
             if relevance.relevance_score >= 7:
                 send_update(AgentStatus.TASK_COMPLETED)
                 return AgenticLoopQueryResult(
@@ -265,17 +267,19 @@ async def agentic_loop(
                     db_name=state.relevant_catalog.name,
                 )
 
+            # Try to improve the query by providing feedback to make it more relevant
             elif relevance.relevance_score >= 3:
                 send_update(AgentStatus.REFINING_QUERY)
-                # regenerate the query
                 state.query = None
-                state.final_result = []
-                state.result_relevance = relevance
+                state.final_result = None
+                continue
 
+            # If the result is not relevant, raise an error
             elif relevance.reason:
                 send_update(AgentStatus.TASK_FAILED)
                 raise UnRecoverableError(relevance.reason)
 
+            # If the result is not relevant and no reason is provided, raise an error
             else:
                 send_update(AgentStatus.TASK_FAILED)
                 raise UnRecoverableError(

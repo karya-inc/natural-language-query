@@ -315,7 +315,16 @@ class AgentTools(ABC):
                 {get_table_markdown(data)}
                 """
 
-        user_prompt = f"""{state.intent}"""
+        user_prompt = f"""
+        ## User Intent:
+        {state.intent}
+        """
+
+        if state.result_relevance and state.result_relevance.reason:
+            user_prompt += f"""
+            ## Insights from Previous Attempt:
+            {state.result_relevance.reason}
+            """
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": system_prompt},
         ]
