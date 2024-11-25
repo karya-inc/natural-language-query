@@ -58,7 +58,7 @@ async def execute_query_with_healing(
 
     healing_attempts = 0
     execution_result: Optional[QueryExecutionResult] = None
-    while healing_attempts >= MAX_HEALING_ATTEMPTS:
+    while healing_attempts <= MAX_HEALING_ATTEMPTS:
         try:
             execution_result = get_or_execute_query_result(
                 query_to_execute, state.relevant_catalog, query_pipeline.execute
