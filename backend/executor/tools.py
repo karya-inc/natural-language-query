@@ -7,7 +7,7 @@ from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
-from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
+from executor.models import GeneratedQuery, HealedQuery, IsResultRelevant, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
 from utils import table_to_markdown
@@ -337,17 +337,24 @@ class AgentTools(ABC):
 
     async def is_result_relevant(
         self, results: QueryResults, nlq: str, sql: str
-    ) -> bool:
+    ) -> IsResultRelevant:
         """
         Check if the aggregated result is relevant to the original natural language query (NLQ).
         """
 
         system_prompt = f"""
         You are a Data Analyst. You had previously asked your intern to get you some data for a query you had.
-        You now have to determine if the data provided to you by the intern is relevant to the query you had asked for.
 
         Your intern will only provide you with a single row of the data. You will also know the number of rows in the data and
         the sql query that was used to generate the data.
+
+        You also need to provide a score between 1 and 10 that determines how relevant the result is.
+        A score of 10 means the result is exactly what you asked for.
+        A score of 0 means the result doesn't have any information requested by you
+        A score of 7 and above indicates the result is relevant enough to be used meaningfully
+        A score of less than 3 means you probably failed to explain the intern. Provide feedback on how you can improve the query to yourself. Use "You" instead of "I" wherever applicable.
+        If result is not relevant, i.e. the score is below 7, you have to provide a reason that explains why.
+        The reason should be constructive feedback that can help the intern improve the results
 
         ## Your Query:
         {nlq}
@@ -364,7 +371,7 @@ class AgentTools(ABC):
         """
 
         llm_response = await self.invoke_llm(
-            QuestionAnsweringResult,
+            IsResultRelevant,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

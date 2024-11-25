@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
@@ -34,3 +34,8 @@ class HealedQuery(BaseModel):
 
 class QuestionAnsweringResult(BaseModel):
     answer: str
+
+
+class IsResultRelevant(BaseModel):
+    relevance_score: float
+    reason: Optional[str]

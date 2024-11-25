@@ -7,7 +7,6 @@ class AgentStatus(Enum):
     FIXING = "Fixing problems with the SQL query..."
     GENERATING_QUERIES = "Generating queries..."
     EXECUTING_QUERIES = "Executing queries..."
-    EXECUTE_REFINED_QUERY = "Executing the refined query..."
     EVALUATING_RESULTS = "Evaluating results..."
     REFINING_QUERY = "Refining the query..."
     TASK_COMPLETED = "Agent has completed the task."

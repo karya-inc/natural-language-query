@@ -2,6 +2,7 @@ from executor.catalog import Catalog
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
+from executor.models import IsResultRelevant
 from rbac.check_permissions import ColumnScope
 
 QueryType = Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]
@@ -22,3 +23,4 @@ class AgentState:
     table_sample_rows: dict[str, QueryResults] = field(default_factory=dict)
     query: Optional[str] = field(default=None)
     final_result: QueryResults = field(default_factory=QueryResults)
+    result_relevance: Optional[IsResultRelevant] = field(default=None)

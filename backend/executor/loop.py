@@ -241,8 +241,8 @@ async def agentic_loop(
                     raise Exception("Failed to generate queries")
 
             if not state.final_result:
-                send_update(AgentStatus.EXECUTE_REFINED_QUERY)
-                # Execute the aggregate query
+                send_update(AgentStatus.EXECUTING_QUERIES)
+                # Execute the final query
                 state.final_result = await execute_query_with_healing(
                     state=state,
                     query=state.query,
@@ -250,12 +250,37 @@ async def agentic_loop(
                     config=config,
                 )
 
-            send_update(AgentStatus.TASK_COMPLETED)
-            return AgenticLoopQueryResult(
-                result=state.final_result,
-                query=state.query,
-                db_name=state.relevant_catalog.name,
-            )
+            if not state.result_relevance:
+                send_update(AgentStatus.EVALUATING_RESULTS)
+                state.result_relevance = await tools.is_result_relevant(
+                    state.final_result, state.intent, state.query
+                )
+
+            relevance = state.result_relevance
+            if relevance.relevance_score >= 7:
+                send_update(AgentStatus.TASK_COMPLETED)
+                return AgenticLoopQueryResult(
+                    result=state.final_result,
+                    query=state.query,
+                    db_name=state.relevant_catalog.name,
+                )
+
+            elif relevance.relevance_score >= 3:
+                send_update(AgentStatus.REFINING_QUERY)
+                # regenerate the query
+                state.query = None
+                state.final_result = []
+                state.result_relevance = relevance
+
+            elif relevance.reason:
+                send_update(AgentStatus.TASK_FAILED)
+                raise UnRecoverableError(relevance.reason)
+
+            else:
+                send_update(AgentStatus.TASK_FAILED)
+                raise UnRecoverableError(
+                    "Failed to generate a result for your query. Try rephrasing your question."
+                )
 
         except UnRecoverableError as e:
             logger.error(f"Unrecoverable error in agentic loop: {e}")
@@ -267,6 +292,3 @@ async def agentic_loop(
             logger.info(f"Retrying in {FAILURE_RETRY_DELAY} seconds...")
             send_update(AgentStatus.FIXING)
             time.sleep(FAILURE_RETRY_DELAY)
-            return AgenticLoopFailure(
-                reason="Encountered problems while fixing permissions"
-            )
