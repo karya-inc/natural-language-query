@@ -1,15 +1,21 @@
 import uuid
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from sqlalchemy import ForeignKey, Text, func
+from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.ext.mutable import MutableList
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
     """Base class for SQLAlchemy models"""
 
-    pass
+    type_annotation_map = {
+        dict[str, Any]: JSONB,
+        list[str]: ARRAY(String),
+    }
 
 
 class User(Base):
@@ -144,7 +150,7 @@ class ExecutionLog(Base):
 
     # Fields with Default values
     notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
-    logs: Mapped[Optional[dict]] = mapped_column(default=None, init=False)
+    logs: Mapped[Optional[dict[str, Any]]] = mapped_column(default=None, init=False)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
