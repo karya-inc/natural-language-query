@@ -110,7 +110,7 @@ class SavedQuery(Base):
     name: Mapped[str] = mapped_column()
     description: Mapped[str] = mapped_column()
 
-    turn_id: Mapped[Optional[str]] = mapped_column(
+    turn_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("turns.turn_id"), nullable=True
     )
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
@@ -123,6 +123,7 @@ class SavedQuery(Base):
     )
 
     # Relationships
+    turn: Mapped["Turn"] = relationship(init=False)
     user: Mapped["User"] = relationship(back_populates="saved_queries", init=False)
     sql_query: Mapped["SqlQuery"] = relationship(init=False)
 
@@ -142,13 +143,12 @@ class ExecutionLog(Base):
     executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
 
     # Fields with Default values
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, default=None)
     notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
-    created_at: Mapped[datetime] = mapped_column(
-        insert_default=func.now(), default=None
-    )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(default=None)
-    logs: Mapped[Optional[dict]] = mapped_column(default=None)
+    logs: Mapped[Optional[dict]] = mapped_column(default=None, init=False)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(init=False)
 
     # Relationships
     query: Mapped["SqlQuery"] = relationship(init=False)
