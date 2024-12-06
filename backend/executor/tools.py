@@ -1,16 +1,13 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, Optional, cast
+from typing import List, Optional, cast
 from openai.types.chat import ChatCompletionMessageParam
-from db.db_queries import get_saved_queries
 from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
-
 from executor.errors import UnRecoverableError
 from executor.models import GeneratedQuery, HealedQuery, IsResultRelevant, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
-from utils import table_to_markdown
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
@@ -32,7 +29,9 @@ class AgentTools(ABC):
     ) -> T:
         raise NotImplementedError
 
-    async def analaze_nlq_intent(self, nlq: str, turns: list[Turn] = []) -> str:
+    async def analaze_nlq_intent(
+        self, nlq: str, turns: list[Turn] = [], feedback: list[str] = []
+    ) -> str:
         """
         Analyze the natural language query (NLQ) and return the intent of the query.
         """
@@ -55,6 +54,17 @@ class AgentTools(ABC):
         for turn in turns:
             user_prompt += f"""
             - {turn.nlq}
+            """
+
+        if len(feedback) > 0:
+            user_prompt += f"""
+            ## Previous Feedback:
+            Use the following feedback to improve the intent analysis.
+            """
+
+        for fb in feedback:
+            user_prompt += f"""
+            - {fb}
             """
 
         user_prompt += f"""
@@ -299,9 +309,12 @@ class AgentTools(ABC):
             system_prompt += f"""
             ## Categorical Tables:
             These can be used in the queries to filter the data based on specific categories or values.
-            If you get a query task requires filtring by specific values, identify the list of relevant values from these tables, and use primary key fields to filter the data.
+            If you get a query that requires filtring by specific values, identify the list of relevant values from these tables, and use primary key fields to filter the data.
 
             For example, if you have a table 'departments' with columns 'id' and 'name', you can use the 'id' field to filter the data in other tables that have a 'dept_id' field.
+
+            Categorical values are often names, categories, or other non-numeric values that can be used to filter or group data.
+            Common examples are project names, department names, product categories, etc.
 
             You will find all the categorical values for the categorical tables below:
             """
@@ -320,11 +333,6 @@ class AgentTools(ABC):
         {state.intent}
         """
 
-        if state.result_relevance and state.result_relevance.reason:
-            user_prompt += f"""
-            ## Insights from Previous Attempt:
-            {state.result_relevance.reason}
-            """
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": system_prompt},
         ]

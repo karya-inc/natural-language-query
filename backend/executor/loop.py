@@ -156,7 +156,7 @@ async def agentic_loop(
             scopes=config.user_info.scopes,
         )
         prev_turn_result = get_or_execute_query_result(
-            query=prev_turn.nlq, catalog=catalog, execute_query=query_pipeline.execute
+            query=prev_turn.sql_query.sqlquery, catalog=catalog, execute_query=query_pipeline.execute
         )
 
         if not isinstance(prev_turn_result, QueryExecutionSuccessResult):
@@ -275,6 +275,7 @@ async def agentic_loop(
                 logger.info(
                     f"Relevance score: {relevance.relevance_score}. Reason - {relevance.reason}. Refining query..."
                 )
+                state.intent = await tools.analaze_nlq_intent(nlq, session.turns)
                 send_update(AgentStatus.REFINING_QUERY)
                 state.query = None
                 state.final_result = None
