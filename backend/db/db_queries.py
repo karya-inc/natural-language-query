@@ -26,7 +26,10 @@ class ChatHistoryResponse(BaseModel):
 
 
 def get_or_create_user(
-    db_session: Session, user_id: str, name: Optional[str] = None, email: Optional[str] = None
+    db_session: Session,
+    user_id: str,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
 ) -> User:
     """Check if a user exists; if not, create a new user."""
     try:
@@ -113,12 +116,12 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def save_query(db_session: Session, sql_query: str) -> SqlQuery:
+def save_query(db_session: Session, sql_query: str, user_id: Optional[str] = None) -> SqlQuery:
     """
     Save a generated SQL query.
     """
     try:
-        query = SqlQuery(sqlquery=sql_query)
+        query = SqlQuery(sqlquery=sql_query, user_id=user_id)
         db_session.add(query)
         db_session.commit()
         return query

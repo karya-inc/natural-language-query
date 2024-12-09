@@ -93,7 +93,7 @@ async def do_nlq(
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
-        sql_query_entry = save_query(db_session=db_session, sql_query=result.query)
+        sql_query_entry = save_query(db_session=db_session, sql_query=result.query, user_id=user_info.user_id)
         turn = store_turn(
             db_session=db_session,
             session_id=session.session_id,

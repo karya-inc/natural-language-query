@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
@@ -100,6 +101,10 @@ class SqlQuery(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
+    )
+
+    user_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("users.user_id"), default=None
     )
 
     # Relationships
