@@ -116,7 +116,9 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def save_query(db_session: Session, sql_query: str, user_id: Optional[str] = None) -> SqlQuery:
+def create_query(
+    db_session: Session, sql_query: str, user_id: Optional[str] = None
+) -> SqlQuery:
     """
     Save a generated SQL query.
     """
