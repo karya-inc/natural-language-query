@@ -92,13 +92,19 @@ def save_user_fav_query(
     user_id: str,
     turn_id: int,
     sql_query_id: UUID,
-    name: str,
-    description: str,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
 ) -> Optional[SavedQuery]:
     """
     Save a query as the user's favorite.
     """
     try:
+        turn = db_session.query(Turn).filter_by(turn_id=turn_id).first()
+        if not name and turn:
+            name = turn.nlq
+        else:
+            name = "Unnamed Query"
+
         saved_query = SavedQuery(
             user_id=user_id,
             turn_id=turn_id,

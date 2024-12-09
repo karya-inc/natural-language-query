@@ -119,7 +119,7 @@ class SavedQuery(Base):
     __tablename__ = "saved_queries"
 
     name: Mapped[str] = mapped_column()
-    description: Mapped[str] = mapped_column()
+    description: Mapped[Optional[str]] = mapped_column()
 
     turn_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("turns.turn_id"), nullable=True
