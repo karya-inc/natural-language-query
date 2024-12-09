@@ -133,6 +133,20 @@ def create_query(
         raise e
 
 
+def fetch_query_by_id(db_session: Session, query_id: str) -> SqlQuery:
+    try:
+        query = db_session.query(SqlQuery).filter_by(sqid=query_id).first()
+
+        if not query:
+            raise Exception(f"Query not found for id: {query_id}")
+
+        return query
+    except Exception as e:
+        logger.error(f"Error fetching query: {e}")
+        db_session.rollback()
+        raise e
+
+
 # check if session exists for that user
 def get_session_for_user(
     db_session: Session, user_id: str, session_id: UUID
