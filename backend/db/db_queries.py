@@ -36,7 +36,7 @@ def get_or_create_user(
         user = db_session.query(User).filter_by(user_id=user_id).first()
         logger.info(f"User: {user}")
         if not user:
-            logger.warning(f"User not found, creating a new user with ID: {user_id}")
+            logger.warning(f"User not found, creating a new user with ID: {user_id}, name: {name}, email: {email}")
             user = User(user_id=user_id, name=name, email=email)
             db_session.add(user)
             db_session.commit()

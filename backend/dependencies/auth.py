@@ -100,7 +100,11 @@ async def get_authenticated_user_info(
             status_code=403, detail="Invalid token: Missing user identification"
         )
 
-    user = get_or_create_user(db, user_id)
+    # Get email and name from the token
+    name = payload.get("name")
+    email = payload.get("email")
+
+    user = get_or_create_user(db, user_id, name, email)
 
     # Extract the role field from the token and ensure it is a valid supported field
     try:
