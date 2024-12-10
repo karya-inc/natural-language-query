@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import desc
 from db.models import User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
@@ -186,6 +187,24 @@ class UserSessionsResponse(BaseModel):
     nlq: str
 
 
+# Get data from database functions
+def get_all_sessions_for_user(db_session: Session, user_id: str) -> List[UserSession]:
+    """
+    Get all sessions for a user.
+    """
+    try:
+        sessions = (db_session.query(UserSession)
+                    .filter_by(user_id=user_id)
+                    .order_by(desc(UserSession.started_at))
+                    .order_by(desc(UserSession.last_updated_at))
+                    .all()
+                    )
+        return sessions
+    except Exception as e:
+        logger.error(f"Error getting all sessions for user: {e}")
+        db_session.rollback()
+        return []
+
 # Get the list of session by user and first turn nlq
 def get_history_sessions(
     db_session: Session, user_id: str
@@ -194,10 +213,11 @@ def get_history_sessions(
     Get all sessions for a user, along with first NLQ turn for each session.
     """
     try:
-        sessions = db_session.query(UserSession).filter_by(user_id=user_id).all()
+        sessions = get_all_sessions_for_user(db_session, user_id)
         sessions_list = []
         if not sessions:
             return sessions_list
+        #!TODO: Optimize this query, it's not efficient
         for session in sessions:
             first_turn = (
                 db_session.query(Turn)
@@ -211,11 +231,6 @@ def get_history_sessions(
                         session_id=session.session_id, nlq=f"{first_turn.nlq}"
                     )
                 )
-            else:
-                sessions_list.append(
-                    UserSessionsResponse(session_id=session.session_id, nlq="")
-                )
-
         return sessions_list
     except Exception as e:
         logger.error(f"Error getting history sessions: {e}")
