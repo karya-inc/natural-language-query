@@ -65,7 +65,7 @@ async def do_nlq(
     agent = AzureAIAgentTools()
 
     nlq_executor = (
-        NLQExecutor()
+        NLQExecutor(db_session)
         .with_tools(agent)
         .with_config(config)
         .with_catalogs(parsed_catalogs.catalogs)
@@ -93,7 +93,9 @@ async def do_nlq(
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
-        sql_query_entry = create_query(db_session=db_session, sql_query=result.query, user_id=user_info.user_id)
+        sql_query_entry = create_query(
+            db_session=db_session, sql_query=result.query, user_id=user_info.user_id
+        )
         turn = store_turn(
             db_session=db_session,
             session_id=session.session_id,

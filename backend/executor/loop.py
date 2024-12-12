@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional, Union, cast
 from db.models import UserSession
+from dependencies import db
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
 from executor.models import QueryTypeLiteral
@@ -107,6 +108,7 @@ async def execute_query_with_healing(
 
 
 async def agentic_loop(
+    db_session: Session,
     nlq: str,
     catalogs: List[Catalog],
     tools: AgentTools,
@@ -244,6 +246,7 @@ async def agentic_loop(
                 send_update(AgentStatus.EXECUTE_REFINED_QUERY)
                 # Execute the aggregate query
                 state.final_result = await execute_query_with_healing(
+                    db_session=db_session,
                     state=state,
                     query=state.query,
                     tools=tools,
