@@ -19,26 +19,27 @@ const useNavBar = () => {
     }
   }
 
-  // async function getSavedQueries(url: string) {
-  //   try {
-  //     const response = await fetch(url, {
-  //       method: "GET",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       credentials: "include",
-  //     });
-  //     const data = await response.json();
-  //     setSavedQueries(data);
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
+  async function getSavedQueries(url: string) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      const data = await response.json();
+      setSavedQueries(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   return {
     history,
     getHistory,
-    // savedQueries, getSavedQueries
+    savedQueries,
+    getSavedQueries,
   };
 };
 

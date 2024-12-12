@@ -28,11 +28,7 @@ const NavBar = ({
   setNavOpen: (arg: boolean) => void;
   handleHistoryClick: (arg1: string) => void;
 }) => {
-  const {
-    history,
-    getHistory,
-    //  savedQueries, getSavedQueries
-  } = useNavBar();
+  const { history, getHistory, savedQueries, getSavedQueries } = useNavBar();
 
   const chatHistoryStyles = {
     ":hover": {
@@ -45,7 +41,7 @@ const NavBar = ({
 
   useEffect(() => {
     getHistory(`${BACKEND_URL}/fetch_history`);
-    // getSavedQueries(`${BACKEND_URL}/fetch_favorite_queries`);
+    getSavedQueries(`${BACKEND_URL}/fetch_favorite_queries`);
   }, []);
 
   return (
@@ -90,18 +86,16 @@ const NavBar = ({
         flex={1}
       >
         <AccordionItem border={"none"}>
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
-                Chat History
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
+          <AccordionButton>
+            <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
+              Chat History
+            </Box>
+            <AccordionIcon />
+          </AccordionButton>
           <AccordionPanel
             display="flex"
             flexDirection="column"
-            h="70vh"
+            maxH="70vh"
             overflow="auto"
           >
             {history && history.length > 0 ? (
@@ -123,15 +117,13 @@ const NavBar = ({
             )}
           </AccordionPanel>
         </AccordionItem>
-        {/* <AccordionItem border={"none"}>
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
-                Saved Queries
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
+        <AccordionItem border={"none"}>
+          <AccordionButton>
+            <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
+              Saved Queries
+            </Box>
+            <AccordionIcon />
+          </AccordionButton>
           <AccordionPanel
             display="flex"
             flexDirection="column"
@@ -156,7 +148,7 @@ const NavBar = ({
               </Text>
             )}
           </AccordionPanel>
-        </AccordionItem> */}
+        </AccordionItem>
       </Accordion>
       <VStack
         color="gray.400"
