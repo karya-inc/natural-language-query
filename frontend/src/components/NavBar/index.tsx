@@ -15,8 +15,9 @@ import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
 import { redirect } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import useHistory from "./useChatHistory";
-// import { useEffect } from "react";
+import { useEffect } from "react";
+import { BACKEND_URL } from "../../config";
+import useNavBar from "./useNavBar";
 
 const NavBar = ({
   navOpen,
@@ -25,12 +26,13 @@ const NavBar = ({
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
-  handleHistoryClick: (arg1: string, arg2: string) => void;
+  handleHistoryClick: (arg1: string) => void;
 }) => {
   const {
     history,
-    // getHistory
-  } = useHistory();
+    getHistory,
+    //  savedQueries, getSavedQueries
+  } = useNavBar();
 
   const chatHistoryStyles = {
     ":hover": {
@@ -41,9 +43,10 @@ const NavBar = ({
     },
   };
 
-  // useEffect(() => {
-  //   getHistory(import.meta.env.VITE_CHAT_HISTORY_SESSIONS_ENDPOINT);
-  // }, []);
+  useEffect(() => {
+    getHistory(`${BACKEND_URL}/fetch_history`);
+    // getSavedQueries(`${BACKEND_URL}/fetch_favorite_queries`);
+  }, []);
 
   return (
     <VStack
@@ -81,7 +84,6 @@ const NavBar = ({
       </HStack>
       <Accordion
         defaultIndex={[0]}
-        allowMultiple
         allowToggle
         w="full"
         color="gray.400"
@@ -96,28 +98,32 @@ const NavBar = ({
               <AccordionIcon />
             </AccordionButton>
           </h2>
-          <AccordionPanel display="flex" flexDirection="column">
+          <AccordionPanel
+            display="flex"
+            flexDirection="column"
+            h="70vh"
+            overflow="auto"
+          >
             {history && history.length > 0 ? (
-              history.map((chat) => (
+              history.map((chat: { session_id: string; nlq: string }) => (
                 <Text
                   pl={2}
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() =>
-                    handleHistoryClick(chat.session_id, chat.user_query)
-                  }
+                  onClick={() => handleHistoryClick(chat.session_id)}
                 >
-                  {chat.user_query}
+                  {chat.nlq}
                 </Text>
               ))
             ) : (
-              <Text fontSize="sm">No chat history available.</Text>
+              <Text fontSize="sm" pl={2}>
+                No chat history available.
+              </Text>
             )}
           </AccordionPanel>
         </AccordionItem>
-
-        <AccordionItem border={"none"}>
+        {/* <AccordionItem border={"none"}>
           <h2>
             <AccordionButton>
               <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
@@ -126,12 +132,31 @@ const NavBar = ({
               <AccordionIcon />
             </AccordionButton>
           </h2>
-          <AccordionPanel>
-            <Text fontSize="sm" pl={2}>
-              No saved queries yet.
-            </Text>
+          <AccordionPanel
+            display="flex"
+            flexDirection="column"
+            h="70vh"
+            overflow="auto"
+          >
+            {savedQueries && savedQueries.length > 0 ? (
+              savedQueries.map((chat: { session_id: string; nlq: string }) => (
+                <Text
+                  pl={2}
+                  key={chat.session_id}
+                  py={3}
+                  sx={chatHistoryStyles}
+                  onClick={() => handleHistoryClick(chat.session_id)}
+                >
+                  {chat.nlq}
+                </Text>
+              ))
+            ) : (
+              <Text fontSize="sm" pl={2}>
+                No saved queries yet.
+              </Text>
+            )}
           </AccordionPanel>
-        </AccordionItem>
+        </AccordionItem> */}
       </Accordion>
       <VStack
         color="gray.400"

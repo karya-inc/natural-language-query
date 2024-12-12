@@ -155,7 +155,6 @@ export function ChatBot({
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
                 } else if (parsedChunk.type === "ERROR") {
-                  console.log(parsedChunk.payload)
                   botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";
                 }

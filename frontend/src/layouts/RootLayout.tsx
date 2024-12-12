@@ -1,18 +1,18 @@
 import NavBar from "../components/NavBar";
 import { HStack } from "@chakra-ui/react";
 import { useState } from "react";
-import { ChatBot, Message } from "../pages/Chat";
-import getData from "./utils";
+import { ChatBot } from "../pages/Chat";
+import useChatHistory from "./utils";
+import { BACKEND_URL } from "../config";
 
 const RootLayout = () => {
   const [navOpen, setNavOpen] = useState(true);
   const [conversationStarted, setConversationStarted] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, setMessages, getChatHistory } = useChatHistory();
 
-  function handleHistoryClick(session_id: string, user_query: string) {
+  function handleHistoryClick(session_id: string) {
     setConversationStarted(true);
-    const data = getData(session_id, user_query);
-    setMessages(data);
+    getChatHistory(`${BACKEND_URL}/fetch_session_history/${session_id}`);
   }
 
   return (
