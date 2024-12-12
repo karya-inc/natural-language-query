@@ -288,7 +288,7 @@ def create_execution_entry(
 
 
 def set_execution_status(
-    db_session: Session, execution_id: str, status: ExecutionStatus
+    db_session: Session, execution_id: int, status: ExecutionStatus
 ) -> ExecutionLog:
     """
     Set the execution status for a query.
