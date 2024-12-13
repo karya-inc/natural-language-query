@@ -160,3 +160,18 @@ class ExecutionLog(Base):
     # Relationships
     query: Mapped["SqlQuery"] = relationship(init=False)
     user: Mapped["User"] = relationship(init=False)
+
+class ExecutionResult(Base):
+    """
+    Execution Result model for storing the result of the query execution
+    """
+
+    __tablename__ = "execution_results"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
+
+    execution_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    result: Mapped[dict[str, Any]] = mapped_column(default=None, init=False)
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
+
+    # Relationships
+    execution_log: Mapped["ExecutionLog"] = relationship(init=False)
