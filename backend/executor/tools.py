@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, Optional, cast
+from typing import List, Optional, cast
 from openai.types.chat import ChatCompletionMessageParam
-from db.db_queries import get_saved_queries
 from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
