@@ -6,7 +6,6 @@ from executor.catalog import Catalog
 from sqlalchemy import Engine, create_engine, text
 from rbac.check_permissions import ColumnScope, check_query_privilages
 from urllib.parse import quote
-import pandas as pd
 
 from utils.rows_to_json import convert_rows_to_serializable
 
