@@ -329,3 +329,21 @@ def set_execution_status(
         logger.error(f"Error setting execution status: {e}")
         db_session.rollback()
         raise e
+
+
+def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
+    """
+    Get the execution log for a query.
+    """
+    try:
+        execution_log = (
+            db_session.query(ExecutionLog).filter_by(id=execution_id).first()
+        )
+        if not execution_log:
+            raise Exception("Execution log not found for {query_id}")
+
+        return execution_log
+    except Exception as e:
+        logger.error(f"Error getting execution log: {e}")
+        db_session.rollback()
+        raise e

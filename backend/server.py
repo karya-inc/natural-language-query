@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 
 from db.models import UserSession
-from dependencies.db import get_db
+from dependencies.db import get_db_session
 
 load_dotenv()
 
@@ -72,7 +72,7 @@ async def get_login_stratergy(
 @app.post("/chat")
 async def stream_sql_query_responses(
     chat_request: ChatRequest,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> StreamingResponse:
     """
@@ -131,7 +131,7 @@ async def stream_sql_query_responses(
 
 @app.get("/fetch_history")
 async def get_chat_history(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[UserSessionsResponse]:
     """
@@ -161,7 +161,7 @@ async def get_chat_history(
 @app.get("/fetch_session_history/{session_id}")
 async def get_session_history_for_user(
     session_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[ChatHistoryResponse]:
     """
@@ -189,7 +189,7 @@ async def get_session_history_for_user(
 
 @app.get("/fetch_favorite_queries")
 async def get_favorite_queries(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[SavedQueriesResponse]:
     """
@@ -222,7 +222,7 @@ async def get_favorite_queries(
 async def save_favorite_query(
     turn_id: int,
     sql_query_id: UUID,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ):
     """

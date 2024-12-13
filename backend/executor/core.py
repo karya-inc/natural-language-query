@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import List, Optional
+
+from sqlalchemy.orm import Session
 
 from sqlalchemy.orm import Session
 
