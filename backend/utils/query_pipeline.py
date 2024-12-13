@@ -4,7 +4,7 @@ from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from sqlalchemy import Engine, create_engine, text
-from rbac.check_permissions import ColumnScope, check_query_privilages
+from rbac.check_permissions import ColumnScope, PrivilageCheckResult, check_query_privilages
 from urllib.parse import quote
 
 from utils.rows_to_json import convert_rows_to_serializable
@@ -62,18 +62,18 @@ class QueryExecutionPipeline:
         self.active_role = active_role
         self.engine = get_engine(catalog)
 
-    def execute(self, query: str) -> QueryExecutionResult:
+    def check_query_privilages(self, query: str) -> PrivilageCheckResult:
         table_privilages = parsed_catalogs.database_privileges[self.catalog.name]
-        try:
-            query_validation_result = check_query_privilages(
-                table_privilages_map=table_privilages,
-                active_role=self.active_role,
-                table_scopes=self.scopes,
-                query=query,
-            )
-        except Exception as e:
-            logger.error(f"Error while checking query privilages: {e}")
-            return QueryExecutionFailureResult(reason=str(e), recoverable=True)
+        query_validation_result = check_query_privilages(
+            table_privilages_map=table_privilages,
+            active_role=self.active_role,
+            table_scopes=self.scopes,
+            query=query,
+        )
+        return query_validation_result
+
+    def check_and_execute(self, query: str) -> QueryExecutionResult:
+        query_validation_result = self.check_query_privilages(query)
 
         if not query_validation_result.query_allowed:
             logger.warning(

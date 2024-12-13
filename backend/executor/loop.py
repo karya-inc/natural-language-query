@@ -61,7 +61,7 @@ async def execute_query_with_healing(
     while healing_attempts <= MAX_HEALING_ATTEMPTS:
         try:
             execution_result = get_or_execute_query_result(
-                query_to_execute, state.relevant_catalog, query_pipeline.execute
+                query_to_execute, state.relevant_catalog, query_pipeline.check_and_execute
             )
 
             if isinstance(execution_result, QueryExecutionSuccessResult):
@@ -156,7 +156,7 @@ async def agentic_loop(
             scopes=config.user_info.scopes,
         )
         prev_turn_result = get_or_execute_query_result(
-            query=prev_turn.nlq, catalog=catalog, execute_query=query_pipeline.execute
+            query=prev_turn.nlq, catalog=catalog, execute_query=query_pipeline.check_and_execute
         )
 
         if not isinstance(prev_turn_result, QueryExecutionSuccessResult):
