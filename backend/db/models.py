@@ -1,14 +1,12 @@
-from dataclasses import dataclass
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.ext.mutable import MutableList
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
@@ -165,6 +163,7 @@ class ExecutionLog(Base):
     # Relationships
     query: Mapped["SqlQuery"] = relationship(init=False)
     user: Mapped["User"] = relationship(init=False)
+
 
 class ExecutionResult(Base):
     """
