@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Any, List, Optional
+from executor.state import QueryResults
 from utils.logger import get_logger
 import enum
 
@@ -349,7 +350,7 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
         raise e
 
 
-def get_exeuction_result(db_session: Session, execution_id: int) -> dict[str, Any]:
+def get_exeuction_result(db_session: Session, execution_id: int) -> ExecutionResult:
     """
     Get the execution result for a query.
     """
@@ -363,7 +364,7 @@ def get_exeuction_result(db_session: Session, execution_id: int) -> dict[str, An
         if not execution_result:
             raise Exception("Execution log not found for {query_id}")
 
-        return execution_result.result
+        return execution_result
     except Exception as e:
         logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
@@ -371,7 +372,7 @@ def get_exeuction_result(db_session: Session, execution_id: int) -> dict[str, An
 
 
 def save_execution_result(
-    db_session: Session, execution_id: int, result: dict[str, Any]
+    db_session: Session, execution_id: int, result: QueryResults
 ) -> ExecutionResult:
     """
     Save the execution result for a query.
