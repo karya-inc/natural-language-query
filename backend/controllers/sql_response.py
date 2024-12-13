@@ -164,7 +164,7 @@ def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
     return save_user_fav_query(db, user_id, turn_id, sql_query_id)
 
 
-def get_fav_queries_user(db: Session, user_id: str) -> List[SavedQueriesResponse]:
+def get_saved_queries_user(db: Session, user_id: str, filter: Optional[str]) -> List[SavedQueriesResponse]:
     # Log info
     logger.info(f"Get saved queries for user: {user_id} is requested!")
-    return get_saved_queries(db, user_id)
+    return get_saved_queries(db, user_id, filter_type=filter)

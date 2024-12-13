@@ -267,12 +267,15 @@ class SavedQueriesResponse(BaseModel):
     sqlquery: str
 
 
-def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesResponse]:
+def get_saved_queries(db_session: Session, user_id: str, filter_type : Optional[str] = "saved") -> List[SavedQueriesResponse]:
     """
     Get all saved queries for a user.
     """
     try:
-        saved_queries = db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+        if (filter_type != "all"):
+            saved_queries = db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+        else:
+            saved_queries = db_session.query(SavedQuery).filter(SavedQuery.user_id != user_id).all()
         saved_queries_list = []
         if not saved_queries:
             return saved_queries_list
@@ -290,6 +293,7 @@ def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesRes
         db_session.rollback()
         return []
 
+def save_queries(db_session: Session, user_id: str, )
 
 def create_execution_entry(
     db_session: Session, user_id: str, query_id: str

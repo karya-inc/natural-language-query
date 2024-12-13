@@ -8,12 +8,12 @@ load_dotenv()
 import os
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends
+from fastapi import Body, FastAPI, HTTPException, Depends, Query
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_fav_queries_user, get_session_history, nlq_sse_wrapper, save_fav
+from controllers.sql_response import chat_history, get_saved_queries_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, create_session, get_session_for_user
 from sqlalchemy.orm import Session
@@ -187,24 +187,28 @@ async def get_session_history_for_user(
         raise HTTPException(status_code=500, detail="Failed to get session history.")
 
 
-@app.get("/fetch_favorite_queries")
-async def get_favorite_queries(
+@app.get("/queries")
+async def get_saved_queries(
     db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+    filter: Optional[str] = Query(None, alias="filter:all"),
 ) -> List[SavedQueriesResponse]:
     """
-    Get favorite queries for the user
 
-    Returns:
-       User favorite queries
+    Retrieve saved queries
+    - For non-SUPERADMIN: returns user's own queries
+    - For SUPERADMIN with filter:all: returns all users' queries except SUPERADMIN
     """
 
     try:
         # Log the start of chat history streaming
         logger.info(f"User chat history for user_id: {user_info.user_id}")
 
+        # Filter
+        filter = "saved" if not filter else "all"
+
         # Create a StreamingResponse for the chat history generator
-        response = get_fav_queries_user(db=db, user_id=user_info.user_id)
+        response = get_saved_queries_user(db=db, user_id=user_info.user_id, filter=filter)
 
         logger.info("Return user favorite queries successfully!!")
         return response
