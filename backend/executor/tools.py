@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 import json
-from typing import Any, List, Optional, cast
+from typing import List, Optional, cast
 from openai.types.chat import ChatCompletionMessageParam
-from db.db_queries import get_saved_queries
 from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
@@ -10,7 +9,6 @@ from executor.errors import UnRecoverableError
 from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
 from executor.state import AgentState, QueryResults
 from executor.catalog import Catalog
-from utils import table_to_markdown
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
