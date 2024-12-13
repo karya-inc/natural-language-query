@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
+from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List, Optional
+from typing import Any, List, Optional
 from utils.logger import get_logger
 import enum
 
@@ -345,5 +345,43 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
         return execution_log
     except Exception as e:
         logger.error(f"Error getting execution log: {e}")
+        db_session.rollback()
+        raise e
+
+
+def get_exeuction_result(db_session: Session, execution_id: int) -> dict[str, Any]:
+    """
+    Get the execution result for a query.
+    """
+    try:
+        execution_result = (
+            db_session.query(ExecutionResult)
+            .filter_by(exeuction_id=execution_id)
+            .first()
+        )
+
+        if not execution_result:
+            raise Exception("Execution log not found for {query_id}")
+
+        return execution_result.result
+    except Exception as e:
+        logger.error(f"Error getting execution result: {e}")
+        db_session.rollback()
+        raise e
+
+
+def save_execution_result(
+    db_session: Session, execution_id: int, result: dict[str, Any]
+) -> ExecutionResult:
+    """
+    Save the execution result for a query.
+    """
+    try:
+        execution_result = ExecutionResult(execution_id=execution_id, result=result)
+        db_session.add(execution_result)
+        db_session.commit()
+        return execution_result
+    except Exception as e:
+        logger.error(f"Error saving execution result: {e}")
         db_session.rollback()
         raise e

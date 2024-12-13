@@ -174,7 +174,7 @@ class ExecutionResult(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
 
     execution_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
-    result: Mapped[dict[str, Any]] = mapped_column(default=None, init=False)
+    result: Mapped[dict[str, Any]] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
     # Relationships
