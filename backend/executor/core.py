@@ -56,7 +56,6 @@ class NLQExecutor:
             self.nlq = nlq
 
         return await agentic_loop(
-            self.db_session,
             self.nlq,
             self.catalogs,
             self.tools,
