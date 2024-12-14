@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 from uuid import UUID
 from typing import List, Optional
 from utils.logger import get_logger
@@ -23,6 +23,7 @@ class ChatHistoryResponse(BaseModel):
     message: str
     role: Roles
     timestamp: datetime
+    execution_id: Optional[int] = None
 
 
 def get_or_create_user(
@@ -194,6 +195,17 @@ def get_chat_history(
             .order_by(desc(Turn.created_at))
             .all()
         )
+        # Get all sqlquery_ids
+        sql_query_ids = [turn.sqid for turn in turns]
+
+        # Get all execution logs
+        execution_logs_query = (db_session.query(ExecutionLog)
+        .filter(ExecutionLog.query_id.in_(sql_query_ids)).all()
+        )
+
+        # Create a mapping of query_id to execution logs
+        execution_logs_map = {log.query_id: log for log in execution_logs_query}
+
         chat_history = []
         for turn in turns:
             chat_history.append(
@@ -202,14 +214,18 @@ def get_chat_history(
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
+                    execution_id=None
                 )
             )
+            # Get the execution log from the mapping
+            execution_log = execution_logs_map.get(str(turn.sqid))
             chat_history.append(
                 ChatHistoryResponse(
                     id=turn.sql_query.sqid,
                     message=turn.sql_query.sqlquery,
                     role=Roles.BOT,
                     timestamp=turn.sql_query.created_at,
+                    execution_id=execution_log.id if execution_log else None
                 )
             )
         return chat_history
