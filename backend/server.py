@@ -13,9 +13,9 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_saved_queries_user, get_session_history, nlq_sse_wrapper, save_fav
+from controllers.sql_response import chat_history, get_saved_queries_user, get_session_history, nlq_sse_wrapper, save_fav, get_execution_result
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, create_session, get_session_for_user
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse,ExecutionLogResult, create_session, get_session_for_user
 from sqlalchemy.orm import Session
 from uuid import UUID
 from utils.parse_catalog import parsed_catalogs
@@ -253,3 +253,31 @@ async def save_favorite_query(
             f"Error while saving favorite query for user : {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to save favorite query.")
+
+@app.get("/execute/{id}/query/")
+async def get_execution_result_for_id(
+    id: int,
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> ExecutionLogResult:
+    """
+    Get execution result for the user
+
+    Args:
+        id (int): Execution Log ID
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        Execution result
+    """
+    logger.info(f"Get execution result for user: {user_info.user_id} is requested!")
+    try:
+        response = get_execution_result(db, user_info.user_id, id)
+        logger.info("Execution result for user return successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to get execution result.")

@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, create_query, save_user_fav_query, get_saved_queries, store_turn
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult,\
+        get_chat_history, get_session_for_user, get_history_sessions, create_query, \
+        save_user_fav_query, get_saved_queries, store_turn, get_execution_log_result
 from db.models import UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
@@ -168,3 +170,9 @@ def get_saved_queries_user(db: Session, user_id: str, filter: Optional[str]) -> 
     # Log info
     logger.info(f"Get saved queries for user: {user_id} is requested!")
     return get_saved_queries(db, user_id, filter_type=filter)
+
+
+def get_execution_result(db: Session, user_id: str, execution_log_id: int) -> ExecutionLogResult:
+    # Log info
+    logger.info(f"Get execution result for user: {user_id} is requested!")
+    return get_execution_log_result(db, execution_log_id)

@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
+from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery, ExecutionResult
 from datetime import datetime
-from pydantic import BaseModel, Json
+from pydantic import BaseModel
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from utils.logger import get_logger
 import enum
 
@@ -309,7 +309,6 @@ def get_saved_queries(db_session: Session, user_id: str, filter_type : Optional[
         db_session.rollback()
         return []
 
-def save_queries(db_session: Session, user_id: str, )
 
 def create_execution_entry(
     db_session: Session, user_id: str, query_id: str
@@ -365,5 +364,40 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
         return execution_log
     except Exception as e:
         logger.error(f"Error getting execution log: {e}")
+        db_session.rollback()
+        raise e
+
+class ExecutionLogResult(BaseModel):
+    status: Optional[ExecutionStatus]
+    result: Optional[Dict[str, Any]]
+
+def get_execution_log_result(db_session: Session, execution_log_id: int) -> ExecutionLogResult:
+    """
+    Get the execution result for a query.
+
+    Args:
+        db_session (Session): SQLAlchemy Session
+        execution_log_id (int): Execution Log ID
+    """
+    try:
+        execution_result = (
+            db_session.query(ExecutionLog, ExecutionResult)
+            .join(ExecutionResult, ExecutionLog.id == ExecutionResult.execution_id)
+            .filter(ExecutionLog.id == execution_log_id)
+            .first()
+        )
+
+        if not execution_result:
+            return ExecutionLogResult(status=None, result=None)
+
+        # Unpack the tuple
+        execution_log, result = execution_result
+
+        return ExecutionLogResult(
+            status = execution_log.status.value if execution_log.status else None,
+            result = result.result if result else None
+        )
+    except Exception as e:
+        logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
         raise e
