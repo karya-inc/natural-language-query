@@ -2,6 +2,7 @@ from typing import Optional
 import celery
 from sqlalchemy.orm import Session
 
+from db.catalog_utils import get_engine
 from executor.state import QueryResults
 from utils.logger import get_logger
 from utils.notify_user import notify_user_on_failure, notify_user_on_success
@@ -11,7 +12,6 @@ from sqlalchemy import text
 from db.db_queries import get_execution_log, save_execution_result, set_execution_status
 from dependencies.db import get_db_session
 from executor.catalog import Catalog
-from utils.query_pipeline import get_engine
 from utils.rows_to_json import convert_rows_to_serializable
 
 logger = get_logger("[DB-Queue]")

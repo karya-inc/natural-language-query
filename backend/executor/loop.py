@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional, Union, cast
-from db.models import UserSession
+from db.models import ExecutionLog, UserSession
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
 from executor.models import QueryTypeLiteral
@@ -45,11 +45,13 @@ async def execute_query_with_healing(
     query: str,
     tools: AgentTools,
     config: AgentConfig,
+    user_id: str,
 ):
     assert state.relevant_catalog, "Relevant catalog not set"
 
     query_pipeline = QueryExecutionPipeline(
         catalog=state.relevant_catalog,
+        user_id=user_id,
         active_role=config.user_info.role,
         scopes=config.user_info.scopes,
     )
@@ -61,8 +63,16 @@ async def execute_query_with_healing(
     while healing_attempts <= MAX_HEALING_ATTEMPTS:
         try:
             execution_result = get_or_execute_query_result(
-                query_to_execute, state.relevant_catalog, query_pipeline.check_and_execute
+                query_to_execute,
+                state.relevant_catalog,
+                query_pipeline.check_and_execute,
+                is_background=False,
             )
+
+            # Query execution not in background, so expect a result
+            assert not isinstance(
+                execution_result, ExecutionLog
+            ), "Expected Query Execution to return a result"
 
             if isinstance(execution_result, QueryExecutionSuccessResult):
                 return execution_result.result
@@ -87,6 +97,11 @@ async def execute_query_with_healing(
         except Exception as e:
             logger.error(f"Error in execute_query_with_healing: {e}")
             continue
+
+    # Query execution not in background, so expect a result
+    assert not isinstance(
+        execution_result, ExecutionLog
+    ), "Expected Query Execution to return a result"
 
     # If the query was successfully executed, return the result
     if isinstance(execution_result, QueryExecutionSuccessResult):
@@ -152,11 +167,14 @@ async def agentic_loop(
         send_update(AgentStatus.EXECUTING_QUERIES)
         query_pipeline = QueryExecutionPipeline(
             catalog=catalog,
+            user_id=session.user_id,
             active_role=config.user_info.role,
             scopes=config.user_info.scopes,
         )
         prev_turn_result = get_or_execute_query_result(
-            query=prev_turn.nlq, catalog=catalog, execute_query=query_pipeline.check_and_execute
+            query=prev_turn.nlq,
+            catalog=catalog,
+            execute_query=query_pipeline.check_and_execute,
         )
 
         if not isinstance(prev_turn_result, QueryExecutionSuccessResult):
@@ -248,6 +266,7 @@ async def agentic_loop(
                     query=state.query,
                     tools=tools,
                     config=config,
+                    user_id=session.user_id,
                 )
 
             send_update(AgentStatus.TASK_COMPLETED)

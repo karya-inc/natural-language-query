@@ -43,13 +43,17 @@ def get_cached_query_result(query: str, catalog: Catalog) -> Optional[QueryResul
 
 
 def get_or_execute_query_result(
-    query: str, catalog: Catalog, execute_query: Callable[[str], QueryExecutionResult]
+    query: str,
+    catalog: Catalog,
+    execute_query: Callable[[str, bool], QueryExecutionResult],
+    is_background: bool = False,
 ) -> QueryExecutionResult:
+
     cached_result = get_cached_query_result(query, catalog)
     if cached_result:
         return QueryExecutionSuccessResult(cached_result)
 
-    execution_result = execute_query(query)
+    execution_result = execute_query(query, is_background)
 
     if isinstance(execution_result, QueryExecutionSuccessResult):
         # Cache the result for 30 minutes

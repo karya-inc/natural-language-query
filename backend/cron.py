@@ -2,12 +2,12 @@ import time
 from os import environ
 
 from redis import Connection
+from db.catalog_utils import get_engine
 from executor.catalog import Catalog
 from sqlalchemy import text, Connection
 from executor.catalog import Catalog
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
-from utils.query_pipeline import get_engine
 from utils.redis import get_redis_key, redis_client
 from utils.rows_to_json import convert_rows_to_json
 

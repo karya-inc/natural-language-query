@@ -1,13 +1,17 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, cast
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session
+from db.db_queries import create_execution_entry, create_query
+from db.models import ExecutionLog
+from dependencies.db import get_db_session
+from executor.state import QueryResults
+from queues.typed_tasks import invoke_execute_query_op
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
-from sqlalchemy import Engine, create_engine, text
 from rbac.check_permissions import ColumnScope, PrivilageCheckResult, check_query_privilages
 from urllib.parse import quote
-
-from utils.rows_to_json import convert_rows_to_serializable
 
 
 logger = get_logger("[QUERY_PIPELINE]")
@@ -25,55 +29,36 @@ class QueryExecutionFailureResult:
     context: Optional[dict] = field(default=None)
 
 
-QueryExecutionResult = Union[QueryExecutionSuccessResult, QueryExecutionFailureResult]
+QueryExecutionResult = Union[
+    QueryExecutionSuccessResult, QueryExecutionFailureResult, ExecutionLog
+]
 
 
-def get_engine(catalog: Catalog) -> Engine:
-    if catalog.provider == "postgres":
-        host = quote(catalog.connection_params["host"])
-        dbname = quote(catalog.connection_params["dbname"])
-        user = quote(catalog.connection_params["user"])
-        password = quote(catalog.connection_params["password"])
-        port = catalog.connection_params.get("port", 5432)
-
-        # Setup connection to postgres
-        engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{dbname}")
-
-        return engine
-
-    else:
-        raise NotImplementedError("Only postgres is supported at the moment")
-
-
+@dataclass
 class QueryExecutionPipeline:
     catalog: Catalog
-    engine: Engine
+    user_id: str
     active_role: str
     scopes: dict[str, List[ColumnScope]]
+    db_session: Session = field(init=False)
 
-    def __init__(
-        self,
-        catalog: Catalog,
-        active_role: str,
-        scopes: dict[str, List[ColumnScope]] = {},
-    ):
-        self.catalog = catalog
-        self.scopes = scopes
-        self.active_role = active_role
-        self.engine = get_engine(catalog)
+    def __post_init__(self):
+        self.db_session = get_db_session()
 
-    def check_query_privilages(self, query: str) -> PrivilageCheckResult:
+    def check_query_privilages(self, sql_query: str) -> PrivilageCheckResult:
         table_privilages = parsed_catalogs.database_privileges[self.catalog.name]
         query_validation_result = check_query_privilages(
             table_privilages_map=table_privilages,
             active_role=self.active_role,
             table_scopes=self.scopes,
-            query=query,
+            query=sql_query,
         )
         return query_validation_result
 
-    def check_and_execute(self, query: str) -> QueryExecutionResult:
-        query_validation_result = self.check_query_privilages(query)
+    def check_and_execute(
+        self, sql_query: str, is_background: bool = False
+    ) -> QueryExecutionResult:
+        query_validation_result = self.check_query_privilages(sql_query)
 
         if not query_validation_result.query_allowed:
             logger.warning(
@@ -87,12 +72,19 @@ class QueryExecutionPipeline:
             )
 
         try:
-            with self.engine.connect() as conn:
-                stmt = text(query)
-                result = conn.execute(stmt).fetchall()
-                result_serializable = convert_rows_to_serializable(result)
-                print(result_serializable)
-                return QueryExecutionSuccessResult(result_serializable)
+            # Create Execution Log
+            saved_query = create_query(self.db_session, sql_query, self.user_id)
+            execution_entry = create_execution_entry(
+                self.db_session, self.user_id, str(saved_query.sqid)
+            )
+
+            execution_result = invoke_execute_query_op(execution_entry.id, self.catalog)
+
+            if is_background:
+                return execution_entry
+
+            result_value = cast(QueryResults, execution_result.get())
+            return QueryExecutionSuccessResult(result=result_value)
 
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")
