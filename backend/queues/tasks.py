@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 import celery
 from sqlalchemy.orm import Session
 
@@ -72,8 +72,11 @@ class ExecuteQueryOp(celery.Task):
         )
 
 
-@app.task(base=ExecuteQueryOp)
-def execute_query_op(self: ExecuteQueryOp, execution_log_id: int, catalog: Catalog):
+@app.task(base=ExecuteQueryOp, bind=True)
+def execute_query_op(
+    self: ExecuteQueryOp, execution_log_id: int, catalog_json: dict
+) -> QueryResults:
+    catalog = Catalog(**catalog_json)
     engine = get_engine(catalog)
     celery.Task.request
 
