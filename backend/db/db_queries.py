@@ -4,7 +4,7 @@ from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, Sq
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Text
 from utils.logger import get_logger
 import enum
 
@@ -401,3 +401,52 @@ def get_execution_log_result(db_session: Session, execution_log_id: int) -> Exec
         logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
         raise e
+
+def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
+    """
+    Check if sql query exists in the database
+    """
+    try:
+        sql_query = db_session.query(SqlQuery).filter_by(sqid=sqid).first()
+        return sql_query
+    except Exception as e:
+        logger.error(f"Error checking if SQL query exists: {e}")
+        db_session.rollback()
+        return None
+
+def check_if_query_against_user_exist(db_session: Session, sqid: UUID, user_id: str) -> Optional[SavedQuery]:
+    """
+    Check if the query against the user exists
+    """
+    try:
+        saved_query = db_session.query(SavedQuery).filter_by(sqid=sqid, user_id=user_id).first()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error checking if query against user exists: {e}")
+        db_session.rollback()
+        return None
+
+def create_saved_query(db_session: Session,
+                name: str,
+                user_id: str,
+                sqid: UUID,
+                turn_id: Optional[int],
+                saved_by: Optional[str],
+                description: Optional[str]) -> Optional[SavedQuery]:
+    """
+    Save the query against the user id
+    """
+    try:
+        saved_query = SavedQuery(name=name,
+                                 user_id=user_id,
+                                 sqid=sqid,
+                                 turn_id=turn_id,
+                                 saved_by=saved_by,
+                                 description=description)
+        db_session.add(saved_query)
+        db_session.commit()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error storing query: {e}")
+        db_session.rollback()
+        return None

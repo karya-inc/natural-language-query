@@ -13,7 +13,7 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_saved_queries_user, get_session_history, nlq_sse_wrapper, save_fav, get_execution_result
+from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav, get_execution_result
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse,ExecutionLogResult, create_session, get_session_for_user
 from sqlalchemy.orm import Session
@@ -281,3 +281,37 @@ async def get_execution_result_for_id(
             f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get execution result.")
+
+class SaveQueryRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+@app.post("/save_query/{turn_id}/{sqid}")
+async def save_query(
+    turn_id: int,
+    sqid: UUID,
+    body: SaveQueryRequest,
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]):
+    """
+    Endpoint to save query
+
+    Args:
+        turn_id (int): Turn ID
+        sqid (UUID): SQL Query ID
+        body (SaveQueryRequest): Request body
+        db (Session): Database session
+        user_info (str): contains user information
+    """
+    logger.info(
+        f"Saving query of user : {user_info.user_id} with turn_id: {turn_id} and sqid: {sqid}"
+    )
+    try:
+        response = save_query_for_user(db, user_info.user_id, turn_id, sqid, body.name, body.description)
+        logger.info("Query saved successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while saving query for user : {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to save query.")

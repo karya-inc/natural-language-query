@@ -129,6 +129,8 @@ class SavedQuery(Base):
         insert_default=func.now(), default=None
     )
 
+    saved_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.user_id"), default=None)
+
     # Relationships
     turn: Mapped["Turn"] = relationship(init=False)
     user: Mapped["User"] = relationship(back_populates="saved_queries", init=False)

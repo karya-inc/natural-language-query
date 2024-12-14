@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult,\
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_saved_query,\
         get_chat_history, get_session_for_user, get_history_sessions, create_query, \
         save_user_fav_query, get_saved_queries, store_turn, get_execution_log_result
-from db.models import UserSession
+from db.models import SavedQuery, UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -176,3 +176,11 @@ def get_execution_result(db: Session, user_id: str, execution_log_id: int) -> Ex
     # Log info
     logger.info(f"Get execution result for user: {user_id} is requested!")
     return get_execution_log_result(db, execution_log_id)
+
+
+def save_query_for_user(db: Session, user_id: str, turn_id:int, sqid: UUID, name: str, description: Optional[str]) -> Optional[SavedQuery]:
+    # Log info
+    logger.info(f"Save query for user: {user_id} is requested!")
+    return create_saved_query(
+        db_session=db, user_id=user_id, turn_id=turn_id, sqid=sqid, name=name, description=description, saved_by=user_id
+    )
