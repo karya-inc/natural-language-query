@@ -1,3 +1,4 @@
+from celery.app.defaults import Option
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
@@ -367,7 +368,7 @@ def create_execution_entry(
     Save the execution log for a query.
     """
     try:
-        execution_log = ExecutionLog("RUNNING", query_id, user_id)
+        execution_log = ExecutionLog("PENDING", query_id, user_id)
         db_session.add(execution_log)
         db_session.commit()
         return execution_log
@@ -380,7 +381,7 @@ def create_execution_entry(
 
 def set_execution_status(
     db_session: Session, execution_id: int, status: ExecutionStatus
-) -> ExecutionLog:
+) -> Optional[ExecutionLog]:
     """
     Set the execution status for a query.
     """
@@ -389,7 +390,7 @@ def set_execution_status(
             db_session.query(ExecutionLog).filter_by(id=execution_id).first()
         )
         if not execution_log:
-            raise Exception("Execution log not found for {query_id}")
+            return None
 
         execution_log.status = status
         db_session.commit()
@@ -400,7 +401,7 @@ def set_execution_status(
         raise e
 
 
-def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
+def get_execution_log(db_session: Session, execution_id: int) -> Optional[ExecutionLog]:
     """
     Get the execution log for a query.
     """
@@ -409,7 +410,7 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
             db_session.query(ExecutionLog).filter_by(id=execution_id).first()
         )
         if not execution_log:
-            raise Exception("Execution log not found for {query_id}")
+            return None
 
         return execution_log
     except Exception as e:
