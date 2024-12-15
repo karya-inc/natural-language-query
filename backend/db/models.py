@@ -25,17 +25,18 @@ class User(Base):
     """User model representing user information"""
 
     __tablename__ = "users"
-
     user_id: Mapped[str] = mapped_column(primary_key=True)
     name: Mapped[Optional[str]] = mapped_column()
     email: Mapped[Optional[str]] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
-
     # Relationships
     saved_queries: Mapped[List["SavedQuery"]] = relationship(
-        "SavedQuery", back_populates="user", default_factory=list
+        "SavedQuery",
+        back_populates="user",
+        default_factory=list,
+        foreign_keys="[SavedQuery.user_id]",
     )
     sessions: Mapped[List["UserSession"]] = relationship(
         back_populates="user", init=False
@@ -93,22 +94,17 @@ class SqlQuery(Base):
     """SQL Query model for storing generated SQL queries"""
 
     __tablename__ = "sql_queries"
-
     sqlquery: Mapped[str] = mapped_column(Text)
-
     # Fields with Default values
     sqid: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default_factory=uuid.uuid4
     )
-
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
-
     user_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("users.user_id"), default=None
     )
-
     # Relationships
     turns: Mapped[List["Turn"]] = relationship(
         "Turn", back_populates="sql_query", default_factory=list
@@ -135,7 +131,9 @@ class SavedQuery(Base):
         insert_default=func.now(), default=None
     )
 
-    saved_by: Mapped[Optional[str]] = mapped_column(ForeignKey("users.user_id"), default=None)
+    saved_by: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("users.user_id"), default=None
+    )
 
     # Relationships
     turn: Mapped["Turn"] = relationship(init=False)
