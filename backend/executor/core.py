@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from sqlalchemy.orm import Session
+
 from db.models import UserSession
 from executor.config import AgentConfig
 from executor.tools import AgentTools

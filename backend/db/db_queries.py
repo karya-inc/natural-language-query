@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery, ExecutionResult
+from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List, Optional, Dict, Any, Text
+from executor.state import QueryResults
+from typing import List, Optional, Dict, Any
 from utils.logger import get_logger
 import enum
 
@@ -123,14 +124,20 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def create_query(
-    db_session: Session, sql_query: str, user_id: Optional[str] = None
+def get_or_create_query(
+    db_session: Session, sql_query: str, user_id: Optional[str], catalog_name: str
 ) -> SqlQuery:
     """
     Save a generated SQL query.
     """
     try:
-        query = SqlQuery(sqlquery=sql_query, user_id=user_id)
+        # Search for the query in the database
+        query = fetch_query_by_value(db_session, sql_query, catalog_name)
+        if query:
+            return query
+
+        # If the query is not found, create a new query
+        query = SqlQuery(sqlquery=sql_query.strip(), user_id=user_id)
         db_session.add(query)
         db_session.commit()
         return query
@@ -140,14 +147,13 @@ def create_query(
         raise e
 
 
-def fetch_query_by_id(db_session: Session, query_id: str) -> SqlQuery:
+def fetch_query_by_value(
+    db_session: Session, sql_query: str, catalog_name: str
+) -> Optional[SqlQuery]:
     try:
-        query = db_session.query(SqlQuery).filter_by(sqid=query_id).first()
-
-        if not query:
-            raise Exception(f"Query not found for id: {query_id}")
-
+        query = db_session.query(SqlQuery).filter_by(sqlquery=sql_query.strip()).first()
         return query
+
     except Exception as e:
         logger.error(f"Error fetching query: {e}")
         db_session.rollback()
@@ -199,8 +205,10 @@ def get_chat_history(
         sql_query_ids = [turn.sqid for turn in turns]
 
         # Get all execution logs
-        execution_logs_query = (db_session.query(ExecutionLog)
-        .filter(ExecutionLog.query_id.in_(sql_query_ids)).all()
+        execution_logs_query = (
+            db_session.query(ExecutionLog)
+            .filter(ExecutionLog.query_id.in_(sql_query_ids))
+            .all()
         )
 
         # Create a mapping of query_id to execution logs
@@ -214,7 +222,7 @@ def get_chat_history(
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
-                    execution_id=None
+                    execution_id=None,
                 )
             )
             # Get the execution log from the mapping
@@ -225,7 +233,7 @@ def get_chat_history(
                     message=turn.sql_query.sqlquery,
                     role=Roles.BOT,
                     timestamp=turn.sql_query.created_at,
-                    execution_id=execution_log.id if execution_log else None
+                    execution_id=execution_log.id if execution_log else None,
                 )
             )
         return chat_history
@@ -283,15 +291,21 @@ class SavedQueriesResponse(BaseModel):
     sqlquery: str
 
 
-def get_saved_queries(db_session: Session, user_id: str, filter_type : Optional[str] = "saved") -> List[SavedQueriesResponse]:
+def get_saved_queries(
+    db_session: Session, user_id: str, filter_type: Optional[str] = "saved"
+) -> List[SavedQueriesResponse]:
     """
     Get all saved queries for a user.
     """
     try:
-        if (filter_type != "all"):
-            saved_queries = db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+        if filter_type != "all":
+            saved_queries = (
+                db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+            )
         else:
-            saved_queries = db_session.query(SavedQuery).filter(SavedQuery.user_id != user_id).all()
+            saved_queries = (
+                db_session.query(SavedQuery).filter(SavedQuery.user_id != user_id).all()
+            )
         saved_queries_list = []
         if not saved_queries:
             return saved_queries_list
@@ -367,11 +381,35 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
         db_session.rollback()
         raise e
 
+
+def get_recent_execution_for_query(
+    db_session: Session, sql_query: str, catalog_name: str
+) -> ExecutionLog | None:
+    """
+    Get the most recent execution log for a query.
+    """
+    query_obj = fetch_query_by_value(db_session, sql_query, catalog_name)
+    if not query_obj:
+        return None
+
+    execution_log = (
+        db_session.query(ExecutionLog)
+        .filter_by(query_id=query_obj.sqid)
+        .order_by(desc(ExecutionLog.created_at))
+        .first()
+    )
+
+    return execution_log
+
+
 class ExecutionLogResult(BaseModel):
     status: Optional[ExecutionStatus]
-    result: Optional[Dict[str, Any]]
+    result: Optional[QueryResults]
 
-def get_execution_log_result(db_session: Session, execution_log_id: int) -> ExecutionLogResult:
+
+def get_exeuction_log_result(
+    db_session: Session, execution_log_id: int
+) -> ExecutionLogResult:
     """
     Get the execution result for a query.
 
@@ -394,13 +432,31 @@ def get_execution_log_result(db_session: Session, execution_log_id: int) -> Exec
         execution_log, result = execution_result
 
         return ExecutionLogResult(
-            status = execution_log.status.value if execution_log.status else None,
-            result = result.result if result else None
+            status=execution_log.status.value if execution_log.status else None,
+            result=result.result if result else None,
         )
     except Exception as e:
         logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
         raise e
+
+
+def save_execution_result(
+    db_session: Session, execution_id: int, result: QueryResults
+) -> ExecutionResult:
+    """
+    Save the execution result for a query.
+    """
+    try:
+        execution_result = ExecutionResult(execution_id=execution_id, result=result)
+        db_session.add(execution_result)
+        db_session.commit()
+        return execution_result
+    except Exception as e:
+        logger.error(f"Error saving execution result: {e}")
+        db_session.rollback()
+        raise e
+
 
 def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
     """
@@ -414,35 +470,45 @@ def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQue
         db_session.rollback()
         return None
 
-def check_if_query_against_user_exist(db_session: Session, sqid: UUID, user_id: str) -> Optional[SavedQuery]:
+
+def check_if_query_against_user_exist(
+    db_session: Session, sqid: UUID, user_id: str
+) -> Optional[SavedQuery]:
     """
     Check if the query against the user exists
     """
     try:
-        saved_query = db_session.query(SavedQuery).filter_by(sqid=sqid, user_id=user_id).first()
+        saved_query = (
+            db_session.query(SavedQuery).filter_by(sqid=sqid, user_id=user_id).first()
+        )
         return saved_query
     except Exception as e:
         logger.error(f"Error checking if query against user exists: {e}")
         db_session.rollback()
         return None
 
-def create_saved_query(db_session: Session,
-                name: str,
-                user_id: str,
-                sqid: UUID,
-                turn_id: Optional[int],
-                saved_by: Optional[str],
-                description: Optional[str]) -> Optional[SavedQuery]:
+
+def create_saved_query(
+    db_session: Session,
+    name: str,
+    user_id: str,
+    sqid: UUID,
+    turn_id: Optional[int],
+    saved_by: Optional[str],
+    description: Optional[str],
+) -> Optional[SavedQuery]:
     """
     Save the query against the user id
     """
     try:
-        saved_query = SavedQuery(name=name,
-                                 user_id=user_id,
-                                 sqid=sqid,
-                                 turn_id=turn_id,
-                                 saved_by=saved_by,
-                                 description=description)
+        saved_query = SavedQuery(
+            name=name,
+            user_id=user_id,
+            sqid=sqid,
+            turn_id=turn_id,
+            saved_by=saved_by,
+            description=description,
+        )
         db_session.add(saved_query)
         db_session.commit()
         return saved_query
@@ -450,6 +516,7 @@ def create_saved_query(db_session: Session,
         logger.error(f"Error storing query: {e}")
         db_session.rollback()
         return None
+
 
 def get_all_user_info(db_session: Session) -> List[User]:
     """

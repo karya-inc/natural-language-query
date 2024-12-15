@@ -13,9 +13,9 @@ from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav, get_execution_result
+from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse,ExecutionLogResult, create_session, get_all_user_info, get_session_for_user
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_session, get_all_user_info, get_session_for_user, get_exeuction_log_result
 from sqlalchemy.orm import Session
 from db.models import User
 from uuid import UUID
@@ -209,7 +209,9 @@ async def get_saved_queries(
         filter = "saved" if not filter else "all"
 
         # Create a StreamingResponse for the chat history generator
-        response = get_saved_queries_user(db=db, user_id=user_info.user_id, filter=filter)
+        response = get_saved_queries_user(
+            db=db, user_id=user_info.user_id, filter=filter
+        )
 
         logger.info("Return user favorite queries successfully!!")
         return response
@@ -255,6 +257,7 @@ async def save_favorite_query(
         )
         raise HTTPException(status_code=500, detail="Failed to save favorite query.")
 
+
 @app.get("/execute/{id}/query/")
 async def get_execution_result_for_id(
     id: int,
@@ -274,7 +277,7 @@ async def get_execution_result_for_id(
     """
     logger.info(f"Get execution result for user: {user_info.user_id} is requested!")
     try:
-        response = get_execution_result(db, user_info.user_id, id)
+        response = get_exeuction_log_result(db, id)
         logger.info("Execution result for user return successfully!!")
         return response
     except Exception as e:
@@ -283,9 +286,11 @@ async def get_execution_result_for_id(
         )
         raise HTTPException(status_code=500, detail="Failed to get execution result.")
 
+
 class SaveQueryRequest(BaseModel):
     name: str
     description: Optional[str] = None
+
 
 @app.post("/save_query/{turn_id}/{sqid}")
 async def save_query(
@@ -293,7 +298,8 @@ async def save_query(
     sqid: UUID,
     body: SaveQueryRequest,
     db: Annotated[Session, Depends(get_db_session)],
-    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]):
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
     """
     Endpoint to save query
 
@@ -308,7 +314,9 @@ async def save_query(
         f"Saving query of user : {user_info.user_id} with turn_id: {turn_id} and sqid: {sqid}"
     )
     try:
-        response = save_query_for_user(db, user_info.user_id, turn_id, sqid, body.name, body.description)
+        response = save_query_for_user(
+            db, user_info.user_id, turn_id, sqid, body.name, body.description
+        )
         logger.info("Query saved successfully!!")
         return response
     except Exception as e:
@@ -317,10 +325,12 @@ async def save_query(
         )
         raise HTTPException(status_code=500, detail="Failed to save query.")
 
+
 @app.get("/get_all_users_info/")
 async def get_all_queries(
     db: Annotated[Session, Depends(get_db_session)],
-    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]) -> List[User]:
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> List[User]:
     """
     Get all users info
 
