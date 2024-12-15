@@ -14,7 +14,7 @@ from executor.tools import AgentTools
 from utils.logger import get_logger
 import time
 
-from utils.redis import get_cached_categorical_values, get_or_execute_query_result
+from utils.cache import get_cached_categorical_values, get_or_execute_query_result
 
 TURN_LIMIT = 3
 MAX_HEALING_ATTEMPTS = 5

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union, cast
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
-from db.db_queries import create_execution_entry, create_query
+from db.db_queries import create_execution_entry, get_or_create_query
 from db.models import ExecutionLog
 from dependencies.db import get_db_session
 from executor.state import QueryResults
@@ -73,7 +73,7 @@ class QueryExecutionPipeline:
 
         try:
             # Create Execution Log
-            saved_query = create_query(self.db_session, sql_query, self.user_id)
+            saved_query = get_or_create_query(self.db_session, sql_query, self.user_id)
             execution_entry = create_execution_entry(
                 self.db_session, self.user_id, str(saved_query.sqid)
             )

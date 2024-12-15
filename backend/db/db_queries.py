@@ -123,14 +123,20 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def create_query(
+def get_or_create_query(
     db_session: Session, sql_query: str, user_id: Optional[str] = None
 ) -> SqlQuery:
     """
     Save a generated SQL query.
     """
     try:
-        query = SqlQuery(sqlquery=sql_query, user_id=user_id)
+        # Search for the query in the database
+        query = fetch_query_by_value(db_session, sql_query)
+        if query:
+            return query
+
+        # If the query is not found, create a new query
+        query = SqlQuery(sqlquery=sql_query.strip(), user_id=user_id)
         db_session.add(query)
         db_session.commit()
         return query
@@ -140,14 +146,11 @@ def create_query(
         raise e
 
 
-def fetch_query_by_id(db_session: Session, query_id: str) -> SqlQuery:
+def fetch_query_by_value(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
     try:
-        query = db_session.query(SqlQuery).filter_by(sqid=query_id).first()
-
-        if not query:
-            raise Exception(f"Query not found for id: {query_id}")
-
+        query = db_session.query(SqlQuery).filter_by(sqlquery=sql_query.strip()).first()
         return query
+
     except Exception as e:
         logger.error(f"Error fetching query: {e}")
         db_session.rollback()
@@ -346,6 +349,27 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
         return execution_log
     except Exception as e:
         logger.error(f"Error getting execution log: {e}")
+        db_session.rollback()
+        raise e
+
+
+def get_recent_execution_for_query(
+    db_session: Session, query_id: str, catalog_name: str
+) -> ExecutionLog | None:
+    """
+    Get the most recent execution log for a query.
+    """
+    try:
+        execution_log = (
+            db_session.query(ExecutionLog)
+            .filter_by(query_id=query_id + catalog_name)
+            .order_by(desc(ExecutionLog.created_at))
+            .first()
+        )
+
+        return execution_log
+    except Exception as e:
+        logger.error(f"Error getting recent execution log: {e}")
         db_session.rollback()
         raise e
 
