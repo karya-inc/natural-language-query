@@ -80,6 +80,7 @@ export function ChatBot({
   const [isFetching, setIsFetching] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const focusRef = useRef<HTMLInputElement>(null);
   const { postChat } = useChat({ input, sessionId });
 
   const scrollToBottom = useCallback(() => {
@@ -89,6 +90,10 @@ export function ChatBot({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    focusRef.current?.focus();
+  }, []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,6 +266,7 @@ export function ChatBot({
               value={input}
               onChange={handleInputChange}
               isDisabled={isFetching}
+              ref={focusRef}
             />
             <InputRightElement width="3rem">
               <IconButton

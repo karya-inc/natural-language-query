@@ -87,10 +87,10 @@ const NavBar = ({
       >
         <AccordionItem border={"none"}>
           <AccordionButton>
+            <AccordionIcon />
             <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
               Chat History
             </Box>
-            <AccordionIcon />
           </AccordionButton>
           <AccordionPanel
             display="flex"
@@ -119,10 +119,10 @@ const NavBar = ({
         </AccordionItem>
         <AccordionItem border={"none"}>
           <AccordionButton>
+            <AccordionIcon />
             <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
               Saved Queries
             </Box>
-            <AccordionIcon />
           </AccordionButton>
           <AccordionPanel
             display="flex"

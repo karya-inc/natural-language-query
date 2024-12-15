@@ -13,6 +13,7 @@
     "@chakra-ui/react": "^2.10.4",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
+    "ag-grid-react": "^33.0.2",
     "framer-motion": "^11.11.17",
     "github-markdown-css": "^5.7.0",
     "papaparse": "^5.4.1",
