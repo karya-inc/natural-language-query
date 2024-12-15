@@ -116,15 +116,17 @@ class SavedQuery(Base):
 
     __tablename__ = "saved_queries"
     # Fields without defaults
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     name: Mapped[str] = mapped_column()
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
-    created_at: Mapped[datetime] = mapped_column(insert_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
+
     # Relationships
     user: Mapped["User"] = relationship(
-        back_populates="saved_queries", foreign_keys="[SavedQuery.user_id]"
+        back_populates="saved_queries", foreign_keys="[SavedQuery.user_id]", init=False
     )
+
     # Fields with defaults
     description: Mapped[Optional[str]] = mapped_column(default=None)
     turn_id: Mapped[Optional[int]] = mapped_column(
