@@ -450,3 +450,15 @@ def create_saved_query(db_session: Session,
         logger.error(f"Error storing query: {e}")
         db_session.rollback()
         return None
+
+def get_all_user_info(db_session: Session) -> List[User]:
+    """
+    Get all user information
+    """
+    try:
+        users = db_session.query(User).all()
+        return users
+    except Exception as e:
+        logger.error(f"Error getting all user info: {e}")
+        db_session.rollback()
+        return []

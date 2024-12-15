@@ -15,8 +15,9 @@ from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, ge
 from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav, get_execution_result
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse,ExecutionLogResult, create_session, get_session_for_user
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse,ExecutionLogResult, create_session, get_all_user_info, get_session_for_user
 from sqlalchemy.orm import Session
+from db.models import User
 from uuid import UUID
 from utils.parse_catalog import parsed_catalogs
 
@@ -315,3 +316,29 @@ async def save_query(
             f"Error while saving query for user : {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to save query.")
+
+@app.get("/get_all_users_info/")
+async def get_all_queries(
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)]) -> List[User]:
+    """
+    Get all users info
+
+    Args:
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        All users info
+    """
+    logger.info(f"Get all users info for user: {user_info.user_id} is requested!")
+    try:
+        # TODO: Before returning the response, check if user ROLE is SUPERADMIN!
+        response = get_all_user_info(db)
+        logger.info("All users info return successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while retrieving all users info for user: {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to get all users info.")
