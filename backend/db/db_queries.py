@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
 from executor.state import QueryResults
-from typing import List, Optional, Dict, Any
+from typing import List, Literal, Optional
 from utils.logger import get_logger
 import enum
 
@@ -24,6 +24,9 @@ class ChatHistoryResponse(BaseModel):
     message: str
     role: Roles
     timestamp: datetime
+    type: Optional[Literal["text", "table", "error"]]
+    session_id: str
+    query: Optional[str]
     execution_id: Optional[int] = None
 
 
@@ -147,6 +150,19 @@ def get_or_create_query(
         raise e
 
 
+def get_query_by_id(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
+    """
+    Get a query by its ID.
+    """
+    try:
+        query = db_session.query(SqlQuery).filter_by(sqid=sqid).first()
+        return query
+    except Exception as e:
+        logger.error(f"Error getting query by ID: {e}")
+        db_session.rollback()
+        return None
+
+
 def fetch_query_by_value(
     db_session: Session, sql_query: str, catalog_name: str
 ) -> Optional[SqlQuery]:
@@ -222,9 +238,15 @@ def get_chat_history(
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
+                    type="text",
+                    session_id=str(session_id),
+                    query=None,
                     execution_id=None,
                 )
             )
+
+            query = get_query_by_id(db_session, turn.sqid)
+
             # Get the execution log from the mapping
             execution_log = execution_logs_map.get(str(turn.sqid))
             chat_history.append(
@@ -234,6 +256,9 @@ def get_chat_history(
                     role=Roles.BOT,
                     timestamp=turn.sql_query.created_at,
                     execution_id=execution_log.id if execution_log else None,
+                    query=str(query.sqlquery) if query else None,
+                    type="table",
+                    session_id=str(session_id),
                 )
             )
         return chat_history
