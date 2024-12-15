@@ -95,6 +95,8 @@ class SqlQuery(Base):
 
     __tablename__ = "sql_queries"
     sqlquery: Mapped[str] = mapped_column(Text)
+    database_used: Mapped[str] = mapped_column(Text)
+
     # Fields with Default values
     sqid: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default_factory=uuid.uuid4
@@ -105,6 +107,7 @@ class SqlQuery(Base):
     user_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("users.user_id"), default=None
     )
+
     # Relationships
     turns: Mapped[List["Turn"]] = relationship(
         "Turn", back_populates="sql_query", default_factory=list

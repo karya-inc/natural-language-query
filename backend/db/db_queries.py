@@ -201,9 +201,6 @@ def get_session_for_user(
         return None
 
 
-# Get data from database functions
-
-
 def get_chat_history(
     db_session: Session, session_id: UUID
 ) -> List[ChatHistoryResponse]:
@@ -346,6 +343,19 @@ def get_saved_queries(
         logger.error(f"Error getting saved queries: {e}")
         db_session.rollback()
         return []
+
+
+def get_saved_query_by_id(db_session: Session, sqid: UUID) -> Optional[SavedQuery]:
+    """
+    Get a saved query by its ID.
+    """
+    try:
+        saved_query = db_session.query(SavedQuery).filter_by(sqid=sqid).first()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error getting saved query by ID: {e}")
+        db_session.rollback()
+        return None
 
 
 def create_execution_entry(

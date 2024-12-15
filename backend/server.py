@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 
-from db.models import UserSession
+from db.models import ExecutionLog, UserSession
 from dependencies.db import get_db_session
+from queues.typed_tasks import invoke_execute_query_op
 
 load_dotenv()
 
@@ -15,7 +16,7 @@ from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, ge
 from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_session, get_all_user_info, get_session_for_user, get_exeuction_log_result
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_session, get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result
 from sqlalchemy.orm import Session
 from db.models import User
 from uuid import UUID
@@ -223,6 +224,63 @@ async def get_saved_queries(
         raise HTTPException(
             status_code=500, detail="Failed to return favorite queries."
         )
+
+
+@app.post("/queries/{sqid}/execute")
+async def execute_saved_query(
+    sqid: UUID,
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> ExecutionLog:
+    """
+    Execute saved query
+
+    Args:
+        saved_query_id (UUID): Saved Query ID
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        StreamingResponse: The response streamed as Server-Sent Events.
+    """
+    logger.info(
+        f"Executing saved query for user: {user_info.user_id} with query_id: {sqid}"
+    )
+
+    saved_query_entry = get_saved_query_by_id(db, sqid)
+
+    if not saved_query_entry:
+        raise HTTPException(status_code=404, detail="Saved query not found.")
+
+    if not saved_query_entry.user_id == user_info.user_id:
+        raise HTTPException(
+            status_code=403, detail="User doesn't have access to this saved query."
+        )
+
+    try:
+        # Returning the StreamingResponse with the proper media type for SSE
+        execution_log = ExecutionLog(
+            status="PENDING",
+            query_id=str(sqid),
+            executed_by=user_info.user_id,
+        )
+
+        logger.info("Execution started successfully.")
+
+        catalog = next(
+            filter(
+                lambda x: x.name == saved_query_entry.sql_query.database_used,
+                parsed_catalogs.catalogs,
+            )
+        )
+
+        invoke_execute_query_op(execution_log.id, catalog)
+        return execution_log
+    except Exception as e:
+        logger.error(
+            f"Error while executing saved query for user: {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to execute saved query.")
 
 
 @app.post("/save_favorite_query/{turn_id}/{sql_query_id}")
