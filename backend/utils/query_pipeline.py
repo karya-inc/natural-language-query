@@ -73,7 +73,9 @@ class QueryExecutionPipeline:
 
         try:
             # Create Execution Log
-            saved_query = get_or_create_query(self.db_session, sql_query, self.user_id, self.catalog.name)
+            saved_query = get_or_create_query(
+                self.db_session, sql_query, self.user_id, self.catalog.name
+            )
             execution_entry = create_execution_entry(
                 self.db_session, self.user_id, str(saved_query.sqid)
             )

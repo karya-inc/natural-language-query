@@ -47,6 +47,9 @@ class ExecuteQueryOp(celery.Task):
 
         # Notify user on success
         execution_log = get_execution_log(self.db_session, execution_log_id)
+        assert (
+            execution_log is not None
+        ), f"Expected execution log to be present for {execution_log_id}"
         notify_user_on_success(
             execution_log_id,
             retval,
@@ -66,6 +69,11 @@ class ExecuteQueryOp(celery.Task):
 
         # Notify user on failure
         execution_log = get_execution_log(self.db_session, execution_log_id)
+
+        assert (
+            execution_log is not None
+        ), f"Expected execution log to be present for id {execution_log_id}"
+
         notify_user_on_failure(
             execution_log_id,
             execution_log.notify_to,
@@ -81,6 +89,9 @@ def execute_query_op(
     celery.Task.request
 
     execution_log = get_execution_log(self.db_session, execution_log_id)
+    assert (
+        execution_log is not None
+    ), f"Expected execution log to be present for {execution_log_id}"
     self.db_session.commit()
 
     with engine.connect() as connection:

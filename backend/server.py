@@ -16,7 +16,7 @@ from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, ge
 from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_session, get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_execution_entry, create_session, get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result
 from sqlalchemy.orm import Session
 from db.models import User
 from uuid import UUID
@@ -259,12 +259,7 @@ async def execute_saved_query(
 
     try:
         # Returning the StreamingResponse with the proper media type for SSE
-        execution_log = ExecutionLog(
-            status="PENDING",
-            query_id=str(sqid),
-            executed_by=user_info.user_id,
-        )
-
+        execution_log = create_execution_entry(db, user_info.user_id, str(sqid))
         logger.info("Execution started successfully.")
 
         catalog = next(
