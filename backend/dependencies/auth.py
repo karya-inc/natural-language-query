@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from db.db_queries import get_or_create_user
 from db.models import User
 from rbac.check_permissions import ColumnScope
-from dependencies.db import get_db
+from dependencies.db import get_db_session
 from utils.auth import get_auth_provider
 from utils.parse_catalog import roles_validator
 
@@ -73,7 +73,7 @@ async def verify_token(
 
 
 async def get_authenticated_user_info(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[Session, Depends(get_db_session)],
     auth_result: Annotated[TokenVerificationResult, Depends(verify_token)],
 ) -> AuthenticatedUserInfo:
     """

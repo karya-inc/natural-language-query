@@ -1,15 +1,18 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
-
-from sqlalchemy import ForeignKey, Text, func
+from typing import Any, List, Literal, Optional
+from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
     """Base class for SQLAlchemy models"""
 
-    pass
+    type_annotation_map = {
+        dict[str, Any]: JSONB,
+        list[str]: ARRAY(String),
+    }
 
 
 class User(Base):
@@ -18,6 +21,8 @@ class User(Base):
     __tablename__ = "users"
 
     user_id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[Optional[str]] = mapped_column()
+    email: Mapped[Optional[str]] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
@@ -74,10 +79,6 @@ class Turn(Base):
         insert_default=func.now(), default=None
     )
 
-    # Relationships
-    saved_queries: Mapped[List["SavedQuery"]] = relationship(
-        back_populates="turns", default_factory=list
-    )
     session: Mapped["UserSession"] = relationship(back_populates="turns", init=False)
     sql_query: Mapped["SqlQuery"] = relationship(back_populates="turns", init=False)
 
@@ -98,6 +99,10 @@ class SqlQuery(Base):
         insert_default=func.now(), default=None
     )
 
+    user_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("users.user_id"), default=None
+    )
+
     # Relationships
     turns: Mapped[List["Turn"]] = relationship(
         "Turn", back_populates="sql_query", default_factory=list
@@ -109,7 +114,12 @@ class SavedQuery(Base):
 
     __tablename__ = "saved_queries"
 
-    turn_id: Mapped[int] = mapped_column(ForeignKey("turns.turn_id"))
+    name: Mapped[str] = mapped_column()
+    description: Mapped[Optional[str]] = mapped_column()
+
+    turn_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("turns.turn_id"), nullable=True
+    )
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
 
@@ -120,10 +130,48 @@ class SavedQuery(Base):
     )
 
     # Relationships
-    turns: Mapped["Turn"] = relationship(
-        "Turn", back_populates="saved_queries", init=False
-    )
-    user: Mapped["User"] = relationship(
-        "User", back_populates="saved_queries", init=False
-    )
-    sql_query: Mapped["SqlQuery"] = relationship("SqlQuery", init=False)
+    turn: Mapped["Turn"] = relationship(init=False)
+    user: Mapped["User"] = relationship(back_populates="saved_queries", init=False)
+    sql_query: Mapped["SqlQuery"] = relationship(init=False)
+
+
+ExecutionStatus = Literal["SUCCESS", "FAILED", "PENDING", "RUNNING"]
+
+
+class ExecutionLog(Base):
+    """
+    Logs the status of the query execution
+    """
+
+    __tablename__ = "execution_logs"
+
+    status: Mapped[ExecutionStatus] = mapped_column()
+    query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
+    executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+
+    # Fields with Default values
+    notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
+    logs: Mapped[Optional[dict[str, Any]]] = mapped_column(default=None, init=False)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(init=False)
+
+    # Relationships
+    query: Mapped["SqlQuery"] = relationship(init=False)
+    user: Mapped["User"] = relationship(init=False)
+
+class ExecutionResult(Base):
+    """
+    Execution Result model for storing the result of the query execution
+    """
+
+    __tablename__ = "execution_results"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
+
+    execution_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    result: Mapped[dict[str, Any]] = mapped_column(default=None, init=False)
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
+
+    # Relationships
+    execution_log: Mapped["ExecutionLog"] = relationship(init=False)

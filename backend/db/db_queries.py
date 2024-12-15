@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import User, UserSession, Turn, SqlQuery, SavedQuery
+from db.models import ExecutionLog, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
@@ -25,14 +25,19 @@ class ChatHistoryResponse(BaseModel):
     timestamp: datetime
 
 
-def get_or_create_user(db_session: Session, user_id: str) -> User:
+def get_or_create_user(
+    db_session: Session,
+    user_id: str,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+) -> User:
     """Check if a user exists; if not, create a new user."""
     try:
         user = db_session.query(User).filter_by(user_id=user_id).first()
         logger.info(f"User: {user}")
         if not user:
             logger.warning(f"User not found, creating a new user with ID: {user_id}")
-            user = User(user_id=user_id)
+            user = User(user_id=user_id, name=name, email=email)
             db_session.add(user)
             db_session.commit()
         return user
@@ -83,13 +88,30 @@ def store_turn(
 
 
 def save_user_fav_query(
-    db_session: Session, user_id: str, turn_id: int, sql_query_id: UUID
+    db_session: Session,
+    user_id: str,
+    turn_id: int,
+    sql_query_id: UUID,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
 ) -> Optional[SavedQuery]:
     """
     Save a query as the user's favorite.
     """
     try:
-        saved_query = SavedQuery(user_id=user_id, turn_id=turn_id, sqid=sql_query_id)
+        turn = db_session.query(Turn).filter_by(turn_id=turn_id).first()
+        if not name and turn:
+            name = turn.nlq
+        else:
+            name = "Unnamed Query"
+
+        saved_query = SavedQuery(
+            user_id=user_id,
+            turn_id=turn_id,
+            sqid=sql_query_id,
+            name=name,
+            description=description,
+        )
         db_session.add(saved_query)
         db_session.commit()
         return saved_query
@@ -100,17 +122,33 @@ def save_user_fav_query(
 
 
 # Save the generated SQL query by AI agent
-def save_query(db_session: Session, sql_query: str) -> SqlQuery:
+def create_query(
+    db_session: Session, sql_query: str, user_id: Optional[str] = None
+) -> SqlQuery:
     """
     Save a generated SQL query.
     """
     try:
-        query = SqlQuery(sqlquery=sql_query)
+        query = SqlQuery(sqlquery=sql_query, user_id=user_id)
         db_session.add(query)
         db_session.commit()
         return query
     except Exception as e:
         logger.error(f"Error saving query: {e}")
+        db_session.rollback()
+        raise e
+
+
+def fetch_query_by_id(db_session: Session, query_id: str) -> SqlQuery:
+    try:
+        query = db_session.query(SqlQuery).filter_by(sqid=query_id).first()
+
+        if not query:
+            raise Exception(f"Query not found for id: {query_id}")
+
+        return query
+    except Exception as e:
+        logger.error(f"Error fetching query: {e}")
         db_session.rollback()
         raise e
 
@@ -242,7 +280,7 @@ def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesRes
             saved_queries_list.append(
                 SavedQueriesResponse(
                     sqid=saved_query.sqid,
-                    nlq=saved_query.turns.nlq,
+                    nlq=saved_query.turn.nlq,
                     sqlquery=saved_query.sql_query.sqlquery,
                 )
             )
@@ -251,3 +289,61 @@ def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesRes
         logger.error(f"Error getting saved queries: {e}")
         db_session.rollback()
         return []
+
+
+def create_execution_entry(
+    db_session: Session, user_id: str, query_id: str
+) -> ExecutionLog:
+    """
+    Save the execution log for a query.
+    """
+    try:
+        execution_log = ExecutionLog("RUNNING", query_id, user_id)
+        db_session.add(execution_log)
+        db_session.commit()
+        return execution_log
+
+    except Exception as e:
+        logger.error(f"Error saving execution log: {e}")
+        db_session.rollback()
+        raise e
+
+
+def set_execution_status(
+    db_session: Session, execution_id: int, status: ExecutionStatus
+) -> ExecutionLog:
+    """
+    Set the execution status for a query.
+    """
+    try:
+        execution_log = (
+            db_session.query(ExecutionLog).filter_by(id=execution_id).first()
+        )
+        if not execution_log:
+            raise Exception("Execution log not found for {query_id}")
+
+        execution_log.status = status
+        db_session.commit()
+        return execution_log
+    except Exception as e:
+        logger.error(f"Error setting execution status: {e}")
+        db_session.rollback()
+        raise e
+
+
+def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
+    """
+    Get the execution log for a query.
+    """
+    try:
+        execution_log = (
+            db_session.query(ExecutionLog).filter_by(id=execution_id).first()
+        )
+        if not execution_log:
+            raise Exception("Execution log not found for {query_id}")
+
+        return execution_log
+    except Exception as e:
+        logger.error(f"Error getting execution log: {e}")
+        db_session.rollback()
+        raise e

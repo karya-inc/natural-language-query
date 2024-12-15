@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import List, Optional
+
+from sqlalchemy.orm import Session
 
 from db.models import UserSession
 from executor.config import AgentConfig
@@ -11,6 +13,7 @@ from executor.loop import agentic_loop
 
 @dataclass
 class NLQExecutor:
+    db_session: Session
     tools: Optional[AgentTools] = field(default=None)
     config: Optional[AgentConfig] = field(default=None)
     nlq: Optional[str] = field(default=None)
@@ -51,6 +54,11 @@ class NLQExecutor:
 
         if not self.nlq:
             self.nlq = nlq
+
         return await agentic_loop(
-            self.nlq, self.catalogs, self.tools, self.config, session=self.session
+            self.nlq,
+            self.catalogs,
+            self.tools,
+            self.config,
+            session=self.session,
         )
