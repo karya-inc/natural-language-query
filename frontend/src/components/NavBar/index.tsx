@@ -17,19 +17,24 @@ import { redirect } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { useEffect } from "react";
 import { BACKEND_URL } from "../../config";
-import useNavBar from "./useNavBar";
 
 const NavBar = ({
   navOpen,
   setNavOpen,
   handleHistoryClick,
+  history,
+  getHistory,
+  savedQueries,
+  getSavedQueries,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
   handleHistoryClick: (arg1: string) => void;
+  history: { session_id: string; nlq: string }[];
+  getHistory: (arg: string) => void;
+  savedQueries: { session_id: string; nlq: string }[];
+  getSavedQueries: (arg: string) => void;
 }) => {
-  const { history, getHistory, savedQueries, getSavedQueries } = useNavBar();
-
   const chatHistoryStyles = {
     ":hover": {
       background: "gray.700",
@@ -41,7 +46,7 @@ const NavBar = ({
 
   useEffect(() => {
     getHistory(`${BACKEND_URL}/fetch_history`);
-    getSavedQueries(`${BACKEND_URL}/fetch_favorite_queries`);
+    getSavedQueries(`${BACKEND_URL}/queries`);
   }, []);
 
   return (

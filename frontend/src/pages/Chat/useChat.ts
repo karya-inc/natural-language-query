@@ -15,7 +15,20 @@ function useChat({ input, sessionId }: { input: string; sessionId: string }) {
     const reader = response.body?.getReader();
     return reader;
   }
-  return { postChat };
+
+  async function getTableData(url: string) {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    console.log(response);
+  }
+
+  return { postChat, getTableData };
 }
 
 export default useChat;

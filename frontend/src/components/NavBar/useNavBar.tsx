@@ -1,7 +1,12 @@
 import { useState } from "react";
 
+interface HistoryItem {
+  session_id: string;
+  nlq: string;
+}
+
 const useNavBar = () => {
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [savedQueries, setSavedQueries] = useState([]);
   async function getHistory(url: string) {
     try {
@@ -37,6 +42,7 @@ const useNavBar = () => {
 
   return {
     history,
+    setHistory,
     getHistory,
     savedQueries,
     getSavedQueries,

@@ -5,8 +5,8 @@ import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const ChatTable = ({ data }: { data: string }) => {
-  const rowData = JSON.parse(data);
+const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
+  const rowData = data;
   const colDefs = Object.keys(rowData[0]).map((key) => ({
     field: key,
     filter: true,
