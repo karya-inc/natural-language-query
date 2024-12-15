@@ -140,7 +140,9 @@ def get_or_create_query(
             return query
 
         # If the query is not found, create a new query
-        query = SqlQuery(sqlquery=sql_query.strip(), user_id=user_id)
+        query = SqlQuery(
+            sqlquery=sql_query.strip(), user_id=user_id, database_used=catalog_name
+        )
         db_session.add(query)
         db_session.commit()
         return query
