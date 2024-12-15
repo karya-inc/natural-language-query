@@ -94,8 +94,8 @@ class SqlQuery(Base):
     """SQL Query model for storing generated SQL queries"""
 
     __tablename__ = "sql_queries"
-    sqlquery: Mapped[str] = mapped_column(Text)
-    database_used: Mapped[str] = mapped_column(Text)
+    sqlquery: Mapped[str] = mapped_column()
+    database_used: Mapped[Optional[str]] = mapped_column()
 
     # Fields with Default values
     sqid: Mapped[uuid.UUID] = mapped_column(
