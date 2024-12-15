@@ -115,30 +115,26 @@ class SavedQuery(Base):
     """Saved Queries model for users to store queries"""
 
     __tablename__ = "saved_queries"
-
+    # Fields without defaults
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column()
-    description: Mapped[Optional[str]] = mapped_column()
-
-    turn_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("turns.turn_id"), nullable=True
-    )
     sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
-
-    # Fields with Default values
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, default=None)
-    created_at: Mapped[datetime] = mapped_column(
-        insert_default=func.now(), default=None
+    created_at: Mapped[datetime] = mapped_column(insert_default=func.now())
+    # Relationships
+    user: Mapped["User"] = relationship(
+        back_populates="saved_queries", foreign_keys="[SavedQuery.user_id]"
     )
-
+    # Fields with defaults
+    description: Mapped[Optional[str]] = mapped_column(default=None)
+    turn_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("turns.turn_id"), nullable=True, default=None
+    )
     saved_by: Mapped[Optional[str]] = mapped_column(
         ForeignKey("users.user_id"), default=None
     )
-
-    # Relationships
-    turn: Mapped["Turn"] = relationship(init=False)
-    user: Mapped["User"] = relationship(back_populates="saved_queries", init=False)
     sql_query: Mapped["SqlQuery"] = relationship(init=False)
+    turn: Mapped["Turn"] = relationship(init=False)
 
 
 ExecutionStatus = Literal["SUCCESS", "FAILED", "PENDING", "RUNNING"]
