@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, get_chat_history, get_session_for_user, get_history_sessions, get_or_create_query, save_user_fav_query, get_saved_queries, store_turn
-from db.models import UserSession
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_saved_query, fetch_query_by_value, get_chat_history, get_history_sessions, get_or_create_query, get_saved_queries, get_session_for_user, save_user_fav_query, store_turn
+from db.models import SavedQuery, User, UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
@@ -94,7 +94,7 @@ async def do_nlq(
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
         sql_query_entry = get_or_create_query(
-            db_session=db_session, sql_query=result.query, user_id=user_info.user_id
+            db_session, result.query, user_info.user_id, result.db_name
         )
         turn = store_turn(
             db_session=db_session,
@@ -164,7 +164,36 @@ def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
     return save_user_fav_query(db, user_id, turn_id, sql_query_id)
 
 
-def get_fav_queries_user(db: Session, user_id: str) -> List[SavedQueriesResponse]:
+def get_saved_queries_user(
+    db: Session, user_id: str, filter: Optional[str]
+) -> List[SavedQueriesResponse]:
     # Log info
     logger.info(f"Get saved queries for user: {user_id} is requested!")
-    return get_saved_queries(db, user_id)
+    return get_saved_queries(db, user_id, filter_type=filter)
+
+
+def save_query_for_user(
+    db: Session,
+    user_id: str,
+    turn_id: int,
+    sqid: UUID,
+    name: str,
+    description: Optional[str],
+) -> Optional[SavedQuery]:
+    # Log info
+    logger.info(f"Save query for user: {user_id} is requested!")
+    return create_saved_query(
+        db_session=db,
+        user_id=user_id,
+        turn_id=turn_id,
+        sqid=sqid,
+        name=name,
+        description=description,
+        saved_by=user_id,
+    )
+
+
+def get_all_users_info(db: Session, user_id: str) -> List[User]:
+    # Log info
+    logger.info(f"Get all users info requested by user: {user_id}")
+    return get_all_users_info(db, user_id)

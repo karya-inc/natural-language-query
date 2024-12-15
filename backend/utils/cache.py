@@ -1,6 +1,6 @@
 import json
 from typing import Callable, Optional
-from db.db_queries import fetch_query_by_value, get_exeuction_result, get_recent_execution_for_query
+from db.db_queries import fetch_query_by_value, get_exeuction_log_result, get_recent_execution_for_query
 from dependencies.db import get_db_session
 from executor.catalog import Catalog
 from executor.state import QueryResults
@@ -19,7 +19,7 @@ def get_cached_query_result(sql_query: str, catalog: Catalog) -> Optional[QueryR
         return QueryResults(json.loads(str(cached_result)))
 
     db_session = get_db_session()
-    query = fetch_query_by_value(db_session, sql_query)
+    query = fetch_query_by_value(db_session, sql_query, catalog.name)
 
     if not query:
         return None
@@ -28,17 +28,11 @@ def get_cached_query_result(sql_query: str, catalog: Catalog) -> Optional[QueryR
         db_session, str(query.sqid), catalog.name
     )
 
-    if not execution or execution.status != "SUCCESS":
+    if not execution:
         return None
 
-    try:
-        execution_result = get_exeuction_result(db_session, execution.id)
-        return QueryResults(execution_result.result)
-    except Exception as e:
-        logger.error(
-            f"Execution with id {execution.id} was SUCCESS but failed to fetch result: {e}"
-        )
-        return None
+    execution_info = get_exeuction_log_result(db_session, execution.id)
+    return execution_info.result
 
 
 def get_or_execute_query_result(

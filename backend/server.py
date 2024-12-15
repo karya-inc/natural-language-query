@@ -8,15 +8,16 @@ load_dotenv()
 import os
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends
+from fastapi import Body, FastAPI, HTTPException, Depends, Query
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_fav_queries_user, get_session_history, nlq_sse_wrapper, save_fav
+from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, create_session, get_session_for_user
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_session, get_all_user_info, get_session_for_user, get_exeuction_log_result
 from sqlalchemy.orm import Session
+from db.models import User
 from uuid import UUID
 from utils.parse_catalog import parsed_catalogs
 
@@ -187,24 +188,30 @@ async def get_session_history_for_user(
         raise HTTPException(status_code=500, detail="Failed to get session history.")
 
 
-@app.get("/fetch_favorite_queries")
-async def get_favorite_queries(
+@app.get("/queries")
+async def get_saved_queries(
     db: Annotated[Session, Depends(get_db_session)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+    filter: Optional[str] = Query(None, alias="filter:all"),
 ) -> List[SavedQueriesResponse]:
     """
-    Get favorite queries for the user
 
-    Returns:
-       User favorite queries
+    Retrieve saved queries
+    - For non-SUPERADMIN: returns user's own queries
+    - For SUPERADMIN with filter:all: returns all users' queries except SUPERADMIN
     """
 
     try:
         # Log the start of chat history streaming
         logger.info(f"User chat history for user_id: {user_info.user_id}")
 
+        # Filter
+        filter = "saved" if not filter else "all"
+
         # Create a StreamingResponse for the chat history generator
-        response = get_fav_queries_user(db=db, user_id=user_info.user_id)
+        response = get_saved_queries_user(
+            db=db, user_id=user_info.user_id, filter=filter
+        )
 
         logger.info("Return user favorite queries successfully!!")
         return response
@@ -249,3 +256,99 @@ async def save_favorite_query(
             f"Error while saving favorite query for user : {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to save favorite query.")
+
+
+@app.get("/execute/{id}/query/")
+async def get_execution_result_for_id(
+    id: int,
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> ExecutionLogResult:
+    """
+    Get execution result for the user
+
+    Args:
+        id (int): Execution Log ID
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        Execution result
+    """
+    logger.info(f"Get execution result for user: {user_info.user_id} is requested!")
+    try:
+        response = get_exeuction_log_result(db, id)
+        logger.info("Execution result for user return successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to get execution result.")
+
+
+class SaveQueryRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+@app.post("/save_query/{turn_id}/{sqid}")
+async def save_query(
+    turn_id: int,
+    sqid: UUID,
+    body: SaveQueryRequest,
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
+    """
+    Endpoint to save query
+
+    Args:
+        turn_id (int): Turn ID
+        sqid (UUID): SQL Query ID
+        body (SaveQueryRequest): Request body
+        db (Session): Database session
+        user_info (str): contains user information
+    """
+    logger.info(
+        f"Saving query of user : {user_info.user_id} with turn_id: {turn_id} and sqid: {sqid}"
+    )
+    try:
+        response = save_query_for_user(
+            db, user_info.user_id, turn_id, sqid, body.name, body.description
+        )
+        logger.info("Query saved successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while saving query for user : {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to save query.")
+
+
+@app.get("/get_all_users_info/")
+async def get_all_queries(
+    db: Annotated[Session, Depends(get_db_session)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+) -> List[User]:
+    """
+    Get all users info
+
+    Args:
+        db (Session): Database session
+        user_id (str): User ID
+
+    Returns:
+        All users info
+    """
+    logger.info(f"Get all users info for user: {user_info.user_id} is requested!")
+    try:
+        # TODO: Before returning the response, check if user ROLE is SUPERADMIN!
+        response = get_all_user_info(db)
+        logger.info("All users info return successfully!!")
+        return response
+    except Exception as e:
+        logger.error(
+            f"Error while retrieving all users info for user: {user_info.user_id}. Error: {str(e)}"
+        )
+        raise HTTPException(status_code=500, detail="Failed to get all users info.")

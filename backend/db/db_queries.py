@@ -4,8 +4,8 @@ from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, User
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Any, List, Optional
 from executor.state import QueryResults
+from typing import List, Optional, Dict, Any
 from utils.logger import get_logger
 import enum
 
@@ -24,6 +24,7 @@ class ChatHistoryResponse(BaseModel):
     message: str
     role: Roles
     timestamp: datetime
+    execution_id: Optional[int] = None
 
 
 def get_or_create_user(
@@ -124,14 +125,14 @@ def save_user_fav_query(
 
 # Save the generated SQL query by AI agent
 def get_or_create_query(
-    db_session: Session, sql_query: str, user_id: Optional[str] = None
+    db_session: Session, sql_query: str, user_id: Optional[str], catalog_name: str
 ) -> SqlQuery:
     """
     Save a generated SQL query.
     """
     try:
         # Search for the query in the database
-        query = fetch_query_by_value(db_session, sql_query)
+        query = fetch_query_by_value(db_session, sql_query, catalog_name)
         if query:
             return query
 
@@ -146,7 +147,9 @@ def get_or_create_query(
         raise e
 
 
-def fetch_query_by_value(db_session: Session, sql_query: str) -> Optional[SqlQuery]:
+def fetch_query_by_value(
+    db_session: Session, sql_query: str, catalog_name: str
+) -> Optional[SqlQuery]:
     try:
         query = db_session.query(SqlQuery).filter_by(sqlquery=sql_query.strip()).first()
         return query
@@ -198,6 +201,19 @@ def get_chat_history(
             .order_by(desc(Turn.created_at))
             .all()
         )
+        # Get all sqlquery_ids
+        sql_query_ids = [turn.sqid for turn in turns]
+
+        # Get all execution logs
+        execution_logs_query = (
+            db_session.query(ExecutionLog)
+            .filter(ExecutionLog.query_id.in_(sql_query_ids))
+            .all()
+        )
+
+        # Create a mapping of query_id to execution logs
+        execution_logs_map = {log.query_id: log for log in execution_logs_query}
+
         chat_history = []
         for turn in turns:
             chat_history.append(
@@ -206,14 +222,18 @@ def get_chat_history(
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
+                    execution_id=None,
                 )
             )
+            # Get the execution log from the mapping
+            execution_log = execution_logs_map.get(str(turn.sqid))
             chat_history.append(
                 ChatHistoryResponse(
                     id=turn.sql_query.sqid,
                     message=turn.sql_query.sqlquery,
                     role=Roles.BOT,
                     timestamp=turn.sql_query.created_at,
+                    execution_id=execution_log.id if execution_log else None,
                 )
             )
         return chat_history
@@ -271,12 +291,21 @@ class SavedQueriesResponse(BaseModel):
     sqlquery: str
 
 
-def get_saved_queries(db_session: Session, user_id: str) -> List[SavedQueriesResponse]:
+def get_saved_queries(
+    db_session: Session, user_id: str, filter_type: Optional[str] = "saved"
+) -> List[SavedQueriesResponse]:
     """
     Get all saved queries for a user.
     """
     try:
-        saved_queries = db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+        if filter_type != "all":
+            saved_queries = (
+                db_session.query(SavedQuery).filter_by(user_id=user_id).all()
+            )
+        else:
+            saved_queries = (
+                db_session.query(SavedQuery).filter(SavedQuery.user_id != user_id).all()
+            )
         saved_queries_list = []
         if not saved_queries:
             return saved_queries_list
@@ -354,41 +383,58 @@ def get_execution_log(db_session: Session, execution_id: int) -> ExecutionLog:
 
 
 def get_recent_execution_for_query(
-    db_session: Session, query_id: str, catalog_name: str
+    db_session: Session, sql_query: str, catalog_name: str
 ) -> ExecutionLog | None:
     """
     Get the most recent execution log for a query.
     """
-    try:
-        execution_log = (
-            db_session.query(ExecutionLog)
-            .filter_by(query_id=query_id + catalog_name)
-            .order_by(desc(ExecutionLog.created_at))
-            .first()
-        )
+    query_obj = fetch_query_by_value(db_session, sql_query, catalog_name)
+    if not query_obj:
+        return None
 
-        return execution_log
-    except Exception as e:
-        logger.error(f"Error getting recent execution log: {e}")
-        db_session.rollback()
-        raise e
+    execution_log = (
+        db_session.query(ExecutionLog)
+        .filter_by(query_id=query_obj.sqid)
+        .order_by(desc(ExecutionLog.created_at))
+        .first()
+    )
+
+    return execution_log
 
 
-def get_exeuction_result(db_session: Session, execution_id: int) -> ExecutionResult:
+class ExecutionLogResult(BaseModel):
+    status: Optional[ExecutionStatus]
+    result: Optional[QueryResults]
+
+
+def get_exeuction_log_result(
+    db_session: Session, execution_log_id: int
+) -> ExecutionLogResult:
     """
     Get the execution result for a query.
+
+    Args:
+        db_session (Session): SQLAlchemy Session
+        execution_log_id (int): Execution Log ID
     """
     try:
         execution_result = (
-            db_session.query(ExecutionResult)
-            .filter_by(exeuction_id=execution_id)
+            db_session.query(ExecutionLog, ExecutionResult)
+            .join(ExecutionResult, ExecutionLog.id == ExecutionResult.execution_id)
+            .filter(ExecutionLog.id == execution_log_id)
             .first()
         )
 
         if not execution_result:
-            raise Exception("Execution log not found for {query_id}")
+            return ExecutionLogResult(status=None, result=None)
 
-        return execution_result
+        # Unpack the tuple
+        execution_log, result = execution_result
+
+        return ExecutionLogResult(
+            status=execution_log.status.value if execution_log.status else None,
+            result=result.result if result else None,
+        )
     except Exception as e:
         logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
@@ -410,3 +456,76 @@ def save_execution_result(
         logger.error(f"Error saving execution result: {e}")
         db_session.rollback()
         raise e
+
+
+def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
+    """
+    Check if sql query exists in the database
+    """
+    try:
+        sql_query = db_session.query(SqlQuery).filter_by(sqid=sqid).first()
+        return sql_query
+    except Exception as e:
+        logger.error(f"Error checking if SQL query exists: {e}")
+        db_session.rollback()
+        return None
+
+
+def check_if_query_against_user_exist(
+    db_session: Session, sqid: UUID, user_id: str
+) -> Optional[SavedQuery]:
+    """
+    Check if the query against the user exists
+    """
+    try:
+        saved_query = (
+            db_session.query(SavedQuery).filter_by(sqid=sqid, user_id=user_id).first()
+        )
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error checking if query against user exists: {e}")
+        db_session.rollback()
+        return None
+
+
+def create_saved_query(
+    db_session: Session,
+    name: str,
+    user_id: str,
+    sqid: UUID,
+    turn_id: Optional[int],
+    saved_by: Optional[str],
+    description: Optional[str],
+) -> Optional[SavedQuery]:
+    """
+    Save the query against the user id
+    """
+    try:
+        saved_query = SavedQuery(
+            name=name,
+            user_id=user_id,
+            sqid=sqid,
+            turn_id=turn_id,
+            saved_by=saved_by,
+            description=description,
+        )
+        db_session.add(saved_query)
+        db_session.commit()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error storing query: {e}")
+        db_session.rollback()
+        return None
+
+
+def get_all_user_info(db_session: Session) -> List[User]:
+    """
+    Get all user information
+    """
+    try:
+        users = db_session.query(User).all()
+        return users
+    except Exception as e:
+        logger.error(f"Error getting all user info: {e}")
+        db_session.rollback()
+        return []
