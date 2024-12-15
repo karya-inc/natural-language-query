@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, List, Literal, Optional
 
+from celery.app.defaults import Option
 from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -74,8 +75,10 @@ class Turn(Base):
     __tablename__ = "turns"
 
     session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.session_id"))
-    nlq: Mapped[str] = mapped_column(Text)
-    sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
+    nlq: Mapped[str] = mapped_column()
+    execution_log_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("execution_logs.id")
+    )
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
@@ -87,7 +90,7 @@ class Turn(Base):
     )
 
     session: Mapped["UserSession"] = relationship(back_populates="turns", init=False)
-    sql_query: Mapped["SqlQuery"] = relationship(back_populates="turns", init=False)
+    execution_log: Mapped[Optional["ExecutionLog"]] = relationship(init=False)
 
 
 class SqlQuery(Base):
