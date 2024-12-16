@@ -174,7 +174,7 @@ def fetch_query_by_value(
     try:
         query = (
             db_session.query(SqlQuery)
-            .filter_by(sqlquery=sql_query.strip(), database_name=catalog_name)
+            .filter_by(sqlquery=sql_query.strip(), database_used=catalog_name)
             .first()
         )
         return query
