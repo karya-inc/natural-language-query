@@ -106,11 +106,6 @@ class SqlQuery(Base):
         ForeignKey("users.user_id"), default=None
     )
 
-    # Relationships
-    turns: Mapped[List["Turn"]] = relationship(
-        "Turn", back_populates="sql_query", default_factory=list
-    )
-
 
 class SavedQuery(Base):
     """Saved Queries model for users to store queries"""
