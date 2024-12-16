@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useContext,
+} from "react";
 import useChat from "./useChat";
 import {
   VStack,
@@ -17,6 +23,7 @@ import BotGreeting from "../../components/BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { BACKEND_URL } from "../../config";
 import MemoizedMessage from "../../components/MemoizedMessage";
+import { RouteContext } from "../../App";
 
 export type Message = {
   id: number;
@@ -86,9 +93,11 @@ export function ChatBot({
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLInputElement>(null);
+  const { sessionId, savedQueryId, setSessionId, setSavedQueryId } =
+    useContext(RouteContext);
+
   const { postChat, getTableData } = useChat({ input, sessionId });
 
   const scrollToBottom = useCallback(() => {

@@ -4,20 +4,14 @@ import NavBar from "../components/NavBar";
 import { ChatBot } from "../pages/Chat";
 import { useState } from "react";
 import useChatHistory from "./utils";
-import { BACKEND_URL } from "../config";
 import useNavBar from "../components/NavBar/useNavBar";
 
 const RootLayout = () => {
   const [navOpen, setNavOpen] = useState(true);
-  const [conversationStarted, setConversationStarted] = useState(false);
-  const { messages, setMessages, getChatHistory } = useChatHistory();
+  const { messages, setMessages, conversationStarted, setConversationStarted } =
+    useChatHistory();
   const { history, setHistory, getHistory, savedQueries, getSavedQueries } =
     useNavBar();
-
-  function handleHistoryClick(session_id: string) {
-    setConversationStarted(true);
-    getChatHistory(`${BACKEND_URL}/fetch_session_history/${session_id}`);
-  }
 
   return (
     <ErrorBoundary
@@ -30,11 +24,11 @@ const RootLayout = () => {
           <NavBar
             navOpen={navOpen}
             setNavOpen={setNavOpen}
-            handleHistoryClick={handleHistoryClick}
             history={history}
             getHistory={getHistory}
             savedQueries={savedQueries}
             getSavedQueries={getSavedQueries}
+            setConversationStarted={setConversationStarted}
           />
         )}
         <ChatBot

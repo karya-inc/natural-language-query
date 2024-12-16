@@ -13,28 +13,30 @@ import {
 } from "@chakra-ui/react";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
-import { redirect } from "react-router-dom";
+import { redirect, useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import { useEffect } from "react";
-import { BACKEND_URL } from "../../config";
+import { useContext, useEffect } from "react";
+import { BACKEND_URL, baseUrl } from "../../config";
+import { RouteContext } from "../../App";
 
 const NavBar = ({
   navOpen,
   setNavOpen,
-  handleHistoryClick,
   history,
   getHistory,
   savedQueries,
   getSavedQueries,
+  setConversationStarted,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
-  handleHistoryClick: (arg1: string) => void;
   history: { session_id: string; nlq: string }[];
   getHistory: (arg: string) => void;
   savedQueries: { session_id: string; nlq: string }[];
   getSavedQueries: (arg: string) => void;
+  setConversationStarted: (arg: boolean) => void;
 }) => {
+  const navigate = useNavigate();
   const chatHistoryStyles = {
     ":hover": {
       background: "gray.700",
@@ -48,6 +50,18 @@ const NavBar = ({
     getHistory(`${BACKEND_URL}/fetch_history`);
     getSavedQueries(`${BACKEND_URL}/queries`);
   }, []);
+
+  const { setSessionId, setSavedQueryId } = useContext(RouteContext);
+
+  function handleClick(type: string, session_id: string) {
+    navigate(`${baseUrl}/session/${session_id}`);
+    setConversationStarted(true);
+    if (type === "history") {
+      setSessionId(session_id);
+    } else {
+      setSavedQueryId(session_id);
+    }
+  }
 
   return (
     <VStack
@@ -110,7 +124,7 @@ const NavBar = ({
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() => handleHistoryClick(chat.session_id)}
+                  onClick={() => handleClick("history", chat.session_id)}
                 >
                   {chat.nlq}
                 </Text>
@@ -142,7 +156,7 @@ const NavBar = ({
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() => handleHistoryClick(chat.session_id)}
+                  onClick={() => handleClick("saved", chat.session_id)}
                 >
                   {chat.nlq}
                 </Text>
