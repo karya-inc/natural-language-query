@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_saved_query, fetch_query_by_value, get_chat_history, get_history_sessions, get_or_create_query, get_saved_queries, get_session_for_user, save_user_fav_query, store_turn
+from db.db_queries import *
 from db.models import SavedQuery, User, UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
@@ -93,17 +93,13 @@ async def do_nlq(
     # Store chat in sql table with session id
     # create_session_and_query(user_id, query, ai_response)
     if isinstance(result, AgenticLoopQueryResult):
-        sql_query_entry = get_or_create_query(
-            db_session, result.query, user_info.user_id, result.db_name
-        )
         turn = store_turn(
             db_session=db_session,
             session_id=session.session_id,
             nlq=nlq,
-            sql_query_id=sql_query_entry.sqid,
             database_used=result.db_name,
+            execution_log_id=result.execution_log.id,
         )
-        logger.info(f"Saved query: {sql_query_entry.sqid}")
         logger.info(f"Created turn for session '{session.session_id}' - {turn}")
         yield NLQResponseEvent(
             kind="RESPONSE",

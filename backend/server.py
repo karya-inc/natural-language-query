@@ -260,6 +260,7 @@ async def execute_saved_query(
     try:
         # Returning the StreamingResponse with the proper media type for SSE
         execution_log = create_execution_entry(db, user_info.user_id, str(sqid))
+
         logger.info("Execution started successfully.")
 
         catalog = next(
@@ -331,13 +332,17 @@ async def get_execution_result_for_id(
     logger.info(f"Get execution result for user: {user_info.user_id} is requested!")
     try:
         response = get_exeuction_log_result(db, id)
-        logger.info("Execution result for user return successfully!!")
-        return response
     except Exception as e:
         logger.error(
             f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get execution result.")
+
+    if not response:
+        raise HTTPException(status_code=404, detail="Execution log not found.")
+
+    logger.info("Execution result for user return successfully!!")
+    return response
 
 
 class SaveQueryRequest(BaseModel):

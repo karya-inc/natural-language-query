@@ -11,7 +11,6 @@ from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
 from rbac.check_permissions import ColumnScope, PrivilageCheckResult, check_query_privilages
-from urllib.parse import quote
 
 
 logger = get_logger("[QUERY_PIPELINE]")
@@ -20,12 +19,13 @@ logger = get_logger("[QUERY_PIPELINE]")
 @dataclass
 class QueryExecutionSuccessResult:
     result: list[dict]
+    execution_log: ExecutionLog
 
 
 @dataclass
 class QueryExecutionFailureResult:
     reason: Any
-    recoverable: bool
+    recoverable: bool = True
     context: Optional[dict] = field(default=None)
 
 
@@ -86,7 +86,9 @@ class QueryExecutionPipeline:
                 return execution_entry
 
             result_value = cast(QueryResults, execution_result.get())
-            return QueryExecutionSuccessResult(result=result_value)
+            return QueryExecutionSuccessResult(
+                result=result_value, execution_log=execution_entry
+            )
 
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")

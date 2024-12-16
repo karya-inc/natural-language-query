@@ -72,7 +72,7 @@ def store_turn(
     session_id: UUID,
     nlq: str,
     database_used: str,
-    sql_query_id: UUID,
+    execution_log_id: Optional[int],
 ) -> Turn:
     """
     Stores a new turn for a session.
@@ -82,7 +82,7 @@ def store_turn(
             session_id=session_id,
             nlq=nlq,
             database_used=database_used,
-            sqid=sql_query_id,
+            execution_log_id=execution_log_id,
         )
         db_session.add(turn)
         db_session.commit()
@@ -129,7 +129,10 @@ def save_user_fav_query(
 
 # Save the generated SQL query by AI agent
 def get_or_create_query(
-    db_session: Session, sql_query: str, user_id: Optional[str], catalog_name: str
+    db_session: Session,
+    sql_query: str,
+    user_id: Optional[str],
+    catalog_name: str,
 ) -> SqlQuery:
     """
     Save a generated SQL query.
@@ -217,21 +220,17 @@ def get_chat_history(
             .order_by(desc(Turn.created_at))
             .all()
         )
-        # Get all sqlquery_ids
-        sql_query_ids = [turn.sqid for turn in turns]
-
-        # Get all execution logs
-        execution_logs_query = (
-            db_session.query(ExecutionLog)
-            .filter(ExecutionLog.query_id.in_(sql_query_ids))
-            .all()
-        )
-
-        # Create a mapping of query_id to execution logs
-        execution_logs_map = {log.query_id: log for log in execution_logs_query}
 
         chat_history = []
         for turn in turns:
+            if turn.execution_log:
+                execution_id = turn.execution_log.id
+                query = turn.execution_log.query.sqlquery
+            else:
+                execution_id = None
+                query = None
+
+            # User Turn Message
             chat_history.append(
                 ChatHistoryResponse(
                     id=turn.turn_id,
@@ -245,17 +244,14 @@ def get_chat_history(
                 )
             )
 
-            query = get_query_by_id(db_session, turn.sqid)
-
-            # Get the execution log from the mapping
-            execution_log = execution_logs_map.get(str(turn.sqid))
+            # Bot Turn Message
             chat_history.append(
                 ChatHistoryResponse(
-                    id=turn.sql_query.sqid,
+                    id=turn.turn_id,
                     role=Roles.BOT,
-                    timestamp=turn.sql_query.created_at,
-                    execution_id=execution_log.id if execution_log else None,
-                    query=str(query.sqlquery) if query else None,
+                    timestamp=turn.created_at,
+                    execution_id=execution_id,
+                    query=query,
                     type="execution",
                     session_id=str(session_id),
                 )
@@ -362,13 +358,16 @@ def get_saved_query_by_id(db_session: Session, sqid: UUID) -> Optional[SavedQuer
 
 
 def create_execution_entry(
-    db_session: Session, user_id: str, query_id: str
+    db_session: Session,
+    user_id: str,
+    query_id: str,
+    status: ExecutionStatus = "PENDING",
 ) -> ExecutionLog:
     """
     Save the execution log for a query.
     """
     try:
-        execution_log = ExecutionLog("PENDING", query_id, user_id)
+        execution_log = ExecutionLog(status, query_id, user_id)
         db_session.add(execution_log)
         db_session.commit()
         return execution_log
@@ -431,7 +430,7 @@ def get_recent_execution_for_query(
 
     execution_log = (
         db_session.query(ExecutionLog)
-        .filter_by(query_id=query_obj.sqid)
+        .filter_by(query_id=query_obj.sqid, status="SUCCESS")
         .order_by(desc(ExecutionLog.created_at))
         .first()
     )
@@ -440,13 +439,13 @@ def get_recent_execution_for_query(
 
 
 class ExecutionLogResult(BaseModel):
-    status: Optional[ExecutionStatus]
-    result: Optional[QueryResults]
+    status: ExecutionStatus
+    result: QueryResults
 
 
 def get_exeuction_log_result(
     db_session: Session, execution_log_id: int
-) -> ExecutionLogResult:
+) -> Optional[ExecutionLogResult]:
     """
     Get the execution result for a query.
 
@@ -455,23 +454,24 @@ def get_exeuction_log_result(
         execution_log_id (int): Execution Log ID
     """
     try:
-        execution_result = (
+        execution_result_with_log = (
             db_session.query(ExecutionLog, ExecutionResult)
             .join(ExecutionResult, ExecutionLog.id == ExecutionResult.execution_id)
             .filter(ExecutionLog.id == execution_log_id)
             .first()
         )
 
-        if not execution_result:
-            return ExecutionLogResult(status=None, result=None)
+        if not execution_result_with_log:
+            return None
 
         # Unpack the tuple
-        execution_log, result = execution_result
+        execution_log, execution_result = execution_result_with_log.tuple()
 
         return ExecutionLogResult(
-            status=execution_log.status.value if execution_log.status else None,
-            result=result.result if result else None,
+            status=execution_log.status,
+            result=execution_result.result,
         )
+
     except Exception as e:
         logger.error(f"Error getting execution result: {e}")
         db_session.rollback()
