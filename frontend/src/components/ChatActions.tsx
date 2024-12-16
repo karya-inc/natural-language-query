@@ -1,4 +1,22 @@
-import { HStack, Icon, Tooltip } from "@chakra-ui/react";
+import {
+  Button,
+  ButtonGroup,
+  FocusLock,
+  FormControl,
+  FormLabel,
+  HStack,
+  Icon,
+  IconButton,
+  Input,
+  Popover,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverContent,
+  PopoverTrigger,
+  Stack,
+  Tooltip,
+  useDisclosure,
+} from "@chakra-ui/react";
 import { FaRegSave } from "react-icons/fa";
 import { IoInformationCircleOutline } from "react-icons/io5";
 import { LuDownloadCloud } from "react-icons/lu";
@@ -6,12 +24,22 @@ import { AiOutlineLike } from "react-icons/ai";
 import { AiOutlineDislike } from "react-icons/ai";
 import { downloadObjectAs } from "../pages/Chat/utils";
 import { Message } from "../pages/Chat";
-import { useState } from "react";
+import { useState, useRef, forwardRef } from "react";
+
+interface TextInputProps {
+  label: string;
+  id: string;
+  defaultValue?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
 
 const ChatActions = ({ msg }: { msg: Message }) => {
   const { message, role, type, kind, query } = msg;
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
+  const { onOpen, onClose, isOpen } = useDisclosure();
+  const firstFieldRef = useRef(null);
 
   const handleDownload = (report: Record<string, string>[]) => {
     const today = new Date();
@@ -49,8 +77,8 @@ const ChatActions = ({ msg }: { msg: Message }) => {
           cursor="pointer"
           justify="center"
           onClick={() => {
-            setLiked(!liked); // Toggle like state
-            if (disliked) setDisliked(false); // Reset dislike state if it's active
+            setLiked(!liked);
+            if (disliked) setDisliked(false);
           }}
         >
           <Icon
@@ -70,8 +98,8 @@ const ChatActions = ({ msg }: { msg: Message }) => {
           cursor="pointer"
           justify="center"
           onClick={() => {
-            setDisliked(!disliked); // Toggle dislike state
-            if (liked) setLiked(false); // Reset like state if it's active
+            setDisliked(!disliked);
+            if (liked) setLiked(false);
           }}
         >
           <Icon
@@ -82,7 +110,6 @@ const ChatActions = ({ msg }: { msg: Message }) => {
           />
         </HStack>
 
-        {/* Download Button (for table type) */}
         {type === "table" && (
           <HStack
             sx={messageActionStyles}
@@ -97,29 +124,62 @@ const ChatActions = ({ msg }: { msg: Message }) => {
               stroke="gray.200"
               strokeWidth={2}
               fontSize="md"
-              onClick={() => handleDownload(JSON.parse(message))}
+              onClick={() => {
+                if (Array.isArray(message)) {
+                  handleDownload(message as Record<string, string>[]);
+                }
+              }}
             />
           </HStack>
         )}
 
-        {/* Save Button */}
-        <HStack
-          sx={messageActionStyles}
-          w={7}
-          h={7}
-          align="center"
-          cursor="pointer"
-          justify="center"
+        <Popover
+          isOpen={isOpen}
+          initialFocusRef={firstFieldRef}
+          onOpen={onOpen}
+          onClose={onClose}
+          placement="top"
+          closeOnBlur={false}
         >
-          <Icon
-            as={FaRegSave}
-            stroke="gray.200"
-            strokeWidth={4}
-            fontSize="md"
-          />
-        </HStack>
+          <PopoverTrigger>
+            <IconButton
+              size="sm"
+              bg="none"
+              color="gray.400"
+              sx={messageActionStyles}
+              icon={
+                <HStack
+                  w={7}
+                  h={7}
+                  align="center"
+                  cursor="pointer"
+                  justify="center"
+                >
+                  <Icon
+                    as={FaRegSave}
+                    stroke="gray.100"
+                    strokeWidth={4}
+                    fontSize="md"
+                  />
+                </HStack>
+              }
+              aria-label={"Save the query"}
+            />
+          </PopoverTrigger>
+          <PopoverContent
+            p={5}
+            bg={"gray.700"}
+            border="1px solid"
+            borderColor={"gray.700"}
+          >
+            <FocusLock persistentFocus={false}>
+              <PopoverArrow bg={"gray.700"} />
+              <PopoverCloseButton />
+              <Form firstFieldRef={firstFieldRef} onCancel={onClose} />
+            </FocusLock>
+          </PopoverContent>
+        </Popover>
 
-        {/* Tooltip with Query Information */}
         <Tooltip
           label={query || "No query available"}
           hasArrow
@@ -146,6 +206,49 @@ const ChatActions = ({ msg }: { msg: Message }) => {
         </Tooltip>
       </HStack>
     )
+  );
+};
+
+const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
+  return (
+    <FormControl>
+      <FormLabel htmlFor={props.id}>{props.label}</FormLabel>
+      <Input ref={ref} {...props} />
+    </FormControl>
+  );
+});
+
+const Form = ({
+  firstFieldRef,
+  onCancel,
+}: {
+  firstFieldRef: React.RefObject<HTMLInputElement>;
+  onCancel: () => void;
+}) => {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  return (
+    <Stack spacing={4}>
+      <TextInput
+        label="Title"
+        id="title"
+        ref={firstFieldRef}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <TextInput
+        label="Description"
+        id="description"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
+      <ButtonGroup display="flex" justifyContent="flex-end">
+        <Button variant="solid" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button colorScheme="teal">Save</Button>
+      </ButtonGroup>
+    </Stack>
   );
 };
 

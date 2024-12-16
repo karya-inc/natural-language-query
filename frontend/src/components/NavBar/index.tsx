@@ -13,25 +13,30 @@ import {
 } from "@chakra-ui/react";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
-import { redirect } from "react-router-dom";
+import { redirect, useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import useHistory from "./useChatHistory";
-// import { useEffect } from "react";
+import { useContext, useEffect } from "react";
+import { BACKEND_URL, baseUrl } from "../../config";
+import { RouteContext } from "../../App";
 
 const NavBar = ({
   navOpen,
   setNavOpen,
-  handleHistoryClick,
+  history,
+  getHistory,
+  savedQueries,
+  getSavedQueries,
+  setConversationStarted,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
-  handleHistoryClick: (arg1: string, arg2: string) => void;
+  history: { session_id: string; nlq: string }[];
+  getHistory: (arg: string) => void;
+  savedQueries: { session_id: string; nlq: string }[];
+  getSavedQueries: (arg: string) => void;
+  setConversationStarted: (arg: boolean) => void;
 }) => {
-  const {
-    history,
-    // getHistory
-  } = useHistory();
-
+  const navigate = useNavigate();
   const chatHistoryStyles = {
     ":hover": {
       background: "gray.700",
@@ -41,9 +46,22 @@ const NavBar = ({
     },
   };
 
-  // useEffect(() => {
-  //   getHistory(import.meta.env.VITE_CHAT_HISTORY_SESSIONS_ENDPOINT);
-  // }, []);
+  useEffect(() => {
+    getHistory(`${BACKEND_URL}/fetch_history`);
+    getSavedQueries(`${BACKEND_URL}/queries`);
+  }, []);
+
+  const { setSessionId, setSavedQueryId } = useContext(RouteContext);
+
+  function handleClick(type: string, session_id: string) {
+    navigate(`${baseUrl}/session/${session_id}`);
+    setConversationStarted(true);
+    if (type === "history") {
+      setSessionId(session_id);
+    } else {
+      setSavedQueryId(session_id);
+    }
+  }
 
   return (
     <VStack
@@ -81,55 +99,73 @@ const NavBar = ({
       </HStack>
       <Accordion
         defaultIndex={[0]}
-        allowMultiple
         allowToggle
         w="full"
         color="gray.400"
         flex={1}
       >
         <AccordionItem border={"none"}>
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
-                Chat History
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
-          <AccordionPanel display="flex" flexDirection="column">
+          <AccordionButton>
+            <AccordionIcon />
+            <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
+              Chat History
+            </Box>
+          </AccordionButton>
+          <AccordionPanel
+            display="flex"
+            flexDirection="column"
+            maxH="70vh"
+            overflow="auto"
+          >
             {history && history.length > 0 ? (
-              history.map((chat) => (
+              history.map((chat: { session_id: string; nlq: string }) => (
                 <Text
                   pl={2}
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() =>
-                    handleHistoryClick(chat.session_id, chat.user_query)
-                  }
+                  onClick={() => handleClick("history", chat.session_id)}
                 >
-                  {chat.user_query}
+                  {chat.nlq}
                 </Text>
               ))
             ) : (
-              <Text fontSize="sm">No chat history available.</Text>
+              <Text fontSize="sm" pl={2}>
+                No chat history available.
+              </Text>
             )}
           </AccordionPanel>
         </AccordionItem>
-
         <AccordionItem border={"none"}>
-          <h2>
-            <AccordionButton>
-              <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
-                Saved Queries
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-          </h2>
-          <AccordionPanel>
-            <Text fontSize="sm" pl={2}>
-              No saved queries yet.
-            </Text>
+          <AccordionButton>
+            <AccordionIcon />
+            <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
+              Saved Queries
+            </Box>
+          </AccordionButton>
+          <AccordionPanel
+            display="flex"
+            flexDirection="column"
+            h="70vh"
+            overflow="auto"
+          >
+            {savedQueries && savedQueries.length > 0 ? (
+              savedQueries.map((chat: { session_id: string; nlq: string }) => (
+                <Text
+                  pl={2}
+                  key={chat.session_id}
+                  py={3}
+                  sx={chatHistoryStyles}
+                  onClick={() => handleClick("saved", chat.session_id)}
+                >
+                  {chat.nlq}
+                </Text>
+              ))
+            ) : (
+              <Text fontSize="sm" pl={2}>
+                No saved queries yet.
+              </Text>
+            )}
           </AccordionPanel>
         </AccordionItem>
       </Accordion>

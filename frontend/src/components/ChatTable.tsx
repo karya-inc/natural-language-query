@@ -1,39 +1,38 @@
-import { Box, Table, Tbody, Td, Th, Thead, Tr, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
+import { AgGridReact } from "ag-grid-react";
+import { themeQuartz, colorSchemeDarkBlue } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
-const ChatTable = ({ data }: { data: string }) => {
-  return JSON.parse(data).length > 0 ? (
-    <Box borderRadius="md" border="1px" borderColor="gray.700">
-      <Table size="sm">
-        <Thead bg="#2A2D3D">
-          <Tr>
-            {Object.keys(JSON.parse(data)[0]).map((key) => (
-              <Th
-                key={key}
-                color="gray.500"
-                p={3}
-                border="1px"
-                borderColor="gray.700"
-              >
-                {key}
-              </Th>
-            ))}
-          </Tr>
-        </Thead>
-        <Tbody>
-          {JSON.parse(data).map(
-            (row: Record<string, string>, index: number) => (
-              <Tr key={index}>
-                {Object.values(row).map((value, colIndex) => (
-                  <Td key={colIndex} py={5} border="1px" borderColor="gray.700">
-                    {value}
-                  </Td>
-                ))}
-              </Tr>
-            )
-          )}
-        </Tbody>
-      </Table>
-    </Box>
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
+  const rowData = data;
+  const colDefs = Object.keys(rowData[0]).map((key) => ({
+    field: key,
+    filter: true,
+  }));
+  const defaultColDef = {
+    flex: 1,
+  };
+  const pagination = true;
+  const paginationPageSize = 10;
+  const paginationPageSizeSelector = [10, 20, 40];
+  const myTheme = themeQuartz.withPart(colorSchemeDarkBlue).withParams({
+    backgroundColor: "rgb(42, 45, 61)",
+    accentColor: "lightblue",
+  });
+
+  return rowData.length > 0 ? (
+    <AgGridReact
+      rowData={rowData}
+      columnDefs={colDefs}
+      defaultColDef={defaultColDef}
+      theme={myTheme}
+      domLayout="autoHeight"
+      pagination={pagination}
+      paginationPageSize={paginationPageSize}
+      paginationPageSizeSelector={paginationPageSizeSelector}
+    />
   ) : (
     <Text py={2}>No results match your query. Please be specific</Text>
   );

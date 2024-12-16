@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useContext,
+} from "react";
 import useChat from "./useChat";
 import {
   VStack,
@@ -17,14 +23,15 @@ import BotGreeting from "../../components/BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { BACKEND_URL } from "../../config";
 import MemoizedMessage from "../../components/MemoizedMessage";
+import { RouteContext } from "../../App";
 
 export type Message = {
   id: number;
-  message: string;
+  message: string | Record<string, unknown>[];
   role: "user" | "bot";
   timestamp: number;
   kind?: "UPDATE" | "TEXT" | "TABLE";
-  type?: "text" | "table" | "error";
+  type?: "text" | "table" | "error" | "execution";
   query?: string;
   components?: MessageComponent[];
   newMessage?: boolean;
@@ -41,6 +48,13 @@ export type ChatBotProps = {
   messages: Message[];
   setMessages: (
     arg: Message[] | ((prevMessages: Message[]) => Message[])
+  ) => void;
+  setHistory: (
+    arg:
+      | { session_id: string; nlq: string }[]
+      | ((
+          prevHistory: { session_id: string; nlq: string }[]
+        ) => { session_id: string; nlq: string }[])
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -71,6 +85,7 @@ export type NLQUpdateEvent = (
 export function ChatBot({
   messages = [],
   setMessages,
+  setHistory,
   navOpen,
   setNavOpen,
   conversationStarted,
@@ -78,9 +93,12 @@ export function ChatBot({
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { postChat } = useChat({ input, sessionId });
+  const focusRef = useRef<HTMLInputElement>(null);
+  const { sessionId, savedQueryId, setSessionId, setSavedQueryId } =
+    useContext(RouteContext);
+
+  const { postChat, getTableData } = useChat({ input, sessionId });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,6 +107,10 @@ export function ChatBot({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    focusRef.current?.focus();
+  }, []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,12 +172,11 @@ export function ChatBot({
                   botMessage.type = "text";
                   botMessage.kind = "TEXT";
                 } else if (parsedChunk.type === "TABLE") {
-                  botMessage.message = JSON.stringify(parsedChunk.payload);
+                  botMessage.message = parsedChunk.payload;
                   botMessage.query = parsedChunk.query;
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
                 } else if (parsedChunk.type === "ERROR") {
-                  console.log(parsedChunk.payload)
                   botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";
                 }
@@ -177,6 +198,10 @@ export function ChatBot({
             }
           }
         }
+        setHistory((prevHistory) => [
+          { session_id: updatedSessionId, nlq: input },
+          ...prevHistory,
+        ]);
 
         setSessionId(updatedSessionId);
       } catch (error) {
@@ -231,7 +256,11 @@ export function ChatBot({
           gap={10}
         >
           {messages.map((msg) => (
-            <MemoizedMessage key={msg.id} msg={msg} />
+            <MemoizedMessage
+              key={msg.id}
+              msg={msg}
+              getTableData={getTableData}
+            />
           ))}
           {isFetching && <FetchingSkeleton />}
           <div ref={messagesEndRef} />
@@ -262,6 +291,7 @@ export function ChatBot({
               value={input}
               onChange={handleInputChange}
               isDisabled={isFetching}
+              ref={focusRef}
             />
             <InputRightElement width="3rem">
               <IconButton
