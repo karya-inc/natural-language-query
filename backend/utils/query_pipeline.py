@@ -1,36 +1,18 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union, cast
+from typing import List, cast
 from sqlalchemy.orm import Session
 from db.db_queries import create_execution_entry, get_or_create_query
-from db.models import ExecutionLog
 from dependencies.db import get_db_session
-from executor.state import QueryResults
+from executor.models import QueryResults
 from queues.typed_tasks import invoke_execute_query_op
 from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from executor.catalog import Catalog
+from executor.result import QueryExecutionFailureResult, QueryExecutionResult, QueryExecutionSuccessResult
 from rbac.check_permissions import ColumnScope, PrivilageCheckResult, check_query_privilages
 
 
 logger = get_logger("[QUERY_PIPELINE]")
-
-
-@dataclass
-class QueryExecutionSuccessResult:
-    result: list[dict]
-    execution_log: ExecutionLog
-
-
-@dataclass
-class QueryExecutionFailureResult:
-    reason: Any
-    recoverable: bool = True
-    context: Optional[dict] = field(default=None)
-
-
-QueryExecutionResult = Union[
-    QueryExecutionSuccessResult, QueryExecutionFailureResult, ExecutionLog
-]
 
 
 @dataclass

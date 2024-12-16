@@ -4,7 +4,7 @@ from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, User
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID
-from executor.state import QueryResults
+from executor.models import QueryResults
 from typing import List, Literal, Optional
 from utils.logger import get_logger
 import enum

@@ -1,4 +1,4 @@
-from executor.state import QueryResults
+from executor.models import QueryResults
 
 
 def get_table_markdown(data: QueryResults) -> str:

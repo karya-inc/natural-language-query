@@ -7,7 +7,8 @@ from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
 from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
-from executor.state import AgentState, QueryResults
+from executor.state import AgentState
+from executor.models import QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult

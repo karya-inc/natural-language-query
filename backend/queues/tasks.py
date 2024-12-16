@@ -3,7 +3,7 @@ import celery
 from sqlalchemy.orm import Session
 
 from db.catalog_utils import get_engine
-from executor.state import QueryResults
+from executor.models import QueryResults
 from utils.logger import get_logger
 from utils.notify_user import notify_user_on_failure, notify_user_on_success
 from .celery import app

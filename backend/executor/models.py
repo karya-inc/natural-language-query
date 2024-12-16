@@ -1,10 +1,12 @@
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel
 
 
 QueryTypeLiteral = Literal[
     "REPORT_GENERATION", "REPORT_FEEDBACK", "QUESTION_ANSWERING", "CASUAL_CONVERSATION"
 ]
+
+QueryResults = list[dict[str, Any]]
 
 
 class QueryType(BaseModel):

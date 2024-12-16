@@ -1,13 +1,12 @@
 from executor.catalog import Catalog
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
-
 from rbac.check_permissions import ColumnScope
-from utils.query_pipeline import QueryExecutionSuccessResult
+from executor.result import QueryExecutionSuccessResult
+from executor.models import QueryResults
+
 
 QueryType = Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]
-
-QueryResults = list[dict[str, Any]]
 
 
 @dataclass

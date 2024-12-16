@@ -1,15 +1,12 @@
 import uuid
 from datetime import datetime
 from typing import Any, List, Literal, Optional
-
-from celery.app.defaults import Option
 from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
-from executor.state import QueryResults
+from executor.models import QueryResults
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
