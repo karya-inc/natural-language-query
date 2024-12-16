@@ -1,4 +1,3 @@
-from celery.app.defaults import Option
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
@@ -173,7 +172,11 @@ def fetch_query_by_value(
     db_session: Session, sql_query: str, catalog_name: str
 ) -> Optional[SqlQuery]:
     try:
-        query = db_session.query(SqlQuery).filter_by(sqlquery=sql_query.strip()).first()
+        query = (
+            db_session.query(SqlQuery)
+            .filter_by(sqlquery=sql_query.strip(), database_name=catalog_name)
+            .first()
+        )
         return query
 
     except Exception as e:

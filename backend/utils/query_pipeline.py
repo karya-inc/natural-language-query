@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union, cast
-from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 from db.db_queries import create_execution_entry, get_or_create_query
 from db.models import ExecutionLog
