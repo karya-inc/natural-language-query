@@ -6,8 +6,9 @@ from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
-from executor.models import GeneratedQuery, HealedQuery, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
-from executor.state import AgentState, QueryResults
+from executor.models import GeneratedQuery, HealedQuery, IsQueryRelevant, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
+from executor.state import AgentState
+from executor.models import QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
@@ -119,7 +120,7 @@ class AgentTools(ABC):
         for turn in nlq_turns:
             old_messages.append({"role": "user", "content": turn.nlq})
             old_messages.append(
-                {"role": "assistant", "content": turn.sql_query.sqlquery}
+                {"role": "assistant", "content": turn.execution_log.query.sqlquery}
             )
 
         llm_response = await self.invoke_llm(
@@ -175,10 +176,11 @@ class AgentTools(ABC):
 
         user_prompt = ""
         if prev_turn:
+            sql_query = prev_turn.execution_log.query.sqlquery
             user_prompt = f"""
             ## Previous Query:
             The following query was executed previously. You can use this information to determine the relevant database catalog.
-            {prev_turn.sql_query}
+            {sql_query}
 
             ## Original User Query:
             This was the query used to generate the above SQL query.
@@ -224,10 +226,11 @@ class AgentTools(ABC):
         """
         user_prompt = ""
         if prev_turn:
+            sql_query = prev_turn.execution_log.query.sqlquery
             user_prompt = f"""
             ## Previous Query:
             The following query was executed previously. You can use this information to determine the relevant tables
-            {prev_turn.sql_query}
+            {sql_query}
 
             ## Original User Query:
             This was the query used to generate the above SQL query.
@@ -318,10 +321,9 @@ class AgentTools(ABC):
             {"role": "system", "content": system_prompt},
         ]
         if prev_turn:
+            sql_query = prev_turn.execution_log.query.sqlquery
             messages.append({"role": "user", "content": prev_turn.nlq})
-            messages.append(
-                {"role": "assistant", "content": prev_turn.sql_query.sqlquery}
-            )
+            messages.append({"role": "assistant", "content": sql_query})
 
         messages.append({"role": "user", "content": user_prompt})
 
@@ -362,14 +364,14 @@ class AgentTools(ABC):
         """
 
         llm_response = await self.invoke_llm(
-            QuestionAnsweringResult,
+            IsQueryRelevant,
             [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
 
-        return llm_response
+        return llm_response.is_relevant
 
     async def heal_fix_query(
         self,

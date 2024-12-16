@@ -1,12 +1,12 @@
 from executor.catalog import Catalog
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
-
 from rbac.check_permissions import ColumnScope
+from executor.result import QueryExecutionSuccessResult
+from executor.models import QueryResults
+
 
 QueryType = Literal["QUESTION_ANSWERING", "REPORT_GENERATION"]
-
-QueryResults = list[dict[str, Any]]
 
 
 @dataclass
@@ -21,4 +21,4 @@ class AgentState:
     categorical_tables: dict[str, QueryResults] = field(default_factory=dict)
     table_sample_rows: dict[str, QueryResults] = field(default_factory=dict)
     query: Optional[str] = field(default=None)
-    final_result: QueryResults = field(default_factory=QueryResults)
+    final_result: Optional[QueryExecutionSuccessResult] = field(default=None)

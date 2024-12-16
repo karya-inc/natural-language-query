@@ -1,14 +1,12 @@
 import uuid
 from datetime import datetime
 from typing import Any, List, Literal, Optional
-
 from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
-from executor.state import QueryResults
+from executor.models import QueryResults
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
@@ -74,8 +72,8 @@ class Turn(Base):
     __tablename__ = "turns"
 
     session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.session_id"))
-    nlq: Mapped[str] = mapped_column(Text)
-    sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
+    nlq: Mapped[str] = mapped_column()
+    execution_log_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
@@ -87,7 +85,7 @@ class Turn(Base):
     )
 
     session: Mapped["UserSession"] = relationship(back_populates="turns", init=False)
-    sql_query: Mapped["SqlQuery"] = relationship(back_populates="turns", init=False)
+    execution_log: Mapped["ExecutionLog"] = relationship(init=False)
 
 
 class SqlQuery(Base):
@@ -106,11 +104,6 @@ class SqlQuery(Base):
     )
     user_id: Mapped[Optional[str]] = mapped_column(
         ForeignKey("users.user_id"), default=None
-    )
-
-    # Relationships
-    turns: Mapped[List["Turn"]] = relationship(
-        "Turn", back_populates="sql_query", default_factory=list
     )
 
 

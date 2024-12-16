@@ -3,7 +3,7 @@ import celery
 from sqlalchemy.orm import Session
 
 from db.catalog_utils import get_engine
-from executor.state import QueryResults
+from executor.models import QueryResults
 from utils.logger import get_logger
 from utils.notify_user import notify_user_on_failure, notify_user_on_success
 from .celery import app
@@ -23,7 +23,8 @@ class ExecuteQueryOp(celery.Task):
     @property
     def db_session(self):
         if self._db_session is None:
-            self._db_session = get_db_session()
+            with get_db_session() as db_session:
+                self._db_session = db_session
         return self._db_session
 
     def before_start(self, task_id, args, kwargs):

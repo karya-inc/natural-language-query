@@ -28,6 +28,7 @@ class AgenticLoopQueryResult:
     result: QueryResults
     query: str
     db_name: str
+    execution_log: ExecutionLog
 
 
 @dataclass
@@ -46,7 +47,7 @@ async def execute_query_with_healing(
     tools: AgentTools,
     config: AgentConfig,
     user_id: str,
-):
+) -> QueryExecutionSuccessResult:
     assert state.relevant_catalog, "Relevant catalog not set"
 
     query_pipeline = QueryExecutionPipeline(
@@ -75,11 +76,13 @@ async def execute_query_with_healing(
             ), "Expected Query Execution to return a result"
 
             if isinstance(execution_result, QueryExecutionSuccessResult):
-                return execution_result.result
+                return execution_result
 
+            # If the query execution failed unrecoverably, raise an error
             if not execution_result.recoverable:
                 raise UnRecoverableError(execution_result.reason)
 
+            # Query execution failed, but is recoverable
             # Attempt to heal the query
             healing_attempts += 1
             if healing_attempts % 3 == 0:
@@ -105,7 +108,7 @@ async def execute_query_with_healing(
 
     # If the query was successfully executed, return the result
     if isinstance(execution_result, QueryExecutionSuccessResult):
-        return execution_result.result
+        return execution_result
 
     # If there is not execution result, or it is not recoverable
     if not execution_result or not execution_result.recoverable:
@@ -172,7 +175,7 @@ async def agentic_loop(
             scopes=config.user_info.scopes,
         )
         prev_turn_result = get_or_execute_query_result(
-            query=prev_turn.nlq,
+            sql_query=prev_turn.nlq,
             catalog=catalog,
             execute_query=query_pipeline.check_and_execute,
         )
@@ -271,9 +274,10 @@ async def agentic_loop(
 
             send_update(AgentStatus.TASK_COMPLETED)
             return AgenticLoopQueryResult(
-                result=state.final_result,
+                result=state.final_result.result,
                 query=state.query,
                 db_name=state.relevant_catalog.name,
+                execution_log=state.final_result.execution_log,
             )
 
         except UnRecoverableError as e:

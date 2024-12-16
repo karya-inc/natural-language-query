@@ -1,9 +1,6 @@
-import json
 from typing import Literal, Optional
 from redis import Redis
 from os import environ
-from executor.catalog import Catalog
-from executor.state import QueryResults
 
 REDIS_HOSTNAME = environ.get("REDIS_HOSTNAME", "localhost")
 REDIS_PORT = int(environ.get("REDIS_PORT", 6379))
