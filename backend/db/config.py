@@ -22,4 +22,4 @@ class Config:
     }
 
     # Query timeout settings
-    SQLALCHEMY_QUERY_TIMEOUT = 60  # Global query timeout in seconds
+    SQLALCHEMY_QUERY_TIMEOUT = 60 * 60  # Global query timeout in seconds
