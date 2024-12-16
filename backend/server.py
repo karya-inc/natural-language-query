@@ -9,7 +9,7 @@ load_dotenv()
 import os
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends, Query, Request
+from fastapi import Body, FastAPI, HTTPException, Depends, Query, Request, Response
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
@@ -46,14 +46,17 @@ class ChatRequest(BaseModel):
     type: Optional[str] = None
 
 
-@app.middleware("http")
-async def manage_db_session(request: Request, call_next):
-    with get_db_session() as db_session:
-        request.state.db = db_session
-        response = await call_next(request)
-        request.state.db.commit()
-        request.state.db.close()
-        return response
+# @app.middleware("http")
+# async def manage_db_session(request: Request, call_next):
+#     db_session = get_db_session()
+#     try:
+#         request.state.db = db_session
+#         logger.info("Calling Nexx")
+#         response = await call_next(request)
+#         logger.info("Next completed")
+#         return response
+#     finally:
+#         db_session.close()
 
 
 @app.get("/auth/verify")
