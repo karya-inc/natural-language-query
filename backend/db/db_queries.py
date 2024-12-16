@@ -71,7 +71,7 @@ def store_turn(
     session_id: UUID,
     nlq: str,
     database_used: str,
-    execution_log_id: Optional[int],
+    execution_log_id: int,
 ) -> Turn:
     """
     Stores a new turn for a session.

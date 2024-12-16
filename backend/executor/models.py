@@ -36,3 +36,7 @@ class HealedQuery(BaseModel):
 
 class QuestionAnsweringResult(BaseModel):
     answer: str
+
+
+class IsQueryRelevant(BaseModel):
+    is_relevant: bool

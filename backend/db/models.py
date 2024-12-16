@@ -73,9 +73,7 @@ class Turn(Base):
 
     session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.session_id"))
     nlq: Mapped[str] = mapped_column()
-    execution_log_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("execution_logs.id")
-    )
+    execution_log_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
@@ -87,7 +85,7 @@ class Turn(Base):
     )
 
     session: Mapped["UserSession"] = relationship(back_populates="turns", init=False)
-    execution_log: Mapped[Optional["ExecutionLog"]] = relationship(init=False)
+    execution_log: Mapped["ExecutionLog"] = relationship(init=False)
 
 
 class SqlQuery(Base):
