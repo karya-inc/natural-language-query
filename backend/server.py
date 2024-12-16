@@ -50,9 +50,10 @@ class ChatRequest(BaseModel):
 async def manage_db_session(request: Request, call_next):
     with get_db_session() as db_session:
         request.state.db = db_session
-        await call_next(request)
+        response = await call_next(request)
         request.state.db.commit()
         request.state.db.close()
+        return response
 
 
 @app.get("/auth/verify")
