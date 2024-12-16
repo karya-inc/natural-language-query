@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 
 from db.models import ExecutionLog, UserSession
-from dependencies.db import get_db_session
+from dependencies.db import get_db_session, get_db_session_from_request
 from queues.typed_tasks import invoke_execute_query_op
 
 load_dotenv()
@@ -9,7 +9,7 @@ load_dotenv()
 import os
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends, Query
+from fastapi import Body, FastAPI, HTTPException, Depends, Query, Request
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
@@ -46,6 +46,15 @@ class ChatRequest(BaseModel):
     type: Optional[str] = None
 
 
+@app.middleware("http")
+async def manage_db_session(request: Request, call_next):
+    with get_db_session() as db_session:
+        request.state.db = db_session
+        await call_next(request)
+        request.state.db.commit()
+        request.state.db.close()
+
+
 @app.get("/auth/verify")
 async def verify_auth(auth: Annotated[TokenVerificationResult, Depends(verify_token)]):
     """
@@ -74,7 +83,7 @@ async def get_login_stratergy(
 @app.post("/chat")
 async def stream_sql_query_responses(
     chat_request: ChatRequest,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> StreamingResponse:
     """
@@ -133,7 +142,7 @@ async def stream_sql_query_responses(
 
 @app.get("/fetch_history")
 async def get_chat_history(
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[UserSessionsResponse]:
     """
@@ -163,7 +172,7 @@ async def get_chat_history(
 @app.get("/fetch_session_history/{session_id}")
 async def get_session_history_for_user(
     session_id: UUID,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[ChatHistoryResponse]:
     """
@@ -191,7 +200,7 @@ async def get_session_history_for_user(
 
 @app.get("/queries")
 async def get_saved_queries(
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
     filter: Optional[str] = Query(None, alias="filter:all"),
 ) -> List[SavedQueriesResponse]:
@@ -229,7 +238,7 @@ async def get_saved_queries(
 @app.post("/queries/{sqid}/execute")
 async def execute_saved_query(
     sqid: UUID,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> ExecutionLog:
     """
@@ -283,7 +292,7 @@ async def execute_saved_query(
 async def save_favorite_query(
     turn_id: int,
     sql_query_id: UUID,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ):
     """
@@ -315,7 +324,7 @@ async def save_favorite_query(
 @app.get("/execute/{id}/query/")
 async def get_execution_result_for_id(
     id: int,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> ExecutionLogResult:
     """
@@ -355,7 +364,7 @@ async def save_query(
     turn_id: int,
     sqid: UUID,
     body: SaveQueryRequest,
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ):
     """
@@ -386,7 +395,7 @@ async def save_query(
 
 @app.get("/get_all_users_info/")
 async def get_all_queries(
-    db: Annotated[Session, Depends(get_db_session)],
+    db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[User]:
     """

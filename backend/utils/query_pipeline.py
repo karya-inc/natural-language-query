@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, cast
+from typing import List, Optional, cast
 from sqlalchemy.orm import Session
 from db.db_queries import create_execution_entry, get_or_create_query
 from dependencies.db import get_db_session
@@ -21,10 +21,14 @@ class QueryExecutionPipeline:
     user_id: str
     active_role: str
     scopes: dict[str, List[ColumnScope]]
-    db_session: Session = field(init=False)
+    _db_session: Optional[Session] = field(init=False)
 
-    def __post_init__(self):
-        self.db_session = get_db_session()
+    @property
+    def db_session(self) -> Session:
+        if self._db_session is None:
+            with get_db_session() as db_session:
+                self._db_session = db_session
+        return self._db_session
 
     def check_query_privilages(self, sql_query: str) -> PrivilageCheckResult:
         table_privilages = parsed_catalogs.database_privileges[self.catalog.name]
