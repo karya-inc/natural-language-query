@@ -297,11 +297,6 @@ def get_history_sessions(
                         session_id=session.session_id, nlq=f"{first_turn.nlq}"
                     )
                 )
-            else:
-                sessions_list.append(
-                    UserSessionsResponse(session_id=session.session_id, nlq="")
-                )
-
         return sessions_list
     except Exception as e:
         logger.error(f"Error getting history sessions: {e}")
