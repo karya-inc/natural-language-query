@@ -1,9 +1,11 @@
 # config.py
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-DATABASE_URI = os.environ['DATABASE_URI']
+DATABASE_URI = os.environ["DATABASE_URI"]
+
 
 class Config:
     # Database configuration
@@ -13,12 +15,12 @@ class Config:
 
     # Connection pool settings
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,  # Maximum number of database connections in the pool
-        'pool_timeout': 30,  # Seconds to wait before timing out
-        'pool_recycle': 1800,  # Recycle connections after 30 minutes
-        'max_overflow': 20,  # Allow up to 20 connections beyond pool_size
-        'echo': False,  # Enable SQL query logging
-        'pool_pre_ping': True,  # Enable connection health checks
+        "pool_size": 100,  # Maximum number of database connections in the pool
+        "pool_timeout": 30,  # Seconds to wait before timing out
+        "pool_recycle": 1800,  # Recycle connections after 30 minutes
+        "max_overflow": 20,  # Allow up to 20 connections beyond pool_size
+        "echo": False,  # Enable SQL query logging
+        "pool_pre_ping": True,  # Enable connection health checks
     }
 
     # Query timeout settings
