@@ -292,7 +292,7 @@ async def execute_saved_query(
         raise HTTPException(status_code=500, detail="Failed to execute saved query.")
 
 
-@app.post("/save_favorite_query/{turn_id}/{sql_query_id}")
+@app.post("/save_favorite_query/{turn_id}/{sql_query_id}", deprecated=True)
 async def save_favorite_query(
     turn_id: int,
     sql_query_id: str,
