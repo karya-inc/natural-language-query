@@ -4,8 +4,6 @@ from typing import Any, List, Literal, Optional
 from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-
 from executor.models import QueryResults
 
 
