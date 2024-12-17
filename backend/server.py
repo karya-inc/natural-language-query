@@ -16,7 +16,8 @@ from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, ge
 from utils.logger import get_logger
 from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_execution_entry, create_session, get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result
+from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_execution_entry
+from db.db_queries import get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result, create_session
 from sqlalchemy.orm import Session
 from db.models import User
 from utils.parse_catalog import parsed_catalogs
