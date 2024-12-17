@@ -25,6 +25,7 @@ class ChatHistoryResponse(BaseModel):
     type: Optional[Literal["text", "table", "error", "execution"]]
     session_id: str
     query: Optional[str]
+    sql_query_id: Optional[str] = None
     message: Optional[str] = None
     execution_id: Optional[int] = None
 
@@ -254,6 +255,9 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
                     query=query,
                     type="execution",
                     session_id=str(session_id),
+                    sql_query_id=turn.execution_log.query.sqid
+                    if turn.execution_log
+                    else None,
                 )
             )
         return chat_history

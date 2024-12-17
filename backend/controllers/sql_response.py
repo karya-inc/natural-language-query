@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from db.db_queries import *
 from db.models import SavedQuery, User, UserSession
 from dependencies.auth import AuthenticatedUserInfo
@@ -29,7 +29,9 @@ class NLQResponseEvent:
     type: Literal["TEXT", "TABLE", "ERROR"]
     payload: str | List[dict]
     session_id: str
-    query: Optional[str] = field(default=None)
+    query: Optional[str] = None
+    sql_query_id: Optional[str] = None
+    execution_id: Optional[int] = None
 
 
 async def nlq_sse_wrapper(
@@ -106,6 +108,7 @@ async def do_nlq(
             payload=result.result,
             session_id=str(session.session_id),
             query=result.query,
+            sql_query_id=result.execution_log.query_id,
         )
 
     if isinstance(result, AgenticLoopQuestionAnsweringResult):
@@ -125,7 +128,6 @@ async def do_nlq(
         )
 
     logger.info("NLQ Completed")
-    return
 
 
 def chat_history(
