@@ -445,8 +445,8 @@ def get_recent_execution_for_query(
 
 
 class ExecutionLogResult(BaseModel):
-    status: ExecutionStatus
-    result: QueryResults
+    execution_log: ExecutionLog
+    result: Optional[QueryResults]
 
 
 def get_exeuction_log_result(
@@ -462,7 +462,10 @@ def get_exeuction_log_result(
     try:
         execution_result_with_log = (
             db_session.query(ExecutionLog, ExecutionResult)
-            .join(ExecutionResult, ExecutionLog.id == ExecutionResult.execution_id)
+            .outerjoin(
+                ExecutionResult,
+                ExecutionLog.id == ExecutionResult.execution_id,
+            )
             .filter(ExecutionLog.id == execution_log_id)
             .first()
         )
@@ -471,11 +474,11 @@ def get_exeuction_log_result(
             return None
 
         # Unpack the tuple
-        execution_log, execution_result = execution_result_with_log.tuple()
+        execution_log, execution_result = execution_result_with_log
 
         return ExecutionLogResult(
-            status=execution_log.status,
-            result=execution_result.result,
+            execution_log=execution_log,
+            result=execution_result.result if execution_result else None,
         )
 
     except Exception as e:
