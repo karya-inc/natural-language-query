@@ -7,8 +7,8 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from executor.models import QueryResults
 
 
-def get_uuid_str():
-    return str(uuid.uuid4())
+def get_uuid_str(length: int = 32) -> str:
+    return str(uuid.uuid4().hex)[:length]
 
 
 class Base(DeclarativeBase, MappedAsDataclass):

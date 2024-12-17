@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
+from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery, get_uuid_str
 from datetime import datetime
 from pydantic import BaseModel
 from executor.models import QueryResults
@@ -20,6 +20,7 @@ class Roles(enum.Enum):
 # Pydantic Models
 class ChatHistoryResponse(BaseModel):
     id: int | str
+    turn_id: int
     role: Roles
     timestamp: datetime
     type: Optional[Literal["text", "table", "error", "execution"]]
@@ -234,7 +235,8 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
             # User Turn Message
             chat_history.append(
                 ChatHistoryResponse(
-                    id=turn.turn_id,
+                    id=get_uuid_str(8),
+                    turn_id=turn.turn_id,
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
@@ -248,7 +250,8 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
             # Bot Turn Message
             chat_history.append(
                 ChatHistoryResponse(
-                    id=turn.turn_id,
+                    id=get_uuid_str(8),
+                    turn_id=turn.turn_id,
                     role=Roles.BOT,
                     timestamp=turn.created_at,
                     execution_id=execution_id,
