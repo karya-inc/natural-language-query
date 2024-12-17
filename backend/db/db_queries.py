@@ -304,9 +304,9 @@ def get_history_sessions(
 
 
 class SavedQueriesResponse(BaseModel):
-    sqid: UUID
-    nlq: str
-    sqlquery: str
+    id: int
+    name: str
+    description: Optional[str]
 
 
 def get_saved_queries(
@@ -327,12 +327,13 @@ def get_saved_queries(
         saved_queries_list = []
         if not saved_queries:
             return saved_queries_list
+
         for saved_query in saved_queries:
             saved_queries_list.append(
                 SavedQueriesResponse(
-                    sqid=saved_query.sqid,
-                    nlq=saved_query.turn.nlq,
-                    sqlquery=saved_query.sql_query.sqlquery,
+                    id=saved_query.id,
+                    name=saved_query.name,
+                    description=saved_query.description,
                 )
             )
         return saved_queries_list

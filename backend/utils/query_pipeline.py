@@ -21,7 +21,7 @@ class QueryExecutionPipeline:
     user_id: str
     active_role: str
     scopes: dict[str, List[ColumnScope]]
-    _db_session: Optional[Session] = field(init=False)
+    _db_session: Optional[Session] = field(default=None)
 
     @property
     def db_session(self) -> Session:
@@ -59,10 +59,10 @@ class QueryExecutionPipeline:
         try:
             # Create Execution Log
             saved_query = get_or_create_query(
-                self.db_session, sql_query, self.user_id, self.catalog.name
+                self.db_session, sql_query, str(self.user_id), self.catalog.name
             )
             execution_entry = create_execution_entry(
-                self.db_session, self.user_id, str(saved_query.sqid)
+                self.db_session, str(self.user_id), str(saved_query.sqid)
             )
 
             execution_result = invoke_execute_query_op(execution_entry.id, self.catalog)

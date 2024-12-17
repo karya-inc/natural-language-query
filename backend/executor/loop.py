@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional, Union, cast
 from db.models import ExecutionLog, UserSession
+from executor import catalog
 from executor.config import AgentConfig
 from executor.errors import UnRecoverableError
 from executor.models import QueryTypeLiteral
@@ -63,34 +64,42 @@ async def execute_query_with_healing(
     execution_result: Optional[QueryExecutionResult] = None
     while healing_attempts <= MAX_HEALING_ATTEMPTS:
         try:
+            logger.debug(f"Executing query: {query_to_execute}")
             execution_result = get_or_execute_query_result(
-                query_to_execute,
-                state.relevant_catalog,
-                query_pipeline.check_and_execute,
+                sql_query=query_to_execute,
+                catalog=state.relevant_catalog,
+                execute_query=query_pipeline.check_and_execute,
                 is_background=False,
             )
 
+            logger.debug(f"Execution result: {execution_result}")
             # Query execution not in background, so expect a result
             assert not isinstance(
                 execution_result, ExecutionLog
             ), "Expected Query Execution to return a result"
 
+            logger.debug(f"Execution result is not an ExecutionLog: {execution_result}")
             if isinstance(execution_result, QueryExecutionSuccessResult):
+                logger.debug(f"Query execution succeeded: {execution_result}")
                 return execution_result
 
             # If the query execution failed unrecoverably, raise an error
             if not execution_result.recoverable:
+                logger.error(f"Unrecoverable error: {execution_result.reason}")
                 raise UnRecoverableError(execution_result.reason)
 
             # Query execution failed, but is recoverable
             # Attempt to heal the query
             healing_attempts += 1
+            logger.debug(f"Healing attempts: {healing_attempts}")
             if healing_attempts % 3 == 0:
-                # Couldn't fix after 2mes, try to regenerate the query
+                # Couldn't fix after 2 times, try to regenerate the query
+                logger.debug("Attempting to regenerate the query")
                 query_to_execute = await tools.heal_fix_query(
                     query_to_execute, state, execution_result
                 )
             else:
+                logger.debug("Attempting to heal the query")
                 query_to_execute = await tools.heal_regenerate_query(
                     query_to_execute, state, execution_result
                 )
@@ -175,7 +184,7 @@ async def agentic_loop(
             scopes=config.user_info.scopes,
         )
         prev_turn_result = get_or_execute_query_result(
-            sql_query=prev_turn.nlq,
+            sql_query=prev_turn.execution_log.query.sqlquery,
             catalog=catalog,
             execute_query=query_pipeline.check_and_execute,
         )

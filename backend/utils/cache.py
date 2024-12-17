@@ -10,18 +10,32 @@ from utils.redis import get_redis_key, redis_client, REDIS_TTL
 logger = get_logger("[CACHING UTILS]")
 
 
-def save_result_to_redis(query_id: str, execution_result: QueryExecutionSuccessResult):
-    key = get_redis_key("query_results", query_id)
-    redis_client.set(key, json.dumps(execution_result.result), ex=REDIS_TTL)
+def save_result_to_redis(
+    execution_result: QueryExecutionSuccessResult,
+):
+    query = execution_result.execution_log.query
+    key = get_redis_key("query_results", str(query.sqid))
+    redis_client.set(key, json.dumps(execution_result.to_dict()), ex=REDIS_TTL)
 
 
-def get_result_from_redis(query_id: str) -> Optional[QueryExecutionSuccessResult]:
-    key = get_redis_key("query_results", query_id)
-    cached_result = redis_client.get(key)
-    if cached_result:
-        return QueryExecutionSuccessResult(**json.loads(str(cached_result)))
+def get_result_from_redis(
+    query: str, catalog_name: str
+) -> Optional[QueryExecutionSuccessResult]:
+    with get_db_session() as db_session:
+        query_obj = fetch_query_by_value(db_session, query, catalog_name)
 
-    return None
+    if not query_obj:
+        return None
+
+    try:
+        key = get_redis_key("query_results", str(query_obj.sqid))
+        cached_result = redis_client.get(key)
+        if cached_result:
+            return QueryExecutionSuccessResult.from_json(str(cached_result))
+
+    except Exception as e:
+        logger.error(f"Error while fetching result from redis: {e}")
+        return None
 
 
 def get_cached_query_result(
@@ -29,7 +43,7 @@ def get_cached_query_result(
 ) -> Optional[QueryExecutionSuccessResult]:
 
     # Check if the result is cached in redis
-    if cached_result := get_result_from_redis(sql_query):
+    if cached_result := get_result_from_redis(sql_query, catalog.name):
         return cached_result
 
     # Fetch the most recent query result from the database if not found in redis cache
@@ -52,7 +66,9 @@ def get_cached_query_result(
     cached_result = QueryExecutionSuccessResult(
         execution_result_info.result, execution_log
     )
-    save_result_to_redis(str(query.sqid), cached_result)
+    save_result_to_redis(
+        cached_result,
+    )
     return cached_result
 
 
@@ -67,15 +83,14 @@ def get_or_execute_query_result(
     If not found, it will execute the query and cache the result in redis.
     """
 
-    cached_result = get_cached_query_result(sql_query, catalog)
+    cached_result = get_cached_query_result(sql_query=sql_query, catalog=catalog)
     if cached_result:
         return cached_result
 
     # If the result is not found in redis and database, execute the query
     execution_result = execute_query(sql_query, is_background)
     if isinstance(execution_result, QueryExecutionSuccessResult):
-        query_id = execution_result.execution_log.query_id
-        save_result_to_redis(query_id, execution_result)
+        save_result_to_redis(execution_result)
 
     return execution_result
 

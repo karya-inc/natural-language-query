@@ -15,3 +15,4 @@ referencing==0.35
 sqlglot
 redis
 celery[redis]
+dataclass-wizard

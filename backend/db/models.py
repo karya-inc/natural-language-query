@@ -9,6 +9,10 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from executor.models import QueryResults
 
 
+def get_uuid_str():
+    return str(uuid.uuid4())
+
+
 class Base(DeclarativeBase, MappedAsDataclass):
     """Base class for SQLAlchemy models"""
 
@@ -23,12 +27,12 @@ class User(Base):
     """User model representing user information"""
 
     __tablename__ = "users"
-    user_id: Mapped[str] = mapped_column(primary_key=True)
     name: Mapped[Optional[str]] = mapped_column()
     email: Mapped[Optional[str]] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
+
     # Relationships
     saved_queries: Mapped[List["SavedQuery"]] = relationship(
         "SavedQuery",
@@ -40,6 +44,9 @@ class User(Base):
         back_populates="user", init=False
     )
 
+    # Fields with Default values
+    user_id: Mapped[str] = mapped_column(primary_key=True, default_factory=get_uuid_str)
+
 
 class UserSession(Base):
     """Session model representing user sessions"""
@@ -49,8 +56,8 @@ class UserSession(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
 
     # Fields with Default values
-    session_id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default_factory=uuid.uuid4
+    session_id: Mapped[str] = mapped_column(
+        primary_key=True, default_factory=get_uuid_str
     )
     started_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
@@ -71,12 +78,14 @@ class Turn(Base):
 
     __tablename__ = "turns"
 
-    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.session_id"))
     nlq: Mapped[str] = mapped_column()
     execution_log_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("sessions.session_id"), default_factory=get_uuid_str
+    )
     turn_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True, default=None
     )
@@ -96,9 +105,7 @@ class SqlQuery(Base):
     database_used: Mapped[Optional[str]] = mapped_column()
 
     # Fields with Default values
-    sqid: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default_factory=uuid.uuid4
-    )
+    sqid: Mapped[str] = mapped_column(primary_key=True, default_factory=get_uuid_str)
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
@@ -114,7 +121,7 @@ class SavedQuery(Base):
     # Fields without defaults
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     name: Mapped[str] = mapped_column()
-    sqid: Mapped[uuid.UUID] = mapped_column(ForeignKey("sql_queries.sqid"))
+    sqid: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
@@ -160,6 +167,34 @@ class ExecutionLog(Base):
     # Relationships
     query: Mapped["SqlQuery"] = relationship(init=False)
     user: Mapped["User"] = relationship(init=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "status": self.status,
+            "query_id": self.query_id,
+            "executed_by": self.executed_by,
+            "notify_to": self.notify_to,
+            "logs": self.logs,
+            "id": self.id,
+            "created_at": str(self.created_at),
+            "completed_at": str(self.completed_at),
+        }
+
+    @staticmethod
+    def from_dict(data: dict):
+        log = ExecutionLog(
+            status=data["status"],
+            query_id=data["query_id"],
+            executed_by=data["executed_by"],
+            notify_to=data["notify_to"],
+        )
+
+        # Force init remaining fields
+        log.logs = data["logs"]
+        log.id = data["id"]
+        log.created_at = data["created_at"]
+        log.completed_at = data["completed_at"]
+        return log
 
 
 class ExecutionResult(Base):
