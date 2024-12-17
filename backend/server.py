@@ -249,7 +249,7 @@ async def execute_saved_query(
     Execute saved query
 
     Args:
-        saved_query_id (str): Saved Query ID
+        query_id (str): Query ID for which to execute the query
         db (Session): Database session
         user_id (str): User ID
 
@@ -260,7 +260,7 @@ async def execute_saved_query(
         f"Executing saved query for user: {user_info.user_id} with query_id: {sqid}"
     )
 
-    saved_query_entry = get_saved_query_by_id(db, sqid)
+    saved_query_entry = get_saved_query_by_id(db, sqid, user_info.user_id)
 
     if not saved_query_entry:
         raise HTTPException(status_code=404, detail="Saved query not found.")

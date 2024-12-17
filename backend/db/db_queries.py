@@ -209,9 +209,7 @@ def get_session_for_user(
         return None
 
 
-def get_chat_history(
-    db_session: Session, session_id: str
-) -> List[ChatHistoryResponse]:
+def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryResponse]:
     """
     Get chat history for a session.
     """
@@ -342,12 +340,16 @@ def get_saved_queries(
         return []
 
 
-def get_saved_query_by_id(db_session: Session, sqid: str) -> Optional[SavedQuery]:
+def get_saved_query_by_id(
+    db_session: Session, sqid: str, user_id: str
+) -> Optional[SavedQuery]:
     """
     Get a saved query by its ID.
     """
     try:
-        saved_query = db_session.query(SavedQuery).filter_by(sqid=sqid).first()
+        saved_query = (
+            db_session.query(SavedQuery).filter_by(sqid=sqid, user_id=user_id).first()
+        )
         return saved_query
     except Exception as e:
         logger.error(f"Error getting saved query by ID: {e}")
