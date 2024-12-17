@@ -325,9 +325,9 @@ async def save_favorite_query(
         raise HTTPException(status_code=500, detail="Failed to save favorite query.")
 
 
-@app.get("/execute/{id}/query/")
+@app.get("/execution_result/{execution_id}")
 async def get_execution_result_for_id(
-    id: int,
+    execution_id: int,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> ExecutionLogResult:
@@ -335,7 +335,7 @@ async def get_execution_result_for_id(
     Get execution result for the user
 
     Args:
-        id (int): Execution Log ID
+        execution_id (int): Execution Log ID
         db (Session): Database session
         user_id (str): User ID
 
@@ -344,7 +344,7 @@ async def get_execution_result_for_id(
     """
     logger.info(f"Get execution result for user: {user_info.user_id} is requested!")
     try:
-        response = get_exeuction_log_result(db, id)
+        response = get_exeuction_log_result(db, execution_id)
     except Exception as e:
         logger.error(
             f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
