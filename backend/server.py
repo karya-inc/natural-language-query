@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 
 from db.models import ExecutionLog, UserSession
-from dependencies.db import get_db_session, get_db_session_from_request
+from dependencies.db import get_db_session_from_request
 from queues.typed_tasks import invoke_execute_query_op
 
 load_dotenv()
@@ -9,7 +9,7 @@ load_dotenv()
 import os
 from typing import Annotated, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends, Query, Request, Response
+from fastapi import Body, FastAPI, HTTPException, Depends, Query
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
@@ -19,7 +19,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_execution_entry, create_session, get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result
 from sqlalchemy.orm import Session
 from db.models import User
-from uuid import UUID
 from utils.parse_catalog import parsed_catalogs
 
 parsed_catalogs.database_privileges
@@ -106,7 +105,7 @@ async def stream_sql_query_responses(
 
     # Dependency check to validate user
 
-    # If no session_id is provided, generate a new UUID for the session
+    # If no session_id is provided, generate a new str for the session
     current_session: Optional[UserSession] = None
     if not chat_request.session_id:
         current_session = create_session(db, user_info.user_id)
@@ -114,7 +113,7 @@ async def stream_sql_query_responses(
         current_session = get_session_for_user(
             db_session=db,
             user_id=user_info.user_id,
-            session_id=UUID(chat_request.session_id),
+            session_id=chat_request.session_id,
         )
         session_id = chat_request.session_id
 
@@ -175,7 +174,7 @@ async def get_chat_history(
 
 @app.get("/fetch_session_history/{session_id}")
 async def get_session_history_for_user(
-    session_id: UUID,
+    session_id: str,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> List[ChatHistoryResponse]:
@@ -183,7 +182,7 @@ async def get_session_history_for_user(
     Get session id from query params and fetch the session history for the user
 
     Args:
-        session_id (UUID): Session ID
+        session_id (str): Session ID
         db (Session): Database session
         user_id (str): User ID
 
@@ -241,7 +240,7 @@ async def get_saved_queries(
 
 @app.post("/queries/{sqid}/execute")
 async def execute_saved_query(
-    sqid: UUID,
+    sqid: str,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ) -> ExecutionLog:
@@ -249,7 +248,7 @@ async def execute_saved_query(
     Execute saved query
 
     Args:
-        saved_query_id (UUID): Saved Query ID
+        saved_query_id (str): Saved Query ID
         db (Session): Database session
         user_id (str): User ID
 
@@ -295,7 +294,7 @@ async def execute_saved_query(
 @app.post("/save_favorite_query/{turn_id}/{sql_query_id}")
 async def save_favorite_query(
     turn_id: int,
-    sql_query_id: UUID,
+    sql_query_id: str,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
 ):
@@ -304,7 +303,7 @@ async def save_favorite_query(
 
     Args:
         turn_id (int): Turn ID
-        sql_query_id (UUID): SQL Query ID
+        sql_query_id (str): SQL Query ID
         db (Session): Database session
         user_id (str): User ID
 
@@ -366,7 +365,7 @@ class SaveQueryRequest(BaseModel):
 @app.post("/save_query/{turn_id}/{sqid}")
 async def save_query(
     turn_id: int,
-    sqid: UUID,
+    sqid: str,
     body: SaveQueryRequest,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
@@ -376,7 +375,7 @@ async def save_query(
 
     Args:
         turn_id (int): Turn ID
-        sqid (UUID): SQL Query ID
+        sqid (str): SQL Query ID
         body (SaveQueryRequest): Request body
         db (Session): Database session
         user_info (str): contains user information

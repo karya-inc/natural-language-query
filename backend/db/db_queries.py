@@ -3,7 +3,6 @@ from sqlalchemy import desc
 from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
 from datetime import datetime
 from pydantic import BaseModel
-from uuid import UUID
 from executor.models import QueryResults
 from typing import List, Literal, Optional
 from utils.logger import get_logger
@@ -20,7 +19,7 @@ class Roles(enum.Enum):
 
 # Pydantic Models
 class ChatHistoryResponse(BaseModel):
-    id: int | UUID
+    id: int | str
     role: Roles
     timestamp: datetime
     type: Optional[Literal["text", "table", "error", "execution"]]
@@ -68,7 +67,7 @@ def create_session(db_session: Session, user_id: str) -> Optional[UserSession]:
 # Saving to database functions
 def store_turn(
     db_session: Session,
-    session_id: UUID,
+    session_id: str,
     nlq: str,
     database_used: str,
     execution_log_id: int,
@@ -96,7 +95,7 @@ def save_user_fav_query(
     db_session: Session,
     user_id: str,
     turn_id: int,
-    sql_query_id: UUID,
+    sql_query_id: str,
     name: Optional[str] = None,
     description: Optional[str] = None,
 ) -> Optional[SavedQuery]:
@@ -155,7 +154,7 @@ def get_or_create_query(
         raise e
 
 
-def get_query_by_id(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
+def get_query_by_id(db_session: Session, sqid: str) -> Optional[SqlQuery]:
     """
     Get a query by its ID.
     """
@@ -187,7 +186,7 @@ def fetch_query_by_value(
 
 # check if session exists for that user
 def get_session_for_user(
-    db_session: Session, user_id: str, session_id: UUID
+    db_session: Session, user_id: str, session_id: str
 ) -> Optional[UserSession]:
     """
     Check if session id is for the user; if not, return None
@@ -211,7 +210,7 @@ def get_session_for_user(
 
 
 def get_chat_history(
-    db_session: Session, session_id: UUID
+    db_session: Session, session_id: str
 ) -> List[ChatHistoryResponse]:
     """
     Get chat history for a session.
@@ -267,7 +266,7 @@ def get_chat_history(
 
 
 class UserSessionsResponse(BaseModel):
-    session_id: UUID
+    session_id: str
     nlq: str
 
 
@@ -343,7 +342,7 @@ def get_saved_queries(
         return []
 
 
-def get_saved_query_by_id(db_session: Session, sqid: UUID) -> Optional[SavedQuery]:
+def get_saved_query_by_id(db_session: Session, sqid: str) -> Optional[SavedQuery]:
     """
     Get a saved query by its ID.
     """
@@ -494,7 +493,7 @@ def save_execution_result(
         raise e
 
 
-def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQuery]:
+def check_if_sql_query_exist(db_session: Session, sqid: str) -> Optional[SqlQuery]:
     """
     Check if sql query exists in the database
     """
@@ -508,7 +507,7 @@ def check_if_sql_query_exist(db_session: Session, sqid: UUID) -> Optional[SqlQue
 
 
 def check_if_query_against_user_exist(
-    db_session: Session, sqid: UUID, user_id: str
+    db_session: Session, sqid: str, user_id: str
 ) -> Optional[SavedQuery]:
     """
     Check if the query against the user exists
@@ -528,7 +527,7 @@ def create_saved_query(
     db_session: Session,
     name: str,
     user_id: str,
-    sqid: UUID,
+    sqid: str,
     turn_id: Optional[int],
     saved_by: Optional[str],
     description: Optional[str],

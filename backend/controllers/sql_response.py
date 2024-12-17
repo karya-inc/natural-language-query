@@ -11,7 +11,6 @@ from utils.logger import get_logger
 from utils.parse_catalog import parsed_catalogs
 from typing import AsyncIterator, List, Literal, Optional
 from sqlalchemy.orm import Session
-from uuid import UUID
 import json
 import asyncio
 
@@ -130,7 +129,7 @@ async def do_nlq(
 
 
 def chat_history(
-    db_session: Session, session_id: UUID, user_id: str
+    db_session: Session, session_id: str, user_id: str
 ) -> List[ChatHistoryResponse]:
     # Log info
     logger.info(
@@ -152,7 +151,7 @@ def get_session_history(user_id: str, db: Session) -> List[UserSessionsResponse]
     return get_history_sessions(db_session=db, user_id=user_id)
 
 
-def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: UUID):
+def save_fav(db: Session, user_id: str, turn_id: int, sql_query_id: str):
     # Log info
     logger.info(
         f"Saving fav query of user : {user_id} with turn_id: {turn_id} and sql_query_id: {sql_query_id}"
@@ -172,7 +171,7 @@ def save_query_for_user(
     db: Session,
     user_id: str,
     turn_id: int,
-    sqid: UUID,
+    sqid: str,
     name: str,
     description: Optional[str],
 ) -> Optional[SavedQuery]:
