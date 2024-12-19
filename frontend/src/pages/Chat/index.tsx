@@ -1,11 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useContext,
-  MouseEvent,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import useChat from "./useChat";
 import {
   VStack,
@@ -24,7 +17,6 @@ import BotGreeting from "../../components/BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { BACKEND_URL } from "../../config";
 import MemoizedMessage from "../../components/MemoizedMessage";
-import { RouteContext } from "../../App";
 
 export type Message = {
   id: number;
@@ -62,6 +54,8 @@ export type ChatBotProps = {
   setNavOpen: (arg: boolean) => void;
   conversationStarted: boolean;
   setConversationStarted: (arg: boolean) => void;
+  id: string;
+  setId: (arg: string) => void;
 };
 
 export type NLQUpdateEvent = (
@@ -92,15 +86,14 @@ export function ChatBot({
   setNavOpen,
   conversationStarted,
   setConversationStarted,
+  id,
+  setId,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLInputElement>(null);
-  const { sessionId, savedQueryId, setSessionId, setSavedQueryId } =
-    useContext(RouteContext);
-
-  const { postChat, getTableData } = useChat({ input, sessionId });
+  const { postChat, getTableData } = useChat({ input, id });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -124,6 +117,12 @@ export function ChatBot({
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      if (conversationStarted === false)
+        setHistory((prevHistory) => [
+          { session_id: id, nlq: input },
+          ...prevHistory,
+        ]);
+
       if (!input.trim()) return;
 
       const newMessage: Message = {
@@ -132,6 +131,7 @@ export function ChatBot({
         type: "text",
         role: "user",
         timestamp: Date.now(),
+        execution_id: "",
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -144,10 +144,11 @@ export function ChatBot({
         message: "",
         role: "bot",
         timestamp: Date.now(),
+        execution_id: "",
       };
 
       try {
-        let updatedSessionId = sessionId;
+        let updatedSessionId = id;
 
         const reader = await postChat(`${BACKEND_URL}/chat`);
 
@@ -200,12 +201,7 @@ export function ChatBot({
             }
           }
         }
-        setHistory((prevHistory) => [
-          { session_id: updatedSessionId, nlq: input },
-          ...prevHistory,
-        ]);
-
-        setSessionId(updatedSessionId);
+        setId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
         botMessage.message = "Failed to fetch response";
@@ -222,14 +218,14 @@ export function ChatBot({
         });
       }
     },
-    [input, sessionId]
+    [input, id]
   );
 
   const handleExecute = async (url: string, executionId: string) => {
     try {
       const response = await getTableData(url);
-      if (response) {
-        const data = response.result;
+      const data = response.result;
+      if (data.length > 0) {
         const updatedMessages = messages.map((msg): Message => {
           if (msg.execution_id === executionId) {
             return {
@@ -243,7 +239,19 @@ export function ChatBot({
         });
         setMessages(updatedMessages);
       } else {
-        throw new Error("Response is undefined");
+        const updatedMessages = messages.map((msg): Message => {
+          if (msg.execution_id === executionId) {
+            return {
+              ...msg,
+              message: "No data found",
+              type: "error",
+              kind: "TEXT",
+            };
+          }
+          return msg;
+        });
+        setMessages(updatedMessages);
+        throw new Error("No data found");
       }
     } catch (error) {
       console.error(error);

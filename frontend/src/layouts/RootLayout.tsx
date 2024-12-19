@@ -8,8 +8,15 @@ import useNavBar from "../components/NavBar/useNavBar";
 
 const RootLayout = () => {
   const [navOpen, setNavOpen] = useState(true);
-  const { messages, setMessages, conversationStarted, setConversationStarted } =
-    useChatHistory();
+
+  const {
+    messages,
+    setMessages,
+    conversationStarted,
+    setConversationStarted,
+    id,
+    setId,
+  } = useChatHistory();
   const { history, setHistory, getHistory, savedQueries, getSavedQueries } =
     useNavBar();
 
@@ -29,6 +36,7 @@ const RootLayout = () => {
             savedQueries={savedQueries}
             getSavedQueries={getSavedQueries}
             setConversationStarted={setConversationStarted}
+            setId={setId}
           />
         )}
         <ChatBot
@@ -39,6 +47,8 @@ const RootLayout = () => {
           setNavOpen={setNavOpen}
           conversationStarted={conversationStarted}
           setConversationStarted={setConversationStarted}
+          id={id ?? ""}
+          setId={setId}
         />
       </HStack>
     </ErrorBoundary>
