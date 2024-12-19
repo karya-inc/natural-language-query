@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { useEffect } from "react";
 import { BACKEND_URL, baseUrl } from "../../config";
+import { Message } from "../../pages/Chat";
 
 const NavBar = ({
   navOpen,
@@ -27,6 +28,7 @@ const NavBar = ({
   getSavedQueries,
   setConversationStarted,
   setId,
+  setMessages,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -36,6 +38,7 @@ const NavBar = ({
   getSavedQueries: (arg: string) => void;
   setConversationStarted: (arg: boolean) => void;
   setId: (arg: string) => void;
+  setMessages: (arg: Message[]) => void;
 }) => {
   const navigate = useNavigate();
   const chatHistoryStyles = {
@@ -79,6 +82,7 @@ const NavBar = ({
           onClick={() => {
             navigate(baseUrl);
             setConversationStarted(false);
+            setMessages([]);
           }}
           cursor="pointer"
         >

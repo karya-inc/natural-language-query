@@ -37,6 +37,7 @@ const RootLayout = () => {
             getSavedQueries={getSavedQueries}
             setConversationStarted={setConversationStarted}
             setId={setId}
+            setMessages={setMessages}
           />
         )}
         <ChatBot
