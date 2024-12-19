@@ -2,7 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Any, List, Literal, Optional
 from sqlalchemy import ForeignKey, String, Text, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    MappedAsDataclass,
+    mapped_column,
+    relationship,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from executor.models import QueryResults
 
@@ -51,7 +57,7 @@ class UserSession(Base):
 
     __tablename__ = "sessions"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
 
     # Fields with Default values
     session_id: Mapped[str] = mapped_column(
@@ -77,12 +83,14 @@ class Turn(Base):
     __tablename__ = "turns"
 
     nlq: Mapped[str] = mapped_column()
-    execution_log_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    execution_log_id: Mapped[int] = mapped_column(
+        ForeignKey("execution_logs.id"), index=True
+    )
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
     session_id: Mapped[str] = mapped_column(
-        ForeignKey("sessions.session_id"), default_factory=get_uuid_str
+        ForeignKey("sessions.session_id"), default_factory=get_uuid_str, index=True
     )
     turn_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True, default=None
@@ -119,8 +127,8 @@ class SavedQuery(Base):
     # Fields without defaults
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     name: Mapped[str] = mapped_column()
-    sqid: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    sqid: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
     # Relationships
@@ -131,13 +139,25 @@ class SavedQuery(Base):
     # Fields with defaults
     description: Mapped[Optional[str]] = mapped_column(default=None)
     turn_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("turns.turn_id"), nullable=True, default=None
+        ForeignKey("turns.turn_id"), nullable=True, default=None, index=True
     )
     saved_by: Mapped[Optional[str]] = mapped_column(
-        ForeignKey("users.user_id"), default=None
+        ForeignKey("users.user_id"), default=None, index=True
     )
     sql_query: Mapped["SqlQuery"] = relationship(init=False)
     turn: Mapped["Turn"] = relationship(init=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "sqid": self.sqid,
+            "user_id": self.user_id,
+            "created_at": str(self.created_at),
+            "description": self.description,
+            "turn_id": self.turn_id,
+            "saved_by": self.saved_by,
+        }
 
 
 ExecutionStatus = Literal["SUCCESS", "FAILED", "PENDING", "RUNNING"]
@@ -151,8 +171,8 @@ class ExecutionLog(Base):
     __tablename__ = "execution_logs"
 
     status: Mapped[ExecutionStatus] = mapped_column()
-    query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
-    executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"), index=True)
+    executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
 
     # Fields with Default values
     notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
@@ -166,7 +186,7 @@ class ExecutionLog(Base):
     query: Mapped["SqlQuery"] = relationship(init=False)
     user: Mapped["User"] = relationship(init=False)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "status": self.status,
             "query_id": self.query_id,
@@ -190,8 +210,8 @@ class ExecutionLog(Base):
         # Force init remaining fields
         log.logs = data["logs"]
         log.id = data["id"]
-        log.created_at = data["created_at"]
-        log.completed_at = data["completed_at"]
+        log.created_at = datetime.fromisoformat(data["created_at"])
+        log.completed_at = datetime.fromisoformat(data["completed_at"])
         return log
 
 
@@ -203,7 +223,9 @@ class ExecutionResult(Base):
     __tablename__ = "execution_results"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
 
-    execution_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    execution_id: Mapped[int] = mapped_column(
+        ForeignKey("execution_logs.id"), index=True
+    )
     result: Mapped[QueryResults] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
