@@ -57,7 +57,7 @@ class UserSession(Base):
 
     __tablename__ = "sessions"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
 
     # Fields with Default values
     session_id: Mapped[str] = mapped_column(
@@ -83,12 +83,14 @@ class Turn(Base):
     __tablename__ = "turns"
 
     nlq: Mapped[str] = mapped_column()
-    execution_log_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    execution_log_id: Mapped[int] = mapped_column(
+        ForeignKey("execution_logs.id"), index=True
+    )
     database_used: Mapped[str] = mapped_column(Text)
 
     # Fields with Default values
     session_id: Mapped[str] = mapped_column(
-        ForeignKey("sessions.session_id"), default_factory=get_uuid_str
+        ForeignKey("sessions.session_id"), default_factory=get_uuid_str, index=True
     )
     turn_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True, default=None
@@ -125,8 +127,8 @@ class SavedQuery(Base):
     # Fields without defaults
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
     name: Mapped[str] = mapped_column()
-    sqid: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    sqid: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
     # Relationships
@@ -137,10 +139,10 @@ class SavedQuery(Base):
     # Fields with defaults
     description: Mapped[Optional[str]] = mapped_column(default=None)
     turn_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("turns.turn_id"), nullable=True, default=None
+        ForeignKey("turns.turn_id"), nullable=True, default=None, index=True
     )
     saved_by: Mapped[Optional[str]] = mapped_column(
-        ForeignKey("users.user_id"), default=None
+        ForeignKey("users.user_id"), default=None, index=True
     )
     sql_query: Mapped["SqlQuery"] = relationship(init=False)
     turn: Mapped["Turn"] = relationship(init=False)
@@ -169,8 +171,8 @@ class ExecutionLog(Base):
     __tablename__ = "execution_logs"
 
     status: Mapped[ExecutionStatus] = mapped_column()
-    query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"))
-    executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
+    query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"), index=True)
+    executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
 
     # Fields with Default values
     notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
@@ -221,7 +223,9 @@ class ExecutionResult(Base):
     __tablename__ = "execution_results"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
 
-    execution_id: Mapped[int] = mapped_column(ForeignKey("execution_logs.id"))
+    execution_id: Mapped[int] = mapped_column(
+        ForeignKey("execution_logs.id"), index=True
+    )
     result: Mapped[QueryResults] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
