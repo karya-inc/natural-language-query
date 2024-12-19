@@ -2,7 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Any, List, Literal, Optional
 from sqlalchemy import ForeignKey, String, Text, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    MappedAsDataclass,
+    mapped_column,
+    relationship,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from executor.models import QueryResults
 
@@ -139,6 +145,18 @@ class SavedQuery(Base):
     sql_query: Mapped["SqlQuery"] = relationship(init=False)
     turn: Mapped["Turn"] = relationship(init=False)
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "sqid": self.sqid,
+            "user_id": self.user_id,
+            "created_at": str(self.created_at),
+            "description": self.description,
+            "turn_id": self.turn_id,
+            "saved_by": self.saved_by,
+        }
+
 
 ExecutionStatus = Literal["SUCCESS", "FAILED", "PENDING", "RUNNING"]
 
@@ -166,7 +184,7 @@ class ExecutionLog(Base):
     query: Mapped["SqlQuery"] = relationship(init=False)
     user: Mapped["User"] = relationship(init=False)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "status": self.status,
             "query_id": self.query_id,
@@ -190,8 +208,8 @@ class ExecutionLog(Base):
         # Force init remaining fields
         log.logs = data["logs"]
         log.id = data["id"]
-        log.created_at = data["created_at"]
-        log.completed_at = data["completed_at"]
+        log.created_at = datetime.fromisoformat(data["created_at"])
+        log.completed_at = datetime.fromisoformat(data["completed_at"])
         return log
 
 

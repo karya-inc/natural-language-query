@@ -1,6 +1,15 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from db.models import ExecutionLog, ExecutionResult, ExecutionStatus, User, UserSession, Turn, SqlQuery, SavedQuery
+from db.models import (
+    ExecutionLog,
+    ExecutionResult,
+    ExecutionStatus,
+    User,
+    UserSession,
+    Turn,
+    SqlQuery,
+    SavedQuery,
+)
 from datetime import datetime
 from pydantic import BaseModel
 from executor.models import QueryResults
@@ -255,9 +264,9 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
                     query=query,
                     type="execution",
                     session_id=str(session_id),
-                    sql_query_id=turn.execution_log.query.sqid
-                    if turn.execution_log
-                    else None,
+                    sql_query_id=(
+                        turn.execution_log.query.sqid if turn.execution_log else None
+                    ),
                 )
             )
         return chat_history

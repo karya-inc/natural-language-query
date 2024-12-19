@@ -7,17 +7,42 @@ from queues.typed_tasks import invoke_execute_query_op
 load_dotenv()
 
 import os
-from typing import Annotated, Optional, List
+from typing import Annotated, Any, Optional, List
 from pydantic import BaseModel
 from fastapi import Body, FastAPI, HTTPException, Depends, Query
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
-from dependencies.auth import AuthenticatedUserInfo, TokenVerificationResult, get_authenticated_user_info, verify_token, auth_handler
+from dependencies.auth import (
+    AuthenticatedUserInfo,
+    TokenVerificationResult,
+    get_authenticated_user_info,
+    verify_token,
+    auth_handler,
+)
 from utils.logger import get_logger
-from controllers.sql_response import chat_history, get_saved_queries_user, save_query_for_user, get_session_history, nlq_sse_wrapper, save_fav
+from controllers.sql_response import (
+    chat_history,
+    get_saved_queries_user,
+    save_query_for_user,
+    get_session_history,
+    nlq_sse_wrapper,
+    save_fav,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from db.db_queries import ChatHistoryResponse, SavedQueriesResponse, UserSessionsResponse, ExecutionLogResult, create_execution_entry
-from db.db_queries import get_all_user_info, get_saved_query_by_id, get_session_for_user, get_exeuction_log_result, create_session
+from db.db_queries import (
+    ChatHistoryResponse,
+    SavedQueriesResponse,
+    UserSessionsResponse,
+    ExecutionLogResult,
+    create_execution_entry,
+)
+from db.db_queries import (
+    get_all_user_info,
+    get_saved_query_by_id,
+    get_session_for_user,
+    get_exeuction_log_result,
+    create_session,
+)
 from sqlalchemy.orm import Session
 from db.models import User
 from utils.parse_catalog import parsed_catalogs
@@ -244,7 +269,7 @@ async def execute_saved_query(
     sqid: str,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
-) -> ExecutionLog:
+) -> dict[str, Any]:
     """
     Execute saved query
 
@@ -284,7 +309,7 @@ async def execute_saved_query(
         )
 
         invoke_execute_query_op(execution_log.id, catalog)
-        return execution_log
+        return execution_log.to_dict()
     except Exception as e:
         logger.error(
             f"Error while executing saved query for user: {user_info.user_id}. Error: {str(e)}"
@@ -388,8 +413,15 @@ async def save_query(
         response = save_query_for_user(
             db, user_info.user_id, turn_id, sqid, body.name, body.description
         )
+
+        if response is None:
+            return HTTPException(
+                400, detail="Failed to save query. Query with same name already exists."
+            )
+
         logger.info("Query saved successfully!!")
-        return response
+        return response.to_dict()
+
     except Exception as e:
         logger.error(
             f"Error while saving query for user : {user_info.user_id}. Error: {str(e)}"
