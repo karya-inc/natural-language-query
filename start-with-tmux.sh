@@ -6,7 +6,17 @@ PORTAL_DIR=${PORTAL_DIR:-'../karya-server/server/'}
 EDITOR=${EDITOR:-'nvim'}
 IS_INIT_BACKEND=${IS_INIT_BACKEND:-'true'}
 
+
 SESSION_NAME=${1:-'nlq'}
+
+IS_SESSION_STARTED=$(tmux list-sessions 2> /dev/null | grep $SESSION_NAME | wc -l)
+
+if [ $IS_SESSION_STARTED -gt 0 ]; then
+  echo "Session with '$SESSION_NAME' already exists. Try using a different name by passing it as an argument."
+  exit 1
+fi
+
+
 tmux new-session -d -s $SESSION_NAME
 tmux rename-window -t $SESSION_NAME:0 'nvim'
 tmux send-keys -t 'nvim' 'nvim' C-m
@@ -28,8 +38,8 @@ tmux send-keys -t 'portal_frontend' "cd $PORTAL_DIR/frontend" C-m "npm start" C-
 
 tmux new-window -t $SESSION_NAME:6 -n 'portal_backend'
 tmux send-keys -t 'portal_backend' "cd $PORTAL_DIR/backend" c-m "node dist/Server.js" C-m
-tmux select-window -t $SESSION_NAME:0
 
 tmux new-window -t $SESSION_NAME:7 -n 'shell'
 
+tmux select-window -t $SESSION_NAME:0
 tmux attach -t $SESSION_NAME
