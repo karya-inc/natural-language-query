@@ -4,16 +4,17 @@ import ChatActions from "./ChatActions";
 import CFImage from "./CloudflareImage";
 import ChatTable from "./ChatTable";
 import { Message } from "../pages/Chat";
+import { BACKEND_URL } from "../config";
 
 const MemoizedMessage = memo(
   ({
     msg,
-    getTableData,
+    handleExecute,
   }: {
     msg: Message;
-    getTableData: (arg: string) => void;
+    handleExecute: (arg1: string, arg2: string) => void;
   }) => {
-    const { message, role, type } = msg;
+    const { message, role, type, execution_id } = msg;
 
     return (
       <HStack
@@ -52,7 +53,12 @@ const MemoizedMessage = memo(
                   color="gray.400"
                   bg="gray.700"
                   _hover={{ bg: "gray.600", color: "gray.400" }}
-                  onClick={() => getTableData(message)}
+                  onClick={() =>
+                    handleExecute(
+                      `${BACKEND_URL}/execution_result/${execution_id}`,
+                      execution_id
+                    )
+                  }
                 >
                   Execute
                 </Button>

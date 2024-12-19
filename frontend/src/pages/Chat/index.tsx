@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useRef,
   useContext,
+  MouseEvent,
 } from "react";
 import useChat from "./useChat";
 import {
@@ -36,6 +37,7 @@ export type Message = {
   components?: MessageComponent[];
   newMessage?: boolean;
   session_id?: string;
+  execution_id: string;
 };
 
 export type MessageComponent = {
@@ -223,6 +225,31 @@ export function ChatBot({
     [input, sessionId]
   );
 
+  const handleExecute = async (url: string, executionId: string) => {
+    try {
+      const response = await getTableData(url);
+      if (response) {
+        const data = response.result;
+        const updatedMessages = messages.map((msg): Message => {
+          if (msg.execution_id === executionId) {
+            return {
+              ...msg,
+              message: data,
+              type: "table",
+              kind: "TABLE",
+            };
+          }
+          return msg;
+        });
+        setMessages(updatedMessages);
+      } else {
+        throw new Error("Response is undefined");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <VStack
       bg="gray.900"
@@ -259,7 +286,7 @@ export function ChatBot({
             <MemoizedMessage
               key={msg.id}
               msg={msg}
-              getTableData={getTableData}
+              handleExecute={handleExecute}
             />
           ))}
           {isFetching && <FetchingSkeleton />}

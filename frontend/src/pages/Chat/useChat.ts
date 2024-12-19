@@ -25,7 +25,7 @@ function useChat({ input, sessionId }: { input: string; sessionId: string }) {
       credentials: "include",
     });
 
-    console.log(response);
+    return response.json();
   }
 
   return { postChat, getTableData };
