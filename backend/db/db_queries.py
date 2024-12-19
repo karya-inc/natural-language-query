@@ -437,6 +437,26 @@ def get_execution_log(db_session: Session, execution_id: int) -> Optional[Execut
         raise e
 
 
+def get_recent_execution_for_query_id(
+    db_session: Session, sqid: str, status="SUCCESS"
+) -> ExecutionLog | None:
+    """
+    Get the most recent execution log for a query.
+    """
+    query_obj = get_query_by_id(db_session, sqid)
+    if not query_obj:
+        return None
+
+    execution_log = (
+        db_session.query(ExecutionLog)
+        .filter_by(query_id=query_obj.sqid, status=status)
+        .order_by(desc(ExecutionLog.created_at))
+        .first()
+    )
+
+    return execution_log
+
+
 def get_recent_execution_for_query(
     db_session: Session, sql_query: str, catalog_name: str
 ) -> ExecutionLog | None:
@@ -447,14 +467,7 @@ def get_recent_execution_for_query(
     if not query_obj:
         return None
 
-    execution_log = (
-        db_session.query(ExecutionLog)
-        .filter_by(query_id=query_obj.sqid, status="SUCCESS")
-        .order_by(desc(ExecutionLog.created_at))
-        .first()
-    )
-
-    return execution_log
+    return get_recent_execution_for_query_id(db_session, query_obj.sqid)
 
 
 class ExecutionLogResult(BaseModel):

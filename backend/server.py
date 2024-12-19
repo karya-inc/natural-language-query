@@ -9,7 +9,7 @@ load_dotenv()
 import os
 from typing import Annotated, Any, Optional, List
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException, Depends, Query
+from fastapi import Body, FastAPI, HTTPException, Depends, Query, Request
 from starlette.responses import StreamingResponse
 from auth.oauth import OAuth2Phase2Payload
 from dependencies.auth import (
@@ -35,6 +35,8 @@ from db.db_queries import (
     UserSessionsResponse,
     ExecutionLogResult,
     create_execution_entry,
+    get_recent_execution_for_query,
+    get_recent_execution_for_query_id,
 )
 from db.db_queries import (
     get_all_user_info,
@@ -264,11 +266,13 @@ async def get_saved_queries(
         )
 
 
-@app.post("/queries/{sqid}/execute")
+@app.get("/queries/{sqid}/execution")
+@app.post("/queries/{sqid}/execution")
 async def execute_saved_query(
     sqid: str,
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+    request: Request,
 ) -> dict[str, Any]:
     """
     Execute saved query
@@ -294,6 +298,13 @@ async def execute_saved_query(
         raise HTTPException(
             status_code=403, detail="User doesn't have access to this saved query."
         )
+
+    if request.method == "GET":
+        execution_log = get_recent_execution_for_query_id(db_session=db, sqid=sqid)
+        if execution_log:
+            return execution_log.to_dict()
+
+        raise HTTPException(status_code=404, detail="Execution log not found.")
 
     try:
         # Returning the StreamingResponse with the proper media type for SSE
