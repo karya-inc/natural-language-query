@@ -20,7 +20,7 @@ fi
 
 tmux new-session -d -s $SESSION_NAME
 tmux rename-window -t $SESSION_NAME:0 'editor'
-tmux send-keys -t 'editor' ". env/bin/activate" "$EDITOR ." C-m
+tmux send-keys -t 'editor' ". env/bin/activate" C-m "$EDITOR ." C-m
 
 tmux new-window -t $SESSION_NAME:1 -n 'server'
 tmux send-keys -t 'server' "cd $BACKEND_DIR" C-m ". env/bin/activate" C-m "uvicorn server:app --port=5500 --reload" C-m
