@@ -1,36 +1,25 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Message } from "../pages/Chat";
 import { BACKEND_URL } from "../config";
-import { RouteContext } from "../App";
 import { useParams } from "react-router-dom";
 
 const useChatHistory = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { sessionHistoryId, savedId } = useParams();
+  const [id, setId] = useState(sessionHistoryId ?? savedId);
   const [conversationStarted, setConversationStarted] = useState(false);
-  const { sessionId, setSessionId, savedQueryId, setSavedQueryId } =
-    useContext(RouteContext);
 
   useEffect(() => {
     if (sessionHistoryId) {
-      setSessionId(sessionHistoryId);
-      getChatHistory(
-        `${BACKEND_URL}/fetch_session_history/${
-          sessionId ? sessionId : sessionHistoryId
-        }`
-      );
       setConversationStarted(true);
+      getChatHistory(
+        `${BACKEND_URL}/fetch_session_history/${sessionHistoryId}`
+      );
     }
     if (savedId) {
-      setSavedQueryId(savedId);
-      getSavedQuery(
-        `${BACKEND_URL}/fetch_session_history/${
-          sessionId ? sessionId : sessionHistoryId
-        }`
-      );
       setConversationStarted(true);
     }
-  }, [sessionId]);
+  }, [id]);
 
   async function getChatHistory(url: string) {
     try {
@@ -54,6 +43,8 @@ const useChatHistory = () => {
     setConversationStarted,
     setMessages,
     getChatHistory,
+    id,
+    setId,
   };
 };
 

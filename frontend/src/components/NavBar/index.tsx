@@ -13,11 +13,11 @@ import {
 } from "@chakra-ui/react";
 import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
-import { redirect, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { BACKEND_URL, baseUrl } from "../../config";
-import { RouteContext } from "../../App";
+import { Message } from "../../pages/Chat";
 
 const NavBar = ({
   navOpen,
@@ -27,14 +27,18 @@ const NavBar = ({
   savedQueries,
   getSavedQueries,
   setConversationStarted,
+  setId,
+  setMessages,
 }: {
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
   history: { session_id: string; nlq: string }[];
   getHistory: (arg: string) => void;
-  savedQueries: { session_id: string; nlq: string }[];
+  savedQueries: { session_id: string; name: string }[];
   getSavedQueries: (arg: string) => void;
   setConversationStarted: (arg: boolean) => void;
+  setId: (arg: string) => void;
+  setMessages: (arg: Message[]) => void;
 }) => {
   const navigate = useNavigate();
   const chatHistoryStyles = {
@@ -51,16 +55,9 @@ const NavBar = ({
     getSavedQueries(`${BACKEND_URL}/queries`);
   }, []);
 
-  const { setSessionId, setSavedQueryId } = useContext(RouteContext);
-
-  function handleClick(type: string, session_id: string) {
+  function handleClick(session_id: string) {
+    setId(session_id);
     navigate(`${baseUrl}/session/${session_id}`);
-    setConversationStarted(true);
-    if (type === "history") {
-      setSessionId(session_id);
-    } else {
-      setSavedQueryId(session_id);
-    }
   }
 
   return (
@@ -82,7 +79,11 @@ const NavBar = ({
           bgClip="text"
           fontWeight="bold"
           gap={2}
-          onClick={() => redirect("/")}
+          onClick={() => {
+            navigate(baseUrl);
+            setConversationStarted(false);
+            setMessages([]);
+          }}
           cursor="pointer"
         >
           <CFImage cfsrc="karya-logo" boxSize={8} />
@@ -117,14 +118,14 @@ const NavBar = ({
             maxH="70vh"
             overflow="auto"
           >
-            {history && history.length > 0 ? (
+            {history.length > 0 ? (
               history.map((chat: { session_id: string; nlq: string }) => (
                 <Text
                   pl={2}
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() => handleClick("history", chat.session_id)}
+                  onClick={() => handleClick(chat.session_id)}
                 >
                   {chat.nlq}
                 </Text>
@@ -150,15 +151,15 @@ const NavBar = ({
             overflow="auto"
           >
             {savedQueries && savedQueries.length > 0 ? (
-              savedQueries.map((chat: { session_id: string; nlq: string }) => (
+              savedQueries.map((chat: { session_id: string; name: string }) => (
                 <Text
                   pl={2}
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() => handleClick("saved", chat.session_id)}
+                  onClick={() => handleClick(chat.session_id)}
                 >
-                  {chat.nlq}
+                  {chat.name}
                 </Text>
               ))
             ) : (

@@ -1,4 +1,4 @@
-function useChat({ input, sessionId }: { input: string; sessionId: string }) {
+function useChat({ input, id }: { input: string; id: string }) {
   async function postChat(url: string) {
     const response = await fetch(url, {
       method: "POST",
@@ -8,7 +8,7 @@ function useChat({ input, sessionId }: { input: string; sessionId: string }) {
       credentials: "include",
       body: JSON.stringify({
         query: input,
-        session_id: sessionId,
+        session_id: id,
       }),
     });
 
@@ -25,7 +25,7 @@ function useChat({ input, sessionId }: { input: string; sessionId: string }) {
       credentials: "include",
     });
 
-    console.log(response);
+    return response.json();
   }
 
   return { postChat, getTableData };

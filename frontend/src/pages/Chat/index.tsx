@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useContext,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import useChat from "./useChat";
 import {
   VStack,
@@ -23,7 +17,6 @@ import BotGreeting from "../../components/BotGreeting";
 import CFImage from "../../components/CloudflareImage";
 import { BACKEND_URL } from "../../config";
 import MemoizedMessage from "../../components/MemoizedMessage";
-import { RouteContext } from "../../App";
 
 export type Message = {
   id: number;
@@ -36,6 +29,9 @@ export type Message = {
   components?: MessageComponent[];
   newMessage?: boolean;
   session_id?: string;
+  execution_id: string;
+  sql_query_id?: string;
+  turn_id?: string;
 };
 
 export type MessageComponent = {
@@ -60,6 +56,8 @@ export type ChatBotProps = {
   setNavOpen: (arg: boolean) => void;
   conversationStarted: boolean;
   setConversationStarted: (arg: boolean) => void;
+  id: string;
+  setId: (arg: string) => void;
 };
 
 export type NLQUpdateEvent = (
@@ -80,6 +78,8 @@ export type NLQUpdateEvent = (
     }
 ) & {
   session_id: string;
+  sql_query_id?: string;
+  turn_id?: string;
 };
 
 export function ChatBot({
@@ -90,15 +90,14 @@ export function ChatBot({
   setNavOpen,
   conversationStarted,
   setConversationStarted,
+  id,
+  setId,
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLInputElement>(null);
-  const { sessionId, savedQueryId, setSessionId, setSavedQueryId } =
-    useContext(RouteContext);
-
-  const { postChat, getTableData } = useChat({ input, sessionId });
+  const { postChat, getTableData } = useChat({ input, id });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,6 +121,12 @@ export function ChatBot({
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      if (conversationStarted === false)
+        setHistory((prevHistory) => [
+          { session_id: id, nlq: input },
+          ...prevHistory,
+        ]);
+
       if (!input.trim()) return;
 
       const newMessage: Message = {
@@ -130,6 +135,7 @@ export function ChatBot({
         type: "text",
         role: "user",
         timestamp: Date.now(),
+        execution_id: "",
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -142,10 +148,13 @@ export function ChatBot({
         message: "",
         role: "bot",
         timestamp: Date.now(),
+        execution_id: "",
+        sql_query_id: "",
+        turn_id: "",
       };
 
       try {
-        let updatedSessionId = sessionId;
+        let updatedSessionId = id;
 
         const reader = await postChat(`${BACKEND_URL}/chat`);
 
@@ -176,6 +185,8 @@ export function ChatBot({
                   botMessage.query = parsedChunk.query;
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
+                  botMessage.sql_query_id = parsedChunk.sql_query_id;
+                  botMessage.turn_id = parsedChunk.turn_id;
                 } else if (parsedChunk.type === "ERROR") {
                   botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";
@@ -198,12 +209,7 @@ export function ChatBot({
             }
           }
         }
-        setHistory((prevHistory) => [
-          { session_id: updatedSessionId, nlq: input },
-          ...prevHistory,
-        ]);
-
-        setSessionId(updatedSessionId);
+        setId(updatedSessionId);
       } catch (error) {
         console.error("Failed to fetch response", error);
         botMessage.message = "Failed to fetch response";
@@ -220,8 +226,45 @@ export function ChatBot({
         });
       }
     },
-    [input, sessionId]
+    [input, id]
   );
+
+  const handleExecute = async (url: string, executionId: string) => {
+    try {
+      const response = await getTableData(url);
+      const data = response.result;
+      if (data.length > 0) {
+        const updatedMessages = messages.map((msg): Message => {
+          if (msg.execution_id === executionId) {
+            return {
+              ...msg,
+              message: data,
+              type: "table",
+              kind: "TABLE",
+            };
+          }
+          return msg;
+        });
+        setMessages(updatedMessages);
+      } else {
+        const updatedMessages = messages.map((msg): Message => {
+          if (msg.execution_id === executionId) {
+            return {
+              ...msg,
+              message: "No data found",
+              type: "error",
+              kind: "TEXT",
+            };
+          }
+          return msg;
+        });
+        setMessages(updatedMessages);
+        throw new Error("No data found");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <VStack
@@ -259,7 +302,7 @@ export function ChatBot({
             <MemoizedMessage
               key={msg.id}
               msg={msg}
-              getTableData={getTableData}
+              handleExecute={handleExecute}
             />
           ))}
           {isFetching && <FetchingSkeleton />}
