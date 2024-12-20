@@ -52,8 +52,6 @@ const useNavBar = (title?: string, description?: string) => {
         body: JSON.stringify({ name: title, description }),
       });
       const data = await response.json();
-      console.log(data);
-
       setSavedQueries((prev) => [data, ...prev]);
       console.log(data);
     } catch (error) {

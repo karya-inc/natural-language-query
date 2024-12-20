@@ -15,9 +15,10 @@ import { GoSidebarExpand } from "react-icons/go";
 import "./index.css";
 import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
+import { SavedQueryContext } from "../../layouts/RootLayout";
 
 const NavBar = ({
   navOpen,
@@ -34,13 +35,14 @@ const NavBar = ({
   setNavOpen: (arg: boolean) => void;
   history: { session_id: string; nlq: string }[];
   getHistory: (arg: string) => void;
-  savedQueries: { session_id: string; name: string }[];
+  savedQueries: { sql_query_id: string; name: string }[];
   getSavedQueries: (arg: string) => void;
   setConversationStarted: (arg: boolean) => void;
   setId: (arg: string) => void;
   setMessages: (arg: Message[]) => void;
 }) => {
   const navigate = useNavigate();
+  const { setSavedQueryDetails } = useContext(SavedQueryContext);
   const chatHistoryStyles = {
     ":hover": {
       background: "gray.700",
@@ -55,9 +57,19 @@ const NavBar = ({
     getSavedQueries(`${BACKEND_URL}/queries`);
   }, []);
 
-  function handleClick(session_id: string) {
-    setId(session_id);
-    navigate(`${baseUrl}/session/${session_id}`);
+  function handleHistory(id: string) {
+    setId(id);
+    navigate(`${baseUrl}/session/${id}`);
+  }
+
+  function handleSavedQuery(id: {
+    title: string;
+    description: string;
+    sql_query_id: string;
+  }) {
+    setId(id.sql_query_id);
+    setSavedQueryDetails(id);
+    navigate(`${baseUrl}/saved/${id.sql_query_id}`);
   }
 
   return (
@@ -125,7 +137,7 @@ const NavBar = ({
                   key={chat.session_id}
                   py={3}
                   sx={chatHistoryStyles}
-                  onClick={() => handleClick(chat.session_id)}
+                  onClick={() => handleHistory(chat.session_id)}
                 >
                   {chat.nlq}
                 </Text>
@@ -151,17 +163,25 @@ const NavBar = ({
             overflow="auto"
           >
             {savedQueries && savedQueries.length > 0 ? (
-              savedQueries.map((chat: { session_id: string; name: string }) => (
-                <Text
-                  pl={2}
-                  key={chat.session_id}
-                  py={3}
-                  sx={chatHistoryStyles}
-                  onClick={() => handleClick(chat.session_id)}
-                >
-                  {chat.name}
-                </Text>
-              ))
+              savedQueries.map(
+                (chat: { sql_query_id: string; name: string }) => (
+                  <Text
+                    pl={2}
+                    key={chat.sql_query_id}
+                    py={3}
+                    sx={chatHistoryStyles}
+                    onClick={() =>
+                      handleSavedQuery({
+                        title: chat.name,
+                        description: chat.description,
+                        sql_query_id: chat.sql_query_id,
+                      })
+                    }
+                  >
+                    {chat.name}
+                  </Text>
+                )
+              )
             ) : (
               <Text fontSize="sm" pl={2}>
                 No saved queries yet.

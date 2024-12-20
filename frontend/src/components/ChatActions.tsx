@@ -24,9 +24,10 @@ import { AiOutlineLike } from "react-icons/ai";
 import { AiOutlineDislike } from "react-icons/ai";
 import { downloadObjectAs } from "../pages/Chat/utils";
 import { Message } from "../pages/Chat";
-import { useState, useRef, forwardRef } from "react";
+import { useState, useRef, forwardRef, useContext } from "react";
 import useNavBar from "./NavBar/useNavBar";
 import { BACKEND_URL } from "../config";
+import { SavedQueryContext } from "../layouts/RootLayout";
 
 interface TextInputProps {
   label: string;
@@ -235,15 +236,16 @@ const Form = ({
   sql_query_id?: string;
   turn_id?: string;
 }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const { savedQueryDetails, setSavedQueryDetails } =
+    useContext(SavedQueryContext);
+
+  const { title, description } = savedQueryDetails;
   const { postSavedQuery } = useNavBar(title, description);
 
   function handleSave() {
     postSavedQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
     onCancel();
-    setTitle("");
-    setDescription("");
+    setSavedQueryDetails({ title: "", description: "", sql_query_id: "" });
   }
 
   return (
@@ -253,21 +255,31 @@ const Form = ({
         id="title"
         ref={firstFieldRef}
         value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        onChange={(e) =>
+          setSavedQueryDetails({ ...savedQueryDetails, title: e.target.value })
+        }
       />
       <TextInput
         label="Description"
         id="description"
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={(e) =>
+          setSavedQueryDetails({
+            ...savedQueryDetails,
+            description: e.target.value,
+          })
+        }
       />
       <ButtonGroup display="flex" justifyContent="flex-end">
         <Button
           variant="solid"
           onClick={() => {
             onCancel();
-            setTitle("");
-            setDescription("");
+            setSavedQueryDetails({
+              title: "",
+              description: "",
+              sql_query_id: "",
+            });
           }}
         >
           Cancel
