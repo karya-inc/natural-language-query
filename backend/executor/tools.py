@@ -6,13 +6,24 @@ from db.models import Turn
 from rbac.check_permissions import ErrorCode, PrivilageCheckResult
 
 from executor.errors import UnRecoverableError
-from executor.models import GeneratedQuery, HealedQuery, IsQueryRelevant, QueryType, QueryTypeLiteral, QuestionAnsweringResult, RelevantCatalog, RelevantTables, NLQIntent
+from executor.models import (
+    GeneratedQuery,
+    HealedQuery,
+    IsQueryRelevant,
+    QueryType,
+    QueryTypeLiteral,
+    QuestionAnsweringResult,
+    RelevantCatalog,
+    RelevantTables,
+    NLQIntent,
+)
 from executor.state import AgentState
 from executor.models import QueryResults
 from executor.catalog import Catalog
 from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
+from utils.rows_to_json import json_serial
 from utils.table_to_markdown import get_table_markdown
 
 logger = get_logger("[AGENTIC TOOLS]")
@@ -159,7 +170,7 @@ class AgentTools(ABC):
 
             database_info.append(catalog_info)
 
-        database_info_json = json.dumps(database_info)
+        database_info_json = json.dumps(database_info, default=json_serial)
 
         system_prompt = """
         You are a highly experienced SQL Expert with over 10 years of expertise. You are provided with a catalog containing metadata about various databases, including descriptions, table names, and column names. Your task is to analyze user queries to understand their intent and determine whether the required data can be retrieved from a single database or if multiple databases are needed.
@@ -420,7 +431,7 @@ class AgentTools(ABC):
                 case ErrorCode.MISSING_TABLE_NAME_PREFIX:
                     system_prompt += f"""
                     Your task is to ensure that all columns in the query are prefixed with the table name to avoid
-                    ambiguity about the table the column orignates from.
+                    ambiguity about the table the column originates from.
                     Example:
 
                     Assuming the following tables:
@@ -432,7 +443,7 @@ class AgentTools(ABC):
                          select name from employees where employees.salary > 1000
                          select name from employees where salary > 1000
                          select employees.name, departments.name as dept_name join departments on departments.id = dept_id from employees where employees.salary > 1000
-                   
+
                     The following queries are allowed:
                          select employees.name from employees where employees.salary > 1000
                          select employees.name from employees join departments on departments.id = employees.dept_id where employees.salary > 1000
@@ -471,7 +482,7 @@ class AgentTools(ABC):
                     Your task is to add where clauses to the query to restrict the rows that the role has access to.
                     A column scope defines the filters/restrictions that are applied to a column to restrict the rows that a role has access to.
 
-                    Privilages defined for the tables are as follows
+                    Privileges defined for the tables are as follows
                     {parsed_catalogs.database_privileges}
                     """
 
@@ -561,7 +572,7 @@ class AgentTools(ABC):
         Make sure the query is distint from the original query and serves the same purpose. Also make sure the query answers the
         user's intent
 
-        Schems for the tables are as follows:
+        Schemes for the tables are as follows:
         ```json
         {catalog.schema}
         ```
