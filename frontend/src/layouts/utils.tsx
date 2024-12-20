@@ -42,7 +42,6 @@ const useChatHistory = () => {
     conversationStarted,
     setConversationStarted,
     setMessages,
-    getChatHistory,
     id,
     setId,
   };
