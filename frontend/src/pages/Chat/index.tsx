@@ -49,8 +49,8 @@ export type ChatBotProps = {
     arg:
       | { session_id: string; nlq: string }[]
       | ((
-          prevHistory: { session_id: string; nlq: string }[]
-        ) => { session_id: string; nlq: string }[])
+        prevHistory: { session_id: string; nlq: string }[]
+      ) => { session_id: string; nlq: string }[])
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -62,20 +62,20 @@ export type ChatBotProps = {
 
 export type NLQUpdateEvent = (
   | {
-      kind: "UPDATE";
-      status: string;
-    }
+    kind: "UPDATE";
+    status: string;
+  }
   | {
-      kind: "RESPONSE";
-      type: "TEXT" | "ERROR";
-      payload: string;
-    }
+    kind: "RESPONSE";
+    type: "TEXT" | "ERROR";
+    payload: string;
+  }
   | {
-      kind: "RESPONSE";
-      type: "TABLE";
-      payload: Record<string, string>[];
-      query: string;
-    }
+    kind: "RESPONSE";
+    type: "TABLE";
+    payload: Record<string, string>[];
+    query: string;
+  }
 ) & {
   session_id: string;
   sql_query_id?: string;
@@ -104,6 +104,7 @@ export function ChatBot({
   }, []);
 
   useEffect(() => {
+    console.log("Messages")
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
@@ -298,9 +299,9 @@ export function ChatBot({
           py={12}
           gap={10}
         >
-          {messages.map((msg) => (
+          {messages.map((msg, index) => (
             <MemoizedMessage
-              key={msg.id}
+              key={index}
               msg={msg}
               handleExecute={handleExecute}
             />
