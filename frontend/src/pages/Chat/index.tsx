@@ -30,6 +30,8 @@ export type Message = {
   newMessage?: boolean;
   session_id?: string;
   execution_id: string;
+  sql_query_id?: string;
+  turn_id?: string;
 };
 
 export type MessageComponent = {
@@ -76,6 +78,8 @@ export type NLQUpdateEvent = (
     }
 ) & {
   session_id: string;
+  sql_query_id?: string;
+  turn_id?: string;
 };
 
 export function ChatBot({
@@ -145,6 +149,8 @@ export function ChatBot({
         role: "bot",
         timestamp: Date.now(),
         execution_id: "",
+        sql_query_id: "",
+        turn_id: "",
       };
 
       try {
@@ -179,6 +185,8 @@ export function ChatBot({
                   botMessage.query = parsedChunk.query;
                   botMessage.type = "table";
                   botMessage.kind = "TABLE";
+                  botMessage.sql_query_id = parsedChunk.sql_query_id;
+                  botMessage.turn_id = parsedChunk.turn_id;
                 } else if (parsedChunk.type === "ERROR") {
                   botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";

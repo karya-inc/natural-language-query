@@ -32,6 +32,7 @@ class NLQResponseEvent:
     query: Optional[str] = None
     sql_query_id: Optional[str] = None
     execution_id: Optional[int] = None
+    turn_id: Optional[int] = None
 
 
 async def nlq_sse_wrapper(
@@ -109,6 +110,7 @@ async def do_nlq(
             session_id=str(session.session_id),
             query=result.query,
             sql_query_id=result.execution_log.query_id,
+            turn_id=turn.turn_id
         )
 
     if isinstance(result, AgenticLoopQuestionAnsweringResult):
@@ -116,7 +118,9 @@ async def do_nlq(
             kind="RESPONSE",
             type="TEXT",
             payload=result.answer,
+            sql_query_id=result.execution_log.query_id,
             session_id=str(session.session_id),
+            turn_id=turn.turn_id
         )
 
     if isinstance(result, AgenticLoopFailure):
@@ -125,6 +129,8 @@ async def do_nlq(
             type="ERROR",
             payload=result.reason,
             session_id=str(session.session_id),
+            sql_query_id=result.execution_log.query_id,
+            turn_id=turn.turn_id
         )
 
     logger.info("NLQ Completed")

@@ -25,6 +25,8 @@ import { AiOutlineDislike } from "react-icons/ai";
 import { downloadObjectAs } from "../pages/Chat/utils";
 import { Message } from "../pages/Chat";
 import { useState, useRef, forwardRef } from "react";
+import useNavBar from "./NavBar/useNavBar";
+import { BACKEND_URL } from "../config";
 
 interface TextInputProps {
   label: string;
@@ -35,7 +37,7 @@ interface TextInputProps {
 }
 
 const ChatActions = ({ msg }: { msg: Message }) => {
-  const { message, role, type, kind, query } = msg;
+  const { message, role, type, kind, query, sql_query_id, turn_id } = msg;
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
   const { onOpen, onClose, isOpen } = useDisclosure();
@@ -46,7 +48,6 @@ const ChatActions = ({ msg }: { msg: Message }) => {
     const date = today.getDate();
     const month = today.getMonth() + 1;
     const year = today.getFullYear();
-
     downloadObjectAs(report, `Table-${year}-${month}-${date}.csv`, "csv");
   };
 
@@ -175,7 +176,12 @@ const ChatActions = ({ msg }: { msg: Message }) => {
             <FocusLock persistentFocus={false}>
               <PopoverArrow bg={"gray.700"} />
               <PopoverCloseButton />
-              <Form firstFieldRef={firstFieldRef} onCancel={onClose} />
+              <Form
+                firstFieldRef={firstFieldRef}
+                onCancel={onClose}
+                sql_query_id={sql_query_id}
+                turn_id={turn_id}
+              />
             </FocusLock>
           </PopoverContent>
         </Popover>
@@ -221,12 +227,25 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
 const Form = ({
   firstFieldRef,
   onCancel,
+  sql_query_id,
+  turn_id,
 }: {
   firstFieldRef: React.RefObject<HTMLInputElement>;
   onCancel: () => void;
+  sql_query_id?: string;
+  turn_id?: string;
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const { postSavedQuery } = useNavBar(title, description);
+
+  function handleSave() {
+    postSavedQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
+    onCancel();
+    setTitle("");
+    setDescription("");
+  }
+
   return (
     <Stack spacing={4}>
       <TextInput
@@ -243,10 +262,19 @@ const Form = ({
         onChange={(e) => setDescription(e.target.value)}
       />
       <ButtonGroup display="flex" justifyContent="flex-end">
-        <Button variant="solid" onClick={onCancel}>
+        <Button
+          variant="solid"
+          onClick={() => {
+            onCancel();
+            setTitle("");
+            setDescription("");
+          }}
+        >
           Cancel
         </Button>
-        <Button colorScheme="teal">Save</Button>
+        <Button colorScheme="teal" onClick={handleSave}>
+          Save
+        </Button>
       </ButtonGroup>
     </Stack>
   );

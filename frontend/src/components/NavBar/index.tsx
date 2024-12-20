@@ -34,7 +34,7 @@ const NavBar = ({
   setNavOpen: (arg: boolean) => void;
   history: { session_id: string; nlq: string }[];
   getHistory: (arg: string) => void;
-  savedQueries: { session_id: string; nlq: string }[];
+  savedQueries: { session_id: string; name: string }[];
   getSavedQueries: (arg: string) => void;
   setConversationStarted: (arg: boolean) => void;
   setId: (arg: string) => void;
@@ -151,7 +151,7 @@ const NavBar = ({
             overflow="auto"
           >
             {savedQueries && savedQueries.length > 0 ? (
-              savedQueries.map((chat: { session_id: string; nlq: string }) => (
+              savedQueries.map((chat: { session_id: string; name: string }) => (
                 <Text
                   pl={2}
                   key={chat.session_id}
@@ -159,7 +159,7 @@ const NavBar = ({
                   sx={chatHistoryStyles}
                   onClick={() => handleClick(chat.session_id)}
                 >
-                  {chat.nlq}
+                  {chat.name}
                 </Text>
               ))
             ) : (

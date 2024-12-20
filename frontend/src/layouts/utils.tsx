@@ -10,19 +10,15 @@ const useChatHistory = () => {
   const [conversationStarted, setConversationStarted] = useState(false);
 
   useEffect(() => {
-    setMessages([]);
     if (sessionHistoryId) {
       setConversationStarted(true);
       getChatHistory(
         `${BACKEND_URL}/fetch_session_history/${sessionHistoryId}`
       );
     }
-    // if (savedId) {
-    //   setConversationStarted(true);
-    //   getSavedQuery(
-    //     `${BACKEND_URL}/fetch_session_history/${id ? id : sessionHistoryId}`
-    //   );
-    // }
+    if (savedId) {
+      setConversationStarted(true);
+    }
   }, [id]);
 
   async function getChatHistory(url: string) {
