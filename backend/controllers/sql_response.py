@@ -4,7 +4,11 @@ from db.models import SavedQuery, User, UserSession
 from dependencies.auth import AuthenticatedUserInfo
 from executor.config import AgentConfig
 from executor.core import NLQExecutor
-from executor.loop import AgenticLoopFailure, AgenticLoopQueryResult, AgenticLoopQuestionAnsweringResult
+from executor.loop import (
+    AgenticLoopFailure,
+    AgenticLoopQueryResult,
+    AgenticLoopQuestionAnsweringResult,
+)
 from executor.status import AgentStatus
 from agents.azure_openai import AzureAIAgentTools
 from utils.logger import get_logger
@@ -110,7 +114,7 @@ async def do_nlq(
             session_id=str(session.session_id),
             query=result.query,
             sql_query_id=result.execution_log.query_id,
-            turn_id=turn.turn_id
+            turn_id=turn.turn_id,
         )
 
     if isinstance(result, AgenticLoopQuestionAnsweringResult):
@@ -118,9 +122,7 @@ async def do_nlq(
             kind="RESPONSE",
             type="TEXT",
             payload=result.answer,
-            sql_query_id=result.execution_log.query_id,
             session_id=str(session.session_id),
-            turn_id=turn.turn_id
         )
 
     if isinstance(result, AgenticLoopFailure):
@@ -129,8 +131,6 @@ async def do_nlq(
             type="ERROR",
             payload=result.reason,
             session_id=str(session.session_id),
-            sql_query_id=result.execution_log.query_id,
-            turn_id=turn.turn_id
         )
 
     logger.info("NLQ Completed")
