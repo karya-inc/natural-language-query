@@ -49,8 +49,8 @@ export type ChatBotProps = {
     arg:
       | { session_id: string; nlq: string }[]
       | ((
-        prevHistory: { session_id: string; nlq: string }[]
-      ) => { session_id: string; nlq: string }[])
+          prevHistory: { session_id: string; nlq: string }[]
+        ) => { session_id: string; nlq: string }[])
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
@@ -62,20 +62,20 @@ export type ChatBotProps = {
 
 export type NLQUpdateEvent = (
   | {
-    kind: "UPDATE";
-    status: string;
-  }
+      kind: "UPDATE";
+      status: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TEXT" | "ERROR";
-    payload: string;
-  }
+      kind: "RESPONSE";
+      type: "TEXT" | "ERROR";
+      payload: string;
+    }
   | {
-    kind: "RESPONSE";
-    type: "TABLE";
-    payload: Record<string, string>[];
-    query: string;
-  }
+      kind: "RESPONSE";
+      type: "TABLE";
+      payload: Record<string, string>[];
+      query: string;
+    }
 ) & {
   session_id: string;
   sql_query_id?: string;
@@ -104,7 +104,6 @@ export function ChatBot({
   }, []);
 
   useEffect(() => {
-    console.log("Messages")
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
@@ -156,9 +155,7 @@ export function ChatBot({
 
       try {
         let updatedSessionId = id;
-
         const reader = await postChat(`${BACKEND_URL}/chat`);
-
         const decoder = new TextDecoder();
         let done = false;
 
@@ -182,12 +179,18 @@ export function ChatBot({
                   botMessage.type = "text";
                   botMessage.kind = "TEXT";
                 } else if (parsedChunk.type === "TABLE") {
-                  botMessage.message = parsedChunk.payload;
-                  botMessage.query = parsedChunk.query;
-                  botMessage.type = "table";
-                  botMessage.kind = "TABLE";
-                  botMessage.sql_query_id = parsedChunk.sql_query_id;
-                  botMessage.turn_id = parsedChunk.turn_id;
+                  if (parsedChunk.payload.length === 0) {
+                    botMessage.message = "No data found";
+                    botMessage.type = "error";
+                    botMessage.kind = "TEXT";
+                  } else {
+                    botMessage.message = parsedChunk.payload;
+                    botMessage.query = parsedChunk.query;
+                    botMessage.type = "table";
+                    botMessage.kind = "TABLE";
+                    botMessage.sql_query_id = parsedChunk.sql_query_id;
+                    botMessage.turn_id = parsedChunk.turn_id;
+                  }
                 } else if (parsedChunk.type === "ERROR") {
                   botMessage.message = parsedChunk.payload;
                   botMessage.type = "error";

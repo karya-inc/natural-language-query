@@ -27,7 +27,7 @@ import { Message } from "../pages/Chat";
 import { useState, useRef, forwardRef, useContext } from "react";
 import useNavBar from "./NavBar/useNavBar";
 import { BACKEND_URL } from "../config";
-import { SavedQueryContext } from "../layouts/RootLayout";
+import { SavedQueryContext } from "./NavBar/utils";
 
 interface TextInputProps {
   label: string;
@@ -236,16 +236,15 @@ const Form = ({
   sql_query_id?: string;
   turn_id?: string;
 }) => {
-  const { savedQueryDetails, setSavedQueryDetails } =
-    useContext(SavedQueryContext);
+  const { savedQueryData, setSavedQueryData } = useContext(SavedQueryContext);
 
-  const { title, description } = savedQueryDetails;
-  const { postSavedQuery } = useNavBar(title, description);
+  const { title, description } = savedQueryData;
+  const { saveQuery } = useNavBar(title, description);
 
   function handleSave() {
-    postSavedQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
+    saveQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
     onCancel();
-    setSavedQueryDetails({ title: "", description: "", sql_query_id: "" });
+    setSavedQueryData({ title: "", description: "", sql_query_id: "" });
   }
 
   return (
@@ -256,7 +255,7 @@ const Form = ({
         ref={firstFieldRef}
         value={title}
         onChange={(e) =>
-          setSavedQueryDetails({ ...savedQueryDetails, title: e.target.value })
+          setSavedQueryData({ ...savedQueryData, title: e.target.value })
         }
       />
       <TextInput
@@ -264,8 +263,8 @@ const Form = ({
         id="description"
         value={description}
         onChange={(e) =>
-          setSavedQueryDetails({
-            ...savedQueryDetails,
+          setSavedQueryData({
+            ...savedQueryData,
             description: e.target.value,
           })
         }
@@ -275,7 +274,7 @@ const Form = ({
           variant="solid"
           onClick={() => {
             onCancel();
-            setSavedQueryDetails({
+            setSavedQueryData({
               title: "",
               description: "",
               sql_query_id: "",

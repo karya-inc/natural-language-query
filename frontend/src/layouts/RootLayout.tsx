@@ -2,42 +2,13 @@ import { HStack } from "@chakra-ui/react";
 import ErrorBoundary from "../components/ErrorBoundary";
 import NavBar from "../components/NavBar";
 import { ChatBot } from "../pages/Chat";
-import { createContext, useState } from "react";
 import useChatHistory from "./utils";
 import useNavBar from "../components/NavBar/useNavBar";
 import { useParams } from "react-router-dom";
 import SavedQuery from "../components/SavedQuery";
-
-export const SavedQueryContext = createContext<{
-  savedQueryDetails: {
-    title: string;
-    description: string;
-    sql_query_id: string;
-  };
-  setSavedQueryDetails: React.Dispatch<
-    React.SetStateAction<{
-      title: string;
-      description: string;
-      sql_query_id: string;
-    }>
-  >;
-}>({
-  savedQueryDetails: {
-    title: "",
-    description: "",
-    sql_query_id: "",
-  },
-  setSavedQueryDetails: () => {},
-});
+import { SavedQueryContext } from "../components/NavBar/utils";
 
 const RootLayout = () => {
-  const [navOpen, setNavOpen] = useState(true);
-  const [savedQueryDetails, setSavedQueryDetails] = useState({
-    title: "",
-    description: "",
-    sql_query_id: "",
-  });
-
   const {
     messages,
     setMessages,
@@ -46,10 +17,24 @@ const RootLayout = () => {
     id,
     setId,
   } = useChatHistory();
-  const { history, setHistory, getHistory, savedQueries, getSavedQueries } =
-    useNavBar();
 
-  const { sessionHistoryId } = useParams();
+  const {
+    history,
+    setHistory,
+    getAllHistory,
+    savedQueries,
+    getAllSavedQueries,
+    navOpen,
+    setNavOpen,
+    savedQueryData,
+    setSavedQueryData,
+    getSavedQueryTableData,
+    postQueryToGetId,
+    savedQueryTableData,
+    setSavedQueryTableData,
+  } = useNavBar();
+
+  const { savedId } = useParams();
 
   return (
     <ErrorBoundary
@@ -57,24 +42,34 @@ const RootLayout = () => {
         <div>Something went wrong in the layout. Please refresh the page.</div>
       }
     >
-      <SavedQueryContext.Provider
-        value={{ savedQueryDetails, setSavedQueryDetails }}
-      >
+      <SavedQueryContext.Provider value={{ savedQueryData, setSavedQueryData }}>
         <HStack gap={0} h="100vh" position={{ base: "relative" }}>
           {navOpen && (
             <NavBar
               navOpen={navOpen}
               setNavOpen={setNavOpen}
               history={history}
-              getHistory={getHistory}
+              getAllHistory={getAllHistory}
               savedQueries={savedQueries}
-              getSavedQueries={getSavedQueries}
+              getAllSavedQueries={getAllSavedQueries}
               setConversationStarted={setConversationStarted}
               setId={setId}
               setMessages={setMessages}
+              setSavedQueryData={setSavedQueryData}
             />
           )}
-          {sessionHistoryId ? (
+
+          {savedId ? (
+            <SavedQuery
+              savedQueryData={savedQueryData}
+              navOpen={navOpen}
+              setNavOpen={setNavOpen}
+              getSavedQueryTableData={getSavedQueryTableData}
+              postQueryToGetId={postQueryToGetId}
+              savedQueryTableData={savedQueryTableData}
+              setSavedQueryTableData={setSavedQueryTableData}
+            />
+          ) : (
             <ChatBot
               messages={messages}
               setMessages={setMessages}
@@ -86,8 +81,6 @@ const RootLayout = () => {
               id={id ?? ""}
               setId={setId}
             />
-          ) : (
-            <SavedQuery />
           )}
         </HStack>
       </SavedQueryContext.Provider>

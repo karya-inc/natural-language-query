@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Box,
   Flex,
@@ -12,37 +13,53 @@ import {
   AccordionIcon,
 } from "@chakra-ui/react";
 import { GoSidebarExpand } from "react-icons/go";
-import "./index.css";
 import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
-import { useContext, useEffect } from "react";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
-import { SavedQueryContext } from "../../layouts/RootLayout";
+
+type HistoryItem = {
+  session_id: string;
+  nlq: string;
+};
+
+type SavedQuery = {
+  sql_query_id: string;
+  name: string;
+  description: string;
+};
+
+type NavBarProps = {
+  navOpen: boolean;
+  setNavOpen: (arg: boolean) => void;
+  history: HistoryItem[];
+  getAllHistory: (url: string) => void;
+  savedQueries: SavedQuery[];
+  getAllSavedQueries: (url: string) => void;
+  setConversationStarted: (arg: boolean) => void;
+  setId: (arg: string) => void;
+  setMessages: (arg: Message[]) => void;
+  setSavedQueryData: (arg: {
+    title: string;
+    description: string;
+    sql_query_id: string;
+  }) => void;
+};
 
 const NavBar = ({
   navOpen,
   setNavOpen,
   history,
-  getHistory,
+  getAllHistory,
   savedQueries,
-  getSavedQueries,
+  getAllSavedQueries,
   setConversationStarted,
   setId,
   setMessages,
-}: {
-  navOpen: boolean;
-  setNavOpen: (arg: boolean) => void;
-  history: { session_id: string; nlq: string }[];
-  getHistory: (arg: string) => void;
-  savedQueries: { sql_query_id: string; name: string }[];
-  getSavedQueries: (arg: string) => void;
-  setConversationStarted: (arg: boolean) => void;
-  setId: (arg: string) => void;
-  setMessages: (arg: Message[]) => void;
-}) => {
+  setSavedQueryData,
+}: NavBarProps) => {
   const navigate = useNavigate();
-  const { setSavedQueryDetails } = useContext(SavedQueryContext);
+
   const chatHistoryStyles = {
     ":hover": {
       background: "gray.700",
@@ -53,24 +70,24 @@ const NavBar = ({
   };
 
   useEffect(() => {
-    getHistory(`${BACKEND_URL}/fetch_history`);
-    getSavedQueries(`${BACKEND_URL}/queries`);
+    getAllHistory(`${BACKEND_URL}/fetch_history`);
+    getAllSavedQueries(`${BACKEND_URL}/queries`);
   }, []);
 
-  function handleHistory(id: string) {
+  const handleHistory = (id: string) => {
     setId(id);
     navigate(`${baseUrl}/session/${id}`);
-  }
+  };
 
-  function handleSavedQuery(id: {
-    title: string;
-    description: string;
-    sql_query_id: string;
-  }) {
-    setId(id.sql_query_id);
-    setSavedQueryDetails(id);
-    navigate(`${baseUrl}/saved/${id.sql_query_id}`);
-  }
+  const handleSavedQuery = (query: SavedQuery) => {
+    setId(query.sql_query_id);
+    setSavedQueryData({
+      title: query.name,
+      description: query.description,
+      sql_query_id: query.sql_query_id,
+    });
+    navigate(`${baseUrl}/saved/${query.sql_query_id}`);
+  };
 
   return (
     <VStack
@@ -110,13 +127,7 @@ const NavBar = ({
           onClick={() => setNavOpen(!navOpen)}
         />
       </HStack>
-      <Accordion
-        defaultIndex={[0]}
-        allowToggle
-        w="full"
-        color="gray.400"
-        flex={1}
-      >
+      <Accordion allowToggle w="full" color="gray.400" flex={1}>
         <AccordionItem border={"none"}>
           <AccordionButton>
             <AccordionIcon />
@@ -131,10 +142,10 @@ const NavBar = ({
             overflow="auto"
           >
             {history.length > 0 ? (
-              history.map((chat: { session_id: string; nlq: string }) => (
+              history.map((chat, index) => (
                 <Text
                   pl={2}
-                  key={chat.session_id}
+                  key={`${chat.session_id}-${index}`}
                   py={3}
                   sx={chatHistoryStyles}
                   onClick={() => handleHistory(chat.session_id)}
@@ -149,6 +160,7 @@ const NavBar = ({
             )}
           </AccordionPanel>
         </AccordionItem>
+
         <AccordionItem border={"none"}>
           <AccordionButton>
             <AccordionIcon />
@@ -159,29 +171,21 @@ const NavBar = ({
           <AccordionPanel
             display="flex"
             flexDirection="column"
-            h="70vh"
+            maxH="70vh"
             overflow="auto"
           >
-            {savedQueries && savedQueries.length > 0 ? (
-              savedQueries.map(
-                (chat: { sql_query_id: string; name: string }) => (
-                  <Text
-                    pl={2}
-                    key={chat.sql_query_id}
-                    py={3}
-                    sx={chatHistoryStyles}
-                    onClick={() =>
-                      handleSavedQuery({
-                        title: chat.name,
-                        description: chat.description,
-                        sql_query_id: chat.sql_query_id,
-                      })
-                    }
-                  >
-                    {chat.name}
-                  </Text>
-                )
-              )
+            {savedQueries.length > 0 ? (
+              savedQueries.map((query, index) => (
+                <Text
+                  pl={2}
+                  key={`${query.sql_query_id}-${index}`}
+                  py={3}
+                  sx={chatHistoryStyles}
+                  onClick={() => handleSavedQuery(query)}
+                >
+                  {query.name}
+                </Text>
+              ))
             ) : (
               <Text fontSize="sm" pl={2}>
                 No saved queries yet.

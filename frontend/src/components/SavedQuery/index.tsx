@@ -1,64 +1,50 @@
-import { VStack, Text, Box, Button } from "@chakra-ui/react";
-import { useContext, useState } from "react";
-import { SavedQueryContext } from "../../layouts/RootLayout";
+import { VStack, Text, Box, Button, Icon } from "@chakra-ui/react";
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
+import { GoSidebarCollapse } from "react-icons/go";
 
-const SavedQuery = () => {
-  const { savedQueryDetails } = useContext(SavedQueryContext);
-  const [data, setData] = useState([]);
+type SavedQueryProps = {
+  savedQueryData: {
+    title: string;
+    description: string;
+    sql_query_id: string;
+  };
+  navOpen: boolean;
+  setNavOpen: (arg: boolean) => void;
+  getSavedQueryTableData: (arg: string) => Promise<{
+    execution_log: { status: string };
+    result: Record<string, unknown>[];
+  }>;
+  postQueryToGetId: (arg: string) => Promise<string>;
+  savedQueryTableData: Record<string, unknown>[];
+  setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
+};
 
+const SavedQuery = ({
+  savedQueryData,
+  navOpen,
+  setNavOpen,
+  getSavedQueryTableData,
+  postQueryToGetId,
+  savedQueryTableData,
+  setSavedQueryTableData,
+}: SavedQueryProps) => {
   const handleExecute = async () => {
     try {
-      const response1 = await fetch(
-        `${BACKEND_URL}/queries/${savedQueryDetails.sql_query_id}/execution`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
+      const id = await postQueryToGetId(
+        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
       );
-
-      if (!response1.ok) {
-        throw new Error("Failed to execute query");
-      }
-
-      const result = await response1.json();
       let executionStatus = "RUNNING";
-      let resultData = null;
-
+      let resultData: Record<string, unknown>[] = [];
       while (executionStatus === "RUNNING") {
-        const response2 = await fetch(
-          `${BACKEND_URL}/execution_result/${result.id}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          }
+        const { execution_log, result } = await getSavedQueryTableData(
+          `${BACKEND_URL}/execution_result/${id}`
         );
-
-        if (!response2.ok) {
-          throw new Error("Failed to fetch execution result");
-        }
-
-        const result2 = await response2.json();
-        executionStatus = result2.execution_log.status;
-        resultData = result2.result;
-
-        if (executionStatus === "RUNNING") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+        executionStatus = execution_log?.status;
+        resultData = result;
       }
-
       if (executionStatus === "SUCCESS") {
-        console.log("Query executed successfully:", resultData);
-        setData(resultData || []);
-      } else {
-        console.error("Query execution failed");
+        setSavedQueryTableData(resultData || []);
       }
     } catch (error) {
       console.error("Error executing query:", error);
@@ -69,38 +55,55 @@ const SavedQuery = () => {
     <VStack
       bg="gray.900"
       align="start"
-      spacing={6}
+      gap={6}
       w="100%"
       h="100vh"
       p={8}
       color="white"
     >
-      {/* Title Section */}
-      <Box w="100%" textAlign="left">
-        <Text fontSize="2xl" fontWeight="bold">
-          {savedQueryDetails.title || "Untitled Query"}
-        </Text>
-      </Box>
-
-      {/* Description Section */}
-      {savedQueryDetails.description && (
-        <Box w="100%">
-          <Text fontSize="lg" color="gray.300">
-            {savedQueryDetails.description}
-          </Text>
-        </Box>
+      {!navOpen && (
+        <Icon
+          as={GoSidebarCollapse}
+          stroke="gray.400"
+          strokeWidth={1}
+          fontSize="xl"
+          cursor="pointer"
+          onClick={() => setNavOpen(!navOpen)}
+          position="absolute"
+          top={5}
+          left={5}
+        />
       )}
-
-      {/* Execute Button */}
-      {data.length > 0 ? (
-        <ChatTable data={data} />
-      ) : (
-        <Box w="100%" textAlign="left">
-          <Button colorScheme="teal" size="lg" onClick={handleExecute}>
-            Execute Query
-          </Button>
-        </Box>
-      )}
+      <VStack w="full" px={{ base: "2.5vw", xl: "5vw" }} align="start" gap={4}>
+        {savedQueryData.title && (
+          <Box w="100%" textAlign="left">
+            <Text fontSize="2xl" fontWeight="bold">
+              {savedQueryData.title || "Untitled Query"}
+            </Text>
+          </Box>
+        )}
+        {savedQueryData.description && (
+          <Box w="100%">
+            <Text fontSize="lg" color="gray.300">
+              {savedQueryData.description}
+            </Text>
+          </Box>
+        )}
+        {savedQueryTableData.length > 0 ? (
+          <ChatTable data={savedQueryTableData} />
+        ) : (
+          <Box w="100%" textAlign="left">
+            <Button
+              color="gray.400"
+              bg="gray.700"
+              _hover={{ bg: "gray.600", color: "gray.400" }}
+              onClick={() => setTimeout(handleExecute)}
+            >
+              Execute
+            </Button>
+          </Box>
+        )}
+      </VStack>
     </VStack>
   );
 };

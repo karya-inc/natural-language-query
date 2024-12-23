@@ -6,10 +6,21 @@ interface HistoryItem {
 }
 
 const useNavBar = (title?: string, description?: string) => {
+  const [navOpen, setNavOpen] = useState(true);
+  const [savedQueryTableData, setSavedQueryTableData] = useState<
+    Record<string, unknown>[]
+  >([]);
+  const [savedQueryData, setSavedQueryData] = useState({
+    title: "",
+    description: "",
+    sql_query_id: "",
+  });
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [savedQueries, setSavedQueries] = useState<any[]>([]);
-  async function getHistory(url: string) {
+  const [savedQueries, setSavedQueries] = useState<
+    { sql_query_id: string; name: string; description: string }[]
+  >([]);
+
+  async function getAllHistory(url: string) {
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -25,7 +36,7 @@ const useNavBar = (title?: string, description?: string) => {
     }
   }
 
-  async function getSavedQueries(url: string) {
+  async function getAllSavedQueries(url: string) {
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -41,7 +52,7 @@ const useNavBar = (title?: string, description?: string) => {
     }
   }
 
-  async function postSavedQuery(url: string) {
+  async function saveQuery(url: string) {
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -53,7 +64,38 @@ const useNavBar = (title?: string, description?: string) => {
       });
       const data = await response.json();
       setSavedQueries((prev) => [data, ...prev]);
-      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function postQueryToGetId(url: string) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      const { id } = await response.json();
+      return id;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function getSavedQueryTableData(url: string) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error(error);
     }
@@ -62,10 +104,18 @@ const useNavBar = (title?: string, description?: string) => {
   return {
     history,
     setHistory,
-    getHistory,
+    getAllHistory,
     savedQueries,
-    getSavedQueries,
-    postSavedQuery,
+    getAllSavedQueries,
+    saveQuery,
+    navOpen,
+    setNavOpen,
+    savedQueryData,
+    setSavedQueryData,
+    getSavedQueryTableData,
+    postQueryToGetId,
+    savedQueryTableData,
+    setSavedQueryTableData,
   };
 };
 
