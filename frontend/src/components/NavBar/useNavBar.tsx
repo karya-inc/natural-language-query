@@ -55,11 +55,13 @@ const useNavBar = (name?: string, description?: string) => {
       });
       const data = await response.json();
       setSavedQueries(data);
-      setSavedQueryData(
-        data.find(
-          (query: SavedQueryDataInterface) => query.sql_query_id === savedId
-        )
-      );
+      if (savedId) {
+        setSavedQueryData(
+          data.find(
+            (query: SavedQueryDataInterface) => query.sql_query_id === savedId
+          )
+        );
+      }
     } catch (error) {
       console.error(error);
     }
