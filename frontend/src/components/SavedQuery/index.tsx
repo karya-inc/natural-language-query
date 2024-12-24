@@ -2,6 +2,8 @@ import { VStack, Text, Box, Button, Icon } from "@chakra-ui/react";
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
+import { useState } from "react";
+import { FetchingSkeleton } from "../../pages/Chat";
 
 type SavedQueryProps = {
   savedQueryData: {
@@ -29,8 +31,11 @@ const SavedQuery = ({
   savedQueryTableData,
   setSavedQueryTableData,
 }: SavedQueryProps) => {
+  const [isFetching, setIsFetching] = useState(false);
+
   const handleExecute = async () => {
     try {
+      setIsFetching(true);
       const id = await postQueryToGetId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
       );
@@ -48,6 +53,8 @@ const SavedQuery = ({
       }
     } catch (error) {
       console.error("Error executing query:", error);
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -89,7 +96,9 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
-        {savedQueryTableData.length > 0 ? (
+        {isFetching ? (
+          <FetchingSkeleton />
+        ) : savedQueryTableData.length > 0 ? (
           <ChatTable data={savedQueryTableData} />
         ) : (
           <Box w="100%" textAlign="left">

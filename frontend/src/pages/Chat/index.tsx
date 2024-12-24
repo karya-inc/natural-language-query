@@ -361,7 +361,7 @@ export function ChatBot({
 }
 
 // Skeleton Loader Component
-const FetchingSkeleton = () => (
+export const FetchingSkeleton = () => (
   <HStack w="full" gap={4}>
     <CFImage
       cfsrc="karya-logo"

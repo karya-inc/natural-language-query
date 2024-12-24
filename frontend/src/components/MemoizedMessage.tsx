@@ -63,16 +63,17 @@ const MemoizedMessage = memo(
                   Execute
                 </Button>
               </VStack>
-            ) : (type === "error") && typeof message === "string" ? (
+            ) : (type === "error" || type === "text") &&
+              typeof message === "string" ? (
               <Text py={2} color={type === "error" ? "red.400" : "gray.400"}>
                 {message}
               </Text>
-            ) : typeof message === "object" && (
-              <ChatTable data={message} />
+            ) : (
+              typeof message === "object" && <ChatTable data={message} />
             )
-          ) : typeof message === "string" ? (
-            <Text p={3}>{message}</Text>
-          ) : null}
+          ) : (
+            typeof message === "string" && <Text p={3}>{message}</Text>
+          )}
           {type !== "execution" && <ChatActions msg={msg} />}
         </VStack>
       </HStack>
