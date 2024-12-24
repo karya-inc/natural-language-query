@@ -30,8 +30,7 @@ type SavedQuery = {
 };
 
 type NavBarProps = {
-  navOpen: boolean;
-  setNavOpen: (arg: boolean) => void;
+  setNavOpen: (arg: (prev: boolean) => boolean) => void;
   history: HistoryItem[];
   getAllHistory: (url: string) => void;
   savedQueries: SavedQuery[];
@@ -48,7 +47,6 @@ type NavBarProps = {
 };
 
 const NavBar = ({
-  navOpen,
   setNavOpen,
   history,
   getAllHistory,
@@ -127,7 +125,7 @@ const NavBar = ({
           strokeWidth={1}
           fontSize="xl"
           cursor="pointer"
-          onClick={() => setNavOpen(!navOpen)}
+          onClick={() => setNavOpen((prev: boolean) => !prev)}
         />
       </HStack>
       <Accordion allowToggle w="full" color="gray.400" flex={1}>

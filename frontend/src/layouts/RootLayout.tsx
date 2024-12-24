@@ -42,7 +42,6 @@ const RootLayout = () => {
         <HStack gap={0} h="100vh" position={{ base: "relative" }}>
           {navOpen && (
             <NavBar
-              navOpen={navOpen}
               setNavOpen={setNavOpen}
               history={history}
               getAllHistory={getAllHistory}

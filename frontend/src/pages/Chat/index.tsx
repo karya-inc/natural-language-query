@@ -53,7 +53,7 @@ export type ChatBotProps = {
         ) => { session_id: string; nlq: string }[])
   ) => void;
   navOpen: boolean;
-  setNavOpen: (arg: boolean) => void;
+  setNavOpen: (arg: (prev: boolean) => boolean) => void;
   conversationStarted: boolean;
   setConversationStarted: (arg: boolean) => void;
   id: string;
@@ -285,7 +285,7 @@ export function ChatBot({
           strokeWidth={1}
           fontSize="xl"
           cursor="pointer"
-          onClick={() => setNavOpen(!navOpen)}
+          onClick={() => setNavOpen((prev: boolean) => !prev)}
           position="absolute"
           top={5}
           left={5}

@@ -9,7 +9,7 @@ import { SavedQueryDataInterface } from "../NavBar/useNavBar";
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
   navOpen: boolean;
-  setNavOpen: (arg: boolean) => void;
+  setNavOpen: (arg: (prev: boolean) => boolean) => void;
   getSavedQueryTableData: (arg: string) => Promise<{
     execution_log: { status: string };
     result: Record<string, unknown>[];
@@ -72,7 +72,7 @@ const SavedQuery = ({
           strokeWidth={1}
           fontSize="xl"
           cursor="pointer"
-          onClick={() => setNavOpen(!navOpen)}
+          onClick={() => setNavOpen((prev: boolean) => !prev)}
           position="absolute"
           top={5}
           left={5}
