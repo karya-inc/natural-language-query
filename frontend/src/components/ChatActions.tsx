@@ -27,7 +27,7 @@ import { Message } from "../pages/Chat";
 import { useState, useRef, forwardRef, useContext } from "react";
 import useNavBar from "./NavBar/useNavBar";
 import { BACKEND_URL } from "../config";
-import { SavedQueryContext } from "./NavBar/utils";
+import { SavedQueryContext, SavedQueryDataInterface } from "./NavBar/utils";
 
 interface TextInputProps {
   label: string;
@@ -236,15 +236,23 @@ const Form = ({
   sql_query_id?: string;
   turn_id?: string;
 }) => {
-  const { savedQueryData, setSavedQueryData } = useContext(SavedQueryContext);
-
-  const { name, description } = savedQueryData;
+  const [queryDetails, setQueryDetails] = useState({
+    name: "",
+    description: "",
+    sql_query_id,
+  });
+  const { name, description } = queryDetails;
   const { saveQuery } = useNavBar(name, description);
+  const { setSavedQueries } = useContext(SavedQueryContext);
 
   function handleSave() {
+    setSavedQueries((prev: SavedQueryDataInterface[]) => [
+      queryDetails as SavedQueryDataInterface,
+      ...prev,
+    ]);
     saveQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
     onCancel();
-    setSavedQueryData({ name: "", description: "", sql_query_id: "" });
+    setQueryDetails({ name: "", description: "", sql_query_id: "" });
   }
 
   return (
@@ -255,7 +263,7 @@ const Form = ({
         ref={firstFieldRef}
         value={name}
         onChange={(e) =>
-          setSavedQueryData({ ...savedQueryData, name: e.target.value })
+          setQueryDetails({ ...queryDetails, name: e.target.value })
         }
       />
       <TextInput
@@ -263,8 +271,8 @@ const Form = ({
         id="description"
         value={description}
         onChange={(e) =>
-          setSavedQueryData({
-            ...savedQueryData,
+          setQueryDetails({
+            ...queryDetails,
             description: e.target.value,
           })
         }
@@ -274,7 +282,7 @@ const Form = ({
           variant="solid"
           onClick={() => {
             onCancel();
-            setSavedQueryData({
+            setQueryDetails({
               name: "",
               description: "",
               sql_query_id: "",

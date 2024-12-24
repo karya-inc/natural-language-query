@@ -33,11 +33,12 @@ const RootLayout = () => {
     savedQueryTableData,
     setSavedQueryTableData,
     savedId,
+    setSavedQueries,
   } = useNavBar();
 
   return (
     <ErrorBoundary fallback={<Error />}>
-      <SavedQueryContext.Provider value={{ savedQueryData, setSavedQueryData }}>
+      <SavedQueryContext.Provider value={{ setSavedQueries }}>
         <HStack gap={0} h="100vh" position={{ base: "relative" }}>
           {navOpen && (
             <NavBar

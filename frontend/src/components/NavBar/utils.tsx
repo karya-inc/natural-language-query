@@ -1,23 +1,15 @@
 import { createContext } from "react";
 
+export interface SavedQueryDataInterface {
+  sql_query_id: string;
+  name: string;
+  description: string;
+}
+
 export const SavedQueryContext = createContext<{
-  savedQueryData: {
-    name: string;
-    description: string;
-    sql_query_id: string;
-  };
-  setSavedQueryData: React.Dispatch<
-    React.SetStateAction<{
-      name: string;
-      description: string;
-      sql_query_id: string;
-    }>
+  setSavedQueries: React.Dispatch<
+    React.SetStateAction<SavedQueryDataInterface[]>
   >;
 }>({
-  savedQueryData: {
-    name: "",
-    description: "",
-    sql_query_id: "",
-  },
-  setSavedQueryData: () => {},
+  setSavedQueries: () => {},
 });

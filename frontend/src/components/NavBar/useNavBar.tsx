@@ -69,7 +69,7 @@ const useNavBar = (name?: string, description?: string) => {
 
   async function saveQuery(url: string) {
     try {
-      const response = await fetch(url, {
+      await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,8 +77,6 @@ const useNavBar = (name?: string, description?: string) => {
         credentials: "include",
         body: JSON.stringify({ name, description }),
       });
-      const data = await response.json();
-      setSavedQueries((prev) => [data, ...prev]);
     } catch (error) {
       console.error(error);
     }
@@ -132,6 +130,7 @@ const useNavBar = (name?: string, description?: string) => {
     savedQueryTableData,
     setSavedQueryTableData,
     savedId,
+    setSavedQueries,
   };
 };
 
