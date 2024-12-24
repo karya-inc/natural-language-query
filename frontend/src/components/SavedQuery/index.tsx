@@ -4,13 +4,10 @@ import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
 import { useState } from "react";
 import { FetchingSkeleton } from "../../pages/Chat";
+import { SavedQueryDataInterface } from "../NavBar/useNavBar";
 
 type SavedQueryProps = {
-  savedQueryData: {
-    title: string;
-    description: string;
-    sql_query_id: string;
-  };
+  savedQueryData: SavedQueryDataInterface;
   navOpen: boolean;
   setNavOpen: (arg: boolean) => void;
   getSavedQueryTableData: (arg: string) => Promise<{
@@ -82,10 +79,10 @@ const SavedQuery = ({
         />
       )}
       <VStack w="full" px={{ base: "2.5vw", xl: "5vw" }} align="start" gap={4}>
-        {savedQueryData.title && (
+        {savedQueryData.name && (
           <Box w="100%" textAlign="left">
             <Text fontSize="2xl" fontWeight="bold">
-              {savedQueryData.title || "Untitled Query"}
+              {savedQueryData.name}
             </Text>
           </Box>
         )}

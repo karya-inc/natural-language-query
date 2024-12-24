@@ -4,9 +4,9 @@ import NavBar from "../components/NavBar";
 import { ChatBot } from "../pages/Chat";
 import useChatHistory from "./utils";
 import useNavBar from "../components/NavBar/useNavBar";
-import { useParams } from "react-router-dom";
 import SavedQuery from "../components/SavedQuery";
 import { SavedQueryContext } from "../components/NavBar/utils";
+import Error from "../components/Error";
 
 const RootLayout = () => {
   const {
@@ -32,16 +32,11 @@ const RootLayout = () => {
     postQueryToGetId,
     savedQueryTableData,
     setSavedQueryTableData,
+    savedId,
   } = useNavBar();
 
-  const { savedId } = useParams();
-
   return (
-    <ErrorBoundary
-      fallback={
-        <div>Something went wrong in the layout. Please refresh the page.</div>
-      }
-    >
+    <ErrorBoundary fallback={<Error />}>
       <SavedQueryContext.Provider value={{ savedQueryData, setSavedQueryData }}>
         <HStack gap={0} h="100vh" position={{ base: "relative" }}>
           {navOpen && (
@@ -56,6 +51,7 @@ const RootLayout = () => {
               setId={setId}
               setMessages={setMessages}
               setSavedQueryData={setSavedQueryData}
+              setSavedQueryTableData={setSavedQueryTableData}
             />
           )}
 

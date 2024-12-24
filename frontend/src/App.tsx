@@ -8,12 +8,11 @@ import RootLayout from "./layouts/RootLayout";
 import { CheckUserAuth } from "./components/CheckUserAuth";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { baseUrl } from "./config";
+import Error from "./components/Error";
 
 function App() {
   return (
-    <ErrorBoundary
-      fallback={<div>Something went wrong. Please try again later.</div>}
-    >
+    <ErrorBoundary fallback={<Error />}>
       <Router>
         <Routes>
           <Route path="/" element={<Navigate to={baseUrl} />} />

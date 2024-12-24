@@ -235,14 +235,13 @@ export function ChatBot({
 
   const handleExecute = async (url: string, executionId: string) => {
     try {
-      const response = await getTableData(url);
-      const data = response.result;
-      if (data.length > 0) {
+      const { result } = await getTableData(url);
+      if (result.length > 0) {
         const updatedMessages = messages.map((msg): Message => {
           if (msg.execution_id === executionId) {
             return {
               ...msg,
-              message: data,
+              message: result,
               type: "table",
               kind: "TABLE",
             };

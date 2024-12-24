@@ -40,10 +40,11 @@ type NavBarProps = {
   setId: (arg: string) => void;
   setMessages: (arg: Message[]) => void;
   setSavedQueryData: (arg: {
-    title: string;
+    name: string;
     description: string;
     sql_query_id: string;
   }) => void;
+  setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
 const NavBar = ({
@@ -57,6 +58,7 @@ const NavBar = ({
   setId,
   setMessages,
   setSavedQueryData,
+  setSavedQueryTableData,
 }: NavBarProps) => {
   const navigate = useNavigate();
 
@@ -80,9 +82,10 @@ const NavBar = ({
   };
 
   const handleSavedQuery = (query: SavedQuery) => {
+    setSavedQueryTableData([]);
     setId(query.sql_query_id);
     setSavedQueryData({
-      title: query.name,
+      name: query.name,
       description: query.description,
       sql_query_id: query.sql_query_id,
     });

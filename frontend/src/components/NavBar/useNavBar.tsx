@@ -1,23 +1,31 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 
 interface HistoryItem {
   session_id: string;
   nlq: string;
 }
 
-const useNavBar = (title?: string, description?: string) => {
+export interface SavedQueryDataInterface {
+  sql_query_id: string;
+  name: string;
+  description: string;
+}
+
+const useNavBar = (name?: string, description?: string) => {
   const [navOpen, setNavOpen] = useState(true);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [savedQueries, setSavedQueries] = useState<SavedQueryDataInterface[]>(
+    []
+  );
+  const { savedId } = useParams();
+  const [savedQueryData, setSavedQueryData] = useState({
+    sql_query_id: "",
+    name: "",
+    description: "",
+  });
   const [savedQueryTableData, setSavedQueryTableData] = useState<
     Record<string, unknown>[]
-  >([]);
-  const [savedQueryData, setSavedQueryData] = useState({
-    title: "",
-    description: "",
-    sql_query_id: "",
-  });
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [savedQueries, setSavedQueries] = useState<
-    { sql_query_id: string; name: string; description: string }[]
   >([]);
 
   async function getAllHistory(url: string) {
@@ -47,6 +55,11 @@ const useNavBar = (title?: string, description?: string) => {
       });
       const data = await response.json();
       setSavedQueries(data);
+      setSavedQueryData(
+        data.find(
+          (query: SavedQueryDataInterface) => query.sql_query_id === savedId
+        )
+      );
     } catch (error) {
       console.error(error);
     }
@@ -60,7 +73,7 @@ const useNavBar = (title?: string, description?: string) => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ name: title, description }),
+        body: JSON.stringify({ name, description }),
       });
       const data = await response.json();
       setSavedQueries((prev) => [data, ...prev]);
@@ -116,6 +129,7 @@ const useNavBar = (title?: string, description?: string) => {
     postQueryToGetId,
     savedQueryTableData,
     setSavedQueryTableData,
+    savedId,
   };
 };
 

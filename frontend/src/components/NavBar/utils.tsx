@@ -2,20 +2,20 @@ import { createContext } from "react";
 
 export const SavedQueryContext = createContext<{
   savedQueryData: {
-    title: string;
+    name: string;
     description: string;
     sql_query_id: string;
   };
   setSavedQueryData: React.Dispatch<
     React.SetStateAction<{
-      title: string;
+      name: string;
       description: string;
       sql_query_id: string;
     }>
   >;
 }>({
   savedQueryData: {
-    title: "",
+    name: "",
     description: "",
     sql_query_id: "",
   },

@@ -238,24 +238,24 @@ const Form = ({
 }) => {
   const { savedQueryData, setSavedQueryData } = useContext(SavedQueryContext);
 
-  const { title, description } = savedQueryData;
-  const { saveQuery } = useNavBar(title, description);
+  const { name, description } = savedQueryData;
+  const { saveQuery } = useNavBar(name, description);
 
   function handleSave() {
     saveQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
     onCancel();
-    setSavedQueryData({ title: "", description: "", sql_query_id: "" });
+    setSavedQueryData({ name: "", description: "", sql_query_id: "" });
   }
 
   return (
     <Stack spacing={4}>
       <TextInput
         label="Title"
-        id="title"
+        id="name"
         ref={firstFieldRef}
-        value={title}
+        value={name}
         onChange={(e) =>
-          setSavedQueryData({ ...savedQueryData, title: e.target.value })
+          setSavedQueryData({ ...savedQueryData, name: e.target.value })
         }
       />
       <TextInput
@@ -275,7 +275,7 @@ const Form = ({
           onClick={() => {
             onCancel();
             setSavedQueryData({
-              title: "",
+              name: "",
               description: "",
               sql_query_id: "",
             });
