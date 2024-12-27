@@ -24,9 +24,10 @@ import { AiOutlineLike } from "react-icons/ai";
 import { AiOutlineDislike } from "react-icons/ai";
 import { downloadObjectAs } from "../pages/Chat/utils";
 import { Message } from "../pages/Chat";
-import { useState, useRef, forwardRef } from "react";
+import { useState, useRef, forwardRef, useContext } from "react";
 import useNavBar from "./NavBar/useNavBar";
 import { BACKEND_URL } from "../config";
+import { SavedQueryContext, SavedQueryDataInterface } from "./NavBar/utils";
 
 interface TextInputProps {
   label: string;
@@ -235,39 +236,57 @@ const Form = ({
   sql_query_id?: string;
   turn_id?: string;
 }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const { postSavedQuery } = useNavBar(title, description);
+  const [queryDetails, setQueryDetails] = useState({
+    name: "",
+    description: "",
+    sql_query_id,
+  });
+  const { name, description } = queryDetails;
+  const { saveQuery } = useNavBar(name, description);
+  const { setSavedQueries } = useContext(SavedQueryContext);
 
   function handleSave() {
-    postSavedQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
+    setSavedQueries((prev: SavedQueryDataInterface[]) => [
+      queryDetails as SavedQueryDataInterface,
+      ...prev,
+    ]);
+    saveQuery(`${BACKEND_URL}/save_query/${turn_id}/${sql_query_id}`);
     onCancel();
-    setTitle("");
-    setDescription("");
+    setQueryDetails({ name: "", description: "", sql_query_id: "" });
   }
 
   return (
     <Stack spacing={4}>
       <TextInput
         label="Title"
-        id="title"
+        id="name"
         ref={firstFieldRef}
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        value={name}
+        onChange={(e) =>
+          setQueryDetails({ ...queryDetails, name: e.target.value })
+        }
       />
       <TextInput
         label="Description"
         id="description"
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={(e) =>
+          setQueryDetails({
+            ...queryDetails,
+            description: e.target.value,
+          })
+        }
       />
       <ButtonGroup display="flex" justifyContent="flex-end">
         <Button
           variant="solid"
           onClick={() => {
             onCancel();
-            setTitle("");
-            setDescription("");
+            setQueryDetails({
+              name: "",
+              description: "",
+              sql_query_id: "",
+            });
           }}
         >
           Cancel
