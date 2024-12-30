@@ -100,7 +100,9 @@ export function ChatBot({
   const { postChat, getTableData } = useChat({ input, id });
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() =>
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    );
   }, []);
 
   useEffect(() => {
@@ -276,7 +278,7 @@ export function ChatBot({
       justify="center"
       gap={8}
       w="100%"
-      h="100%"
+      h="100vh"
     >
       {!navOpen && (
         <Icon

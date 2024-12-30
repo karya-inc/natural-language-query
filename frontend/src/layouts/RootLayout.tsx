@@ -39,7 +39,7 @@ const RootLayout = () => {
   return (
     <ErrorBoundary fallback={<Error />}>
       <SavedQueryContext.Provider value={{ setSavedQueries }}>
-        <HStack gap={0} h="100vh" position={{ base: "relative" }}>
+        <HStack gap={0} position={{ base: "relative" }}>
           {navOpen && (
             <NavBar
               setNavOpen={setNavOpen}

@@ -46,6 +46,11 @@ type NavBarProps = {
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
+type UserDetails = {
+  name: string;
+  email: string;
+};
+
 const NavBar = ({
   setNavOpen,
   history,
@@ -59,6 +64,15 @@ const NavBar = ({
   setSavedQueryTableData,
 }: NavBarProps) => {
   const navigate = useNavigate();
+  const userDetails: UserDetails = localStorage.getItem("userDetails")
+    ? JSON.parse(localStorage.getItem("userDetails") as string)
+    : {
+        name: "",
+
+        email: "",
+      };
+
+  const { name, email } = userDetails;
 
   const chatHistoryStyles = {
     ":hover": {
@@ -136,12 +150,7 @@ const NavBar = ({
               Chat History
             </Box>
           </AccordionButton>
-          <AccordionPanel
-            display="flex"
-            flexDirection="column"
-            maxH="70vh"
-            overflow="auto"
-          >
+          <AccordionPanel display="flex" flexDirection="column" maxH="70vh">
             {history.length > 0 ? (
               history.map((chat, index) => (
                 <Text
@@ -202,8 +211,8 @@ const NavBar = ({
         gap={{ base: 2, xl: 0 }}
         p={6}
       >
-        <Text>Dan Abrahmov</Text>
-        <Text>danabrahmov@gmail.com</Text>
+        <Text>{name || "Dan Abrahmov"}</Text>
+        <Text>{email || "danabrahmov@gmail.com"}</Text>
       </VStack>
     </VStack>
   );
