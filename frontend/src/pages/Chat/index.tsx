@@ -43,14 +43,14 @@ export type MessageComponent = {
 export type ChatBotProps = {
   messages: Message[];
   setMessages: (
-    arg: Message[] | ((prevMessages: Message[]) => Message[])
+    arg: Message[] | ((prevMessages: Message[]) => Message[]),
   ) => void;
   setHistory: (
     arg:
       | { session_id: string; nlq: string }[]
       | ((
-          prevHistory: { session_id: string; nlq: string }[]
-        ) => { session_id: string; nlq: string }[])
+          prevHistory: { session_id: string; nlq: string }[],
+        ) => { session_id: string; nlq: string }[]),
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: (prev: boolean) => boolean) => void;
@@ -115,7 +115,7 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    []
+    [],
   );
 
   const handleSubmit = useCallback(
@@ -230,7 +230,7 @@ export function ChatBot({
         });
       }
     },
-    [input, id]
+    [input, id],
   );
 
   const handleExecute = async (url: string, executionId: string) => {
@@ -276,7 +276,7 @@ export function ChatBot({
       justify="center"
       gap={8}
       w="100%"
-      h="100%"
+      h="100vh"
     >
       {!navOpen && (
         <Icon
