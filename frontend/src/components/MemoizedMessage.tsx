@@ -120,7 +120,9 @@ const MemoizedMessage = memo(
           ) : (
             typeof message === "string" && <Text p={3}>{message}</Text>
           )}
-          {type !== "execution" && <ChatActions msg={msg} />}
+          {type !== "execution" && type !== "error" && (
+            <ChatActions msg={msg} />
+          )}
         </VStack>
         {<div ref={messagesEndRef} />}
       </HStack>

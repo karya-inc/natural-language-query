@@ -5,6 +5,8 @@ import { GoSidebarCollapse } from "react-icons/go";
 import { useState } from "react";
 import { FetchingSkeleton } from "../../pages/Chat";
 import { SavedQueryDataInterface } from "../NavBar/useNavBar";
+import { Column, RowData } from "@tanstack/react-table";
+import { ArrowUpDown } from "lucide-react";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -12,11 +14,11 @@ type SavedQueryProps = {
   setNavOpen: (arg: (prev: boolean) => boolean) => void;
   getSavedQueryTableData: (arg: string) => Promise<{
     execution_log: { status: string };
-    result: Record<string, unknown>[];
+    result: string | Record<string, unknown>[];
   }>;
   postQueryToGetId: (arg: string) => Promise<string>;
-  savedQueryTableData: Record<string, unknown>[];
-  setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
+  savedQueryTableData: string | Record<string, unknown>[];
+  setSavedQueryTableData: (arg: string | Record<string, unknown>[]) => void;
 };
 
 const SavedQuery = ({
@@ -37,7 +39,7 @@ const SavedQuery = ({
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
       );
       let executionStatus = "RUNNING";
-      let resultData: Record<string, unknown>[] = [];
+      let resultData: string | Record<string, unknown>[] = [];
       while (executionStatus === "RUNNING") {
         const { execution_log, result } = await getSavedQueryTableData(
           `${BACKEND_URL}/execution_result/${id}`
@@ -54,6 +56,33 @@ const SavedQuery = ({
       setIsFetching(false);
     }
   };
+
+  type ColProps = {
+    header: ({ column }: { column: Column<RowData> }) => JSX.Element;
+    accessorKey: string;
+  };
+
+  console.log(savedQueryTableData);
+
+  let colDefs: ColProps[] = [];
+  if (savedQueryTableData !== null && savedQueryTableData.length > 0) {
+    colDefs = Object.keys(savedQueryTableData[0]).map((key) => ({
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="plain"
+            size={"md"}
+            color={"gray.500"}
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            {key}
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      accessorKey: key,
+    }));
+  }
 
   return (
     <VStack
@@ -96,7 +125,10 @@ const SavedQuery = ({
         {isFetching ? (
           <FetchingSkeleton />
         ) : savedQueryTableData.length > 0 ? (
-          <ChatTable data={savedQueryTableData} />
+          <ChatTable
+            columns={colDefs}
+            data={savedQueryTableData as RowData[]}
+          />
         ) : (
           <Box w="100%" textAlign="left">
             <Button

@@ -29,7 +29,9 @@ import useNavBar from "./NavBar/useNavBar";
 import { BACKEND_URL } from "../config";
 import { SavedQueryContext, SavedQueryDataInterface } from "./NavBar/utils";
 
-interface TextInputProps {
+import { InputProps } from "@chakra-ui/react";
+
+interface TextInputProps extends InputProps {
   label: string;
   id: string;
   defaultValue?: string;
@@ -170,7 +172,7 @@ const ChatActions = ({ msg }: { msg: Message }) => {
           </PopoverTrigger>
           <PopoverContent
             p={5}
-            bg={"gray.700"}
+            bg={"#2a2d3d"}
             border="1px solid"
             borderColor={"gray.700"}
           >
@@ -219,7 +221,9 @@ const ChatActions = ({ msg }: { msg: Message }) => {
 const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
   return (
     <FormControl>
-      <FormLabel htmlFor={props.id}>{props.label}</FormLabel>
+      <FormLabel htmlFor={props.id} fontWeight={"bold"}>
+        {props.label}
+      </FormLabel>
       <Input ref={ref} {...props} />
     </FormControl>
   );
@@ -265,6 +269,8 @@ const Form = ({
         onChange={(e) =>
           setQueryDetails({ ...queryDetails, name: e.target.value })
         }
+        _focusVisible={{ boxShadow: "none", borderColor: "gray.500" }}
+        borderColor="gray.500"
       />
       <TextInput
         label="Description"
@@ -276,10 +282,13 @@ const Form = ({
             description: e.target.value,
           })
         }
+        _focusVisible={{ boxShadow: "none", borderColor: "gray.500" }}
+        borderColor="gray.500"
       />
       <ButtonGroup display="flex" justifyContent="flex-end">
         <Button
-          variant="solid"
+          variant="unstyled"
+          px={4}
           onClick={() => {
             onCancel();
             setQueryDetails({
@@ -291,7 +300,7 @@ const Form = ({
         >
           Cancel
         </Button>
-        <Button colorScheme="teal" onClick={handleSave}>
+        <Button colorScheme="gray" background={"gray.300"} onClick={handleSave}>
           Save
         </Button>
       </ButtonGroup>
