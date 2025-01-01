@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { HStack, VStack, Text, Button } from "@chakra-ui/react";
 import ChatActions from "./ChatActions";
 import CFImage from "./CloudflareImage";
@@ -28,6 +28,15 @@ const MemoizedMessage = memo(
     handleExecute: (arg1: string, arg2: string) => void;
   }) => {
     const { message, role, type, execution_id } = msg;
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = useCallback(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, []);
+
+    useEffect(() => {
+      scrollToBottom();
+    }, [msg, scrollToBottom]);
 
     let colDefs: ColProps[] = [];
     if (message !== null) {
@@ -37,6 +46,7 @@ const MemoizedMessage = memo(
             <Button
               variant="plain"
               size={"md"}
+              color={"gray.500"}
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() === "asc")
               }
@@ -112,6 +122,7 @@ const MemoizedMessage = memo(
           )}
           {type !== "execution" && <ChatActions msg={msg} />}
         </VStack>
+        {<div ref={messagesEndRef} />}
       </HStack>
     );
   }

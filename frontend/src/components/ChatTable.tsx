@@ -107,21 +107,23 @@ export default function ChatTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
-      {table.getCanPreviousPage() && (
-        <HStack className="flex items-center justify-end space-x-2 py-4">
+      {(table.getCanPreviousPage() || table.getCanNextPage()) && (
+        <HStack justify={"flex-end"} w={"full"}>
           <Button
-            variant="outline"
+            variant={`${!table.getCanPreviousPage() ? "default" : "secondary"}`}
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            style={{ backgroundColor: "#2a2d3d", color: "lightgray" }}
           >
             Previous
           </Button>
           <Button
-            variant="outline"
+            variant={`${!table.getCanNextPage() ? "default" : "secondary"}`}
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            style={{ backgroundColor: "#2a2d3d", color: "lightgray" }}
           >
             Next
           </Button>
