@@ -2,9 +2,22 @@ import { memo } from "react";
 import { HStack, VStack, Text, Button } from "@chakra-ui/react";
 import ChatActions from "./ChatActions";
 import CFImage from "./CloudflareImage";
-import ChatTable from "./ChatTable";
+import ChatTable from "../components/ChatTable";
 import { Message } from "../pages/Chat";
 import { BACKEND_URL } from "../config";
+import { ArrowUpDown } from "lucide-react";
+import { Column } from "@tanstack/react-table";
+
+type RowData = {
+  id: string;
+  content: string;
+  timestamp: Date;
+};
+
+type ColProps = {
+  header: ({ column }: { column: Column<RowData> }) => JSX.Element;
+  accessorKey: string;
+};
 
 const MemoizedMessage = memo(
   ({
@@ -15,6 +28,27 @@ const MemoizedMessage = memo(
     handleExecute: (arg1: string, arg2: string) => void;
   }) => {
     const { message, role, type, execution_id } = msg;
+
+    let colDefs: ColProps[] = [];
+    if (message !== null) {
+      colDefs = Object.keys(message[0]).map((key) => ({
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="plain"
+              size={"md"}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              {key}
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          );
+        },
+        accessorKey: key,
+      }));
+    }
 
     return (
       <HStack
@@ -69,7 +103,9 @@ const MemoizedMessage = memo(
                 {message}
               </Text>
             ) : (
-              typeof message === "object" && <ChatTable data={message} />
+              typeof message === "object" && (
+                <ChatTable columns={colDefs} data={message as RowData[]} />
+              )
             )
           ) : (
             typeof message === "string" && <Text p={3}>{message}</Text>

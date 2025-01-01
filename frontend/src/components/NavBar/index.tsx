@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
+import "./index.css";
 
 type HistoryItem = {
   session_id: string;
@@ -150,7 +151,12 @@ const NavBar = ({
               Chat History
             </Box>
           </AccordionButton>
-          <AccordionPanel display="flex" flexDirection="column" maxH="70vh">
+          <AccordionPanel
+            display="flex"
+            flexDirection="column"
+            maxH="70vh"
+            overflow="auto"
+          >
             {history.length > 0 ? (
               history.map((chat, index) => (
                 <Text

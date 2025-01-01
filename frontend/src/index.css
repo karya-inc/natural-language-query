@@ -1,6 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html,
 body,
 #root {
   height: 100%;
   width: 100%;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
 }
