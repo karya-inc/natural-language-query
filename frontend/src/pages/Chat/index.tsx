@@ -95,17 +95,8 @@ export function ChatBot({
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLInputElement>(null);
   const { postChat, getTableData } = useChat({ input, id });
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     focusRef.current?.focus();
@@ -276,7 +267,7 @@ export function ChatBot({
       justify="center"
       gap={8}
       w="100%"
-      h="100%"
+      h="100vh"
     >
       {!navOpen && (
         <Icon
@@ -309,7 +300,6 @@ export function ChatBot({
             />
           ))}
           {isFetching && <FetchingSkeleton />}
-          <div ref={messagesEndRef} />
         </VStack>
       )}
 

@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
+import "./index.css";
 
 type HistoryItem = {
   session_id: string;
@@ -46,6 +47,11 @@ type NavBarProps = {
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
+type UserDetails = {
+  name: string;
+  email: string;
+};
+
 const NavBar = ({
   setNavOpen,
   history,
@@ -59,6 +65,15 @@ const NavBar = ({
   setSavedQueryTableData,
 }: NavBarProps) => {
   const navigate = useNavigate();
+  const userDetails: UserDetails = localStorage.getItem("userDetails")
+    ? JSON.parse(localStorage.getItem("userDetails") as string)
+    : {
+        name: "",
+
+        email: "",
+      };
+
+  const { name, email } = userDetails;
 
   const chatHistoryStyles = {
     ":hover": {
@@ -202,8 +217,8 @@ const NavBar = ({
         gap={{ base: 2, xl: 0 }}
         p={6}
       >
-        <Text>Dan Abrahmov</Text>
-        <Text>danabrahmov@gmail.com</Text>
+        <Text>{name || "Dan Abrahmov"}</Text>
+        <Text>{email || "danabrahmov@gmail.com"}</Text>
       </VStack>
     </VStack>
   );
