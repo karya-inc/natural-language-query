@@ -19,7 +19,7 @@ import {
 } from "@chakra-ui/react";
 import { FaRegSave } from "react-icons/fa";
 import { IoInformationCircleOutline } from "react-icons/io5";
-import { LuDownloadCloud } from "react-icons/lu";
+import { IoCloudDownloadOutline } from "react-icons/io5";
 import { AiOutlineLike } from "react-icons/ai";
 import { AiOutlineDislike } from "react-icons/ai";
 import { downloadObjectAs } from "../pages/Chat/utils";
@@ -122,7 +122,7 @@ const ChatActions = ({ msg }: { msg: Message }) => {
             cursor="pointer"
           >
             <Icon
-              as={LuDownloadCloud}
+              as={IoCloudDownloadOutline}
               stroke="gray.200"
               strokeWidth={2}
               fontSize="md"
