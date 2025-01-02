@@ -9,6 +9,7 @@ from db.models import (
     Turn,
     SqlQuery,
     SavedQuery,
+    get_uuid_str,
 )
 from datetime import datetime
 from pydantic import BaseModel
@@ -29,6 +30,7 @@ class Roles(enum.Enum):
 # Pydantic Models
 class ChatHistoryResponse(BaseModel):
     id: int | str
+    turn_id: int
     role: Roles
     timestamp: datetime
     type: Optional[Literal["text", "table", "error", "execution"]]
@@ -243,7 +245,8 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
             # User Turn Message
             chat_history.append(
                 ChatHistoryResponse(
-                    id=turn.turn_id,
+                    id=get_uuid_str(),
+                    turn_id=turn.turn_id,
                     message=turn.nlq,
                     role=Roles.USER,
                     timestamp=turn.created_at,
@@ -257,7 +260,8 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
             # Bot Turn Message
             chat_history.append(
                 ChatHistoryResponse(
-                    id=turn.turn_id,
+                    id=get_uuid_str(),
+                    turn_id=turn.turn_id,
                     role=Roles.BOT,
                     timestamp=turn.created_at,
                     execution_id=execution_id,
