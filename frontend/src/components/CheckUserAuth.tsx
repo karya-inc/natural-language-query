@@ -70,6 +70,9 @@ export function CheckUserAuth(props: CheckUserAuthProps) {
       } else {
         setIsTokenValid(false);
       }
+      if (data?.payload) {
+        localStorage.setItem("userDetails", JSON.stringify(data.payload));
+      }
     } catch {
       setIsTokenValid(false);
     }
