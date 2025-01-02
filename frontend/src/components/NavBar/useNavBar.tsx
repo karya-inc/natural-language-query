@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { BACKEND_URL } from "../../config";
 
 interface HistoryItem {
   session_id: string;
@@ -16,7 +17,7 @@ const useNavBar = (name?: string, description?: string) => {
   const [navOpen, setNavOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [savedQueries, setSavedQueries] = useState<SavedQueryDataInterface[]>(
-    []
+    [],
   );
   const { savedId } = useParams();
   const [savedQueryData, setSavedQueryData] = useState({
@@ -58,8 +59,8 @@ const useNavBar = (name?: string, description?: string) => {
       if (savedId) {
         setSavedQueryData(
           data.find(
-            (query: SavedQueryDataInterface) => query.sql_query_id === savedId
-          )
+            (query: SavedQueryDataInterface) => query.sql_query_id === savedId,
+          ),
         );
       }
     } catch (error) {
@@ -77,6 +78,7 @@ const useNavBar = (name?: string, description?: string) => {
         credentials: "include",
         body: JSON.stringify({ name, description }),
       });
+      await getAllSavedQueries(`${BACKEND_URL}/queries`);
     } catch (error) {
       console.error(error);
     }
