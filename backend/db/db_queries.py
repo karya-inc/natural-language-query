@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 from db.models import (
     ExecutionLog,
     ExecutionResult,
@@ -229,7 +229,7 @@ def get_chat_history(db_session: Session, session_id: str) -> List[ChatHistoryRe
         turns = (
             db_session.query(Turn)
             .filter_by(session_id=session_id)
-            .order_by(desc(Turn.created_at))
+            .order_by(asc(Turn.created_at))
             .all()
         )
 
