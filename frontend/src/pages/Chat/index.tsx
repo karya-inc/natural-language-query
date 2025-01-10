@@ -276,7 +276,7 @@ export function ChatBot({
       justify="center"
       gap={8}
       w="100%"
-      h="100vh"
+      h="100%"
     >
       {!navOpen && (
         <Icon

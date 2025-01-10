@@ -34,13 +34,13 @@ const SavedQuery = ({
     try {
       setIsFetching(true);
       const id = await postQueryToGetId(
-        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
+        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
       );
       let executionStatus = "RUNNING";
       let resultData: Record<string, unknown>[] = [];
       while (executionStatus === "RUNNING") {
         const { execution_log, result } = await getSavedQueryTableData(
-          `${BACKEND_URL}/execution_result/${id}`
+          `${BACKEND_URL}/execution_result/${id}`,
         );
         executionStatus = execution_log?.status;
         resultData = result;
@@ -61,7 +61,7 @@ const SavedQuery = ({
       align="start"
       gap={6}
       w="100%"
-      h="100vh"
+      h="100%"
       p={8}
       color="white"
     >
