@@ -16,6 +16,13 @@ const MemoizedMessage = memo(
   }) => {
     const { message, role, type, execution_id } = msg;
 
+    const onExecute = () => {
+      handleExecute(
+        `${BACKEND_URL}/execution_result/${execution_id}`,
+        execution_id,
+      );
+    };
+
     return (
       <HStack
         color="gray.50"
@@ -43,42 +50,43 @@ const MemoizedMessage = memo(
           borderRadius="xl"
           gap={4}
         >
-          {role === "bot" ? (
-            type === "execution" ? (
-              <VStack gap={0} align="flex-start">
-                <Text py={2} color={"gray.400"}>
-                  Please click to execute the query
-                </Text>
-                <Button
-                  color="gray.400"
-                  bg="gray.700"
-                  _hover={{ bg: "gray.600", color: "gray.400" }}
-                  onClick={() =>
-                    handleExecute(
-                      `${BACKEND_URL}/execution_result/${execution_id}`,
-                      execution_id
-                    )
-                  }
-                >
-                  Execute
-                </Button>
-              </VStack>
-            ) : (type === "error" || type === "text") &&
-              typeof message === "string" ? (
+          {role === "bot" && type === "execution" && (
+            <VStack gap={0} align="flex-start">
+              <Text py={2} color={"gray.400"}>
+                Please click to execute the query
+              </Text>
+              <Button
+                color="gray.400"
+                bg="gray.700"
+                _hover={{ bg: "gray.600", color: "gray.400" }}
+                onClick={onExecute}
+              >
+                Execute
+              </Button>
+            </VStack>
+          )}
+
+          {role == "bot" &&
+            (type === "error" || type === "text") &&
+            typeof message === "string" && (
               <Text py={2} color={type === "error" ? "red.400" : "gray.400"}>
                 {message}
               </Text>
-            ) : (
-              typeof message === "object" && <ChatTable data={message} />
-            )
-          ) : (
-            typeof message === "string" && <Text p={3}>{message}</Text>
+            )}
+
+          {role == "bot" && type === "table" && typeof message === "object" && (
+            <ChatTable data={message} />
           )}
+
+          {role == "user" && typeof message === "string" && (
+            <Text p={3}>{message}</Text>
+          )}
+
           {type !== "execution" && <ChatActions msg={msg} />}
         </VStack>
       </HStack>
     );
-  }
+  },
 );
 
 export default MemoizedMessage;
