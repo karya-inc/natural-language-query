@@ -100,7 +100,10 @@ export function ChatBot({
   const { postChat, getTableData } = useChat({ input, id });
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
   }, []);
 
   useEffect(() => {
@@ -308,8 +311,8 @@ export function ChatBot({
               handleExecute={handleExecute}
             />
           ))}
-          {isFetching && <FetchingSkeleton />}
           <div ref={messagesEndRef} />
+          {isFetching && <FetchingSkeleton />}
         </VStack>
       )}
 
