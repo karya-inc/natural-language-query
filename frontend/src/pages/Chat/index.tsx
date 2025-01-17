@@ -43,14 +43,14 @@ export type MessageComponent = {
 export type ChatBotProps = {
   messages: Message[];
   setMessages: (
-    arg: Message[] | ((prevMessages: Message[]) => Message[]),
+    arg: Message[] | ((prevMessages: Message[]) => Message[])
   ) => void;
   setHistory: (
     arg:
       | { session_id: string; nlq: string }[]
       | ((
-          prevHistory: { session_id: string; nlq: string }[],
-        ) => { session_id: string; nlq: string }[]),
+          prevHistory: { session_id: string; nlq: string }[]
+        ) => { session_id: string; nlq: string }[])
   ) => void;
   navOpen: boolean;
   setNavOpen: (arg: (prev: boolean) => boolean) => void;
@@ -95,20 +95,8 @@ export function ChatBot({
 }: ChatBotProps) {
   const [input, setInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<HTMLInputElement>(null);
   const { postChat, getTableData } = useChat({ input, id });
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     focusRef.current?.focus();
@@ -118,7 +106,7 @@ export function ChatBot({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setInput(e.target.value);
     },
-    [],
+    []
   );
 
   const handleSubmit = useCallback(
@@ -233,7 +221,7 @@ export function ChatBot({
         });
       }
     },
-    [input, id],
+    [input, id]
   );
 
   const handleExecute = async (url: string, executionId: string) => {
@@ -311,7 +299,6 @@ export function ChatBot({
               handleExecute={handleExecute}
             />
           ))}
-          <div ref={messagesEndRef} />
           {isFetching && <FetchingSkeleton />}
         </VStack>
       )}
