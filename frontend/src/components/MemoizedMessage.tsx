@@ -96,29 +96,8 @@ const MemoizedMessage = memo(
           ) : (
             typeof message === "string" && <Text p={3}>{message}</Text>
           )}
-          {type !== "execution" && type !== "error" ? (
+          {type !== "execution" && type !== "error" && (
             <ChatActions msg={msg} />
-          ) : (
-            <HStack
-              sx={messageActionStyles}
-              w={7}
-              h={7}
-              align="center"
-              justify="center"
-              cursor="pointer"
-            >
-              <Icon
-                as={IoCloudDownloadOutline}
-                stroke="gray.200"
-                strokeWidth={2}
-                fontSize="md"
-                onClick={() => {
-                  if (Array.isArray(message)) {
-                    handleDownload(message as Record<string, string>[]);
-                  }
-                }}
-              />
-            </HStack>
           )}
         </VStack>
         {<div ref={messagesEndRef} />}
