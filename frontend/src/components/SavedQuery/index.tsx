@@ -3,7 +3,7 @@ import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
 import { useState } from "react";
-import { FetchingSkeleton, Message } from "../../pages/Chat";
+import { FetchingSkeleton } from "../../pages/Chat";
 import { SavedQueryDataInterface } from "../NavBar/useNavBar";
 import { handleDownload } from "../../pages/Chat/utils";
 import { IoCloudDownloadOutline } from "react-icons/io5";
@@ -17,7 +17,7 @@ type SavedQueryProps = {
     result: Record<string, unknown>[];
   }>;
   postQueryToGetId: (arg: string) => Promise<string>;
-  savedQueryTableData: Message[];
+  savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
