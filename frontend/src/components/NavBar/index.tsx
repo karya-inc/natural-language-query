@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
+import "./index.css";
 
 type HistoryItem = {
   session_id: string;
