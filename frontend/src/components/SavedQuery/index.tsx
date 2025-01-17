@@ -3,8 +3,10 @@ import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
 import { useState } from "react";
-import { FetchingSkeleton } from "../../pages/Chat";
+import { FetchingSkeleton, Message } from "../../pages/Chat";
 import { SavedQueryDataInterface } from "../NavBar/useNavBar";
+import { handleDownload } from "../../pages/Chat/utils";
+import { IoCloudDownloadOutline } from "react-icons/io5";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -15,7 +17,7 @@ type SavedQueryProps = {
     result: Record<string, unknown>[];
   }>;
   postQueryToGetId: (arg: string) => Promise<string>;
-  savedQueryTableData: Record<string, unknown>[];
+  savedQueryTableData: Message[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
@@ -34,13 +36,13 @@ const SavedQuery = ({
     try {
       setIsFetching(true);
       const id = await postQueryToGetId(
-        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
+        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
       );
       let executionStatus = "RUNNING";
       let resultData: Record<string, unknown>[] = [];
       while (executionStatus === "RUNNING") {
         const { execution_log, result } = await getSavedQueryTableData(
-          `${BACKEND_URL}/execution_result/${id}`,
+          `${BACKEND_URL}/execution_result/${id}`
         );
         executionStatus = execution_log?.status;
         resultData = result;
@@ -78,7 +80,13 @@ const SavedQuery = ({
           left={5}
         />
       )}
-      <VStack w="full" px={{ base: "2.5vw", xl: "5vw" }} align="start" gap={4}>
+      <VStack
+        w="full"
+        px={{ base: "2.5vw", xl: "5vw" }}
+        align="start"
+        gap={4}
+        color={"gray.400"}
+      >
         {savedQueryData.name && (
           <Box w="100%" textAlign="left">
             <Text fontSize="2xl" fontWeight="bold">
@@ -92,6 +100,34 @@ const SavedQuery = ({
               {savedQueryData.description}
             </Text>
           </Box>
+        )}
+        {savedQueryTableData.length > 0 && (
+          <Button
+            justifyContent={"space-between"}
+            gap={2}
+            cursor="pointer"
+            color="gray.400"
+            bg="gray.700"
+            // py={2}
+
+            _hover={{ bg: "gray.600", color: "gray.400" }}
+            onClick={() => {
+              if (Array.isArray(savedQueryTableData)) {
+                console.log(1);
+                handleDownload(
+                  savedQueryTableData as unknown as Record<string, string>[]
+                );
+              }
+            }}
+          >
+            <Text fontSize={"sm"}>Download</Text>
+            <Icon
+              as={IoCloudDownloadOutline}
+              stroke="gray.400"
+              strokeWidth={2}
+              fontSize="md"
+            />
+          </Button>
         )}
         {isFetching ? (
           <FetchingSkeleton />

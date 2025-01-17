@@ -50,8 +50,7 @@ export function downloadObjectAs(
 
 export const messageActionStyles = {
   ":hover": {
-    backgroundColor: "gray.700",
-    rounded: "lg",
+    backgroundColor: "gray.400",
   },
 };
 
