@@ -1,12 +1,7 @@
 import { Text } from "@chakra-ui/react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz, colorSchemeDarkBlue } from "ag-grid-community";
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  SizeColumnsToContentStrategy,
-} from "ag-grid-community";
-import { useMemo } from "react";
+import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -27,12 +22,6 @@ const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
     accentColor: "lightblue",
   });
 
-  const autoSizeStrategy: SizeColumnsToContentStrategy = useMemo(() => {
-    return {
-      type: "fitCellContents",
-    };
-  }, []);
-
   return rowData.length > 0 ? (
     <AgGridReact
       rowData={rowData}
@@ -40,7 +29,6 @@ const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
       defaultColDef={defaultColDef}
       theme={myTheme}
       domLayout="autoHeight"
-      autoSizeStrategy={autoSizeStrategy}
       pagination={pagination}
       paginationPageSize={paginationPageSize}
       paginationPageSizeSelector={paginationPageSizeSelector}
