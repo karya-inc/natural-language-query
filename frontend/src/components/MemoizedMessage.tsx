@@ -1,12 +1,10 @@
 import { memo, useCallback, useEffect, useRef } from "react";
-import { HStack, VStack, Text, Button, Icon } from "@chakra-ui/react";
+import { HStack, VStack, Text, Button } from "@chakra-ui/react";
 import ChatActions from "./ChatActions";
 import CFImage from "./CloudflareImage";
 import ChatTable from "../components/ChatTable";
 import { Message } from "../pages/Chat";
 import { BACKEND_URL } from "../config";
-import { IoCloudDownloadOutline } from "react-icons/io5";
-import { handleDownload, messageActionStyles } from "../pages/Chat/utils";
 
 type RowData = {
   id: string;
