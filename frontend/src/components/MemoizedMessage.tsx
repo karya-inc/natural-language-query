@@ -1,10 +1,16 @@
-import { memo } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { HStack, VStack, Text, Button } from "@chakra-ui/react";
 import ChatActions from "./ChatActions";
 import CFImage from "./CloudflareImage";
-import ChatTable from "./ChatTable";
+import ChatTable from "../components/ChatTable";
 import { Message } from "../pages/Chat";
 import { BACKEND_URL } from "../config";
+
+type RowData = {
+  id: string;
+  content: string;
+  timestamp: Date;
+};
 
 const MemoizedMessage = memo(
   ({
@@ -15,6 +21,18 @@ const MemoizedMessage = memo(
     handleExecute: (arg1: string, arg2: string) => void;
   }) => {
     const { message, role, type, execution_id } = msg;
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = useCallback(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }, []);
+
+    useEffect(() => {
+      scrollToBottom();
+    }, [msg]);
 
     return (
       <HStack
@@ -69,16 +87,20 @@ const MemoizedMessage = memo(
                 {message}
               </Text>
             ) : (
-              typeof message === "object" && <ChatTable data={message} />
+              typeof message === "object" && (
+                <ChatTable data={message as RowData[]} />
+              )
             )
           ) : (
             typeof message === "string" && <Text p={3}>{message}</Text>
           )}
-          {type !== "execution" && <ChatActions msg={msg} />}
+          {type !== "execution" && type !== "error" && (
+            <ChatActions msg={msg} />
+          )}
         </VStack>
+        {<div ref={messagesEndRef} />}
       </HStack>
     );
   }
 );
-
 export default MemoizedMessage;

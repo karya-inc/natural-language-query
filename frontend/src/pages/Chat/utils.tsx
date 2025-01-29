@@ -47,3 +47,17 @@ export function downloadObjectAs(
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
 }
+
+export const messageActionStyles = {
+  ":hover": {
+    backgroundColor: "gray.400",
+  },
+};
+
+export const handleDownload = (report: Record<string, string>[]) => {
+  const today = new Date();
+  const date = today.getDate();
+  const month = today.getMonth() + 1;
+  const year = today.getFullYear();
+  downloadObjectAs(report, `Table-${year}-${month}-${date}.csv`, "csv");
+};

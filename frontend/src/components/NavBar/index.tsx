@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
 import { BACKEND_URL, baseUrl } from "../../config";
 import { Message } from "../../pages/Chat";
+import "./index.css";
 
 type HistoryItem = {
   session_id: string;
@@ -111,7 +112,7 @@ const NavBar = ({
       position={{ base: "absolute", md: "inherit" }}
       top={{ base: 0, md: "unset" }}
       left={{ base: 0, md: "unset" }}
-      h="100vh"
+      h="100%"
       w={{ base: "70%", md: "50%", xl: "25%" }}
       alignItems="flex-start"
       zIndex={10}
