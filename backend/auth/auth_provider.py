@@ -3,8 +3,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Literal, TypeVar
 import jwt
+from utils.logger import get_logger
 
 ResponsePayload = TypeVar("ResponsePayload")
+
+# Set up logging configuration
+logger = get_logger("NLQ-Server")
 
 
 @dataclass
@@ -71,7 +75,7 @@ class AuthProvider(ABC):
             token: Access Token of the user to be checked
 
         Returns:
-            Whether the acccess token is valid or not
+            Whether the access token is valid or not
 
         """
         if not token:
@@ -83,7 +87,8 @@ class AuthProvider(ABC):
                 return False
             else:
                 return True
-        except:
+        except Exception as e:
+            logger.error("Token validation failed: ", e)
             return False
 
     def validate_token(self, token: str) -> dict[str, Any]:
