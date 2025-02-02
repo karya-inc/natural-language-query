@@ -21,11 +21,6 @@ class AzureAIAgentTools(AgentTools):
             api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
         )
 
-        self.gemini_ai_client = AsyncOpenAI(
-            api_key=os.environ.get("GEMINI_API_KEY"),
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        )
-
     @override
     async def invoke_llm[
         T
