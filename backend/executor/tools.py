@@ -20,13 +20,10 @@ from executor.models import (
 from executor.state import AgentState
 from executor.models import QueryResults
 from executor.catalog import Catalog
-from utils.logger import get_logger
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
 from utils.rows_to_json import json_serial
 from utils.table_to_markdown import get_table_markdown
-
-logger = get_logger("[AGENTIC TOOLS]")
 
 
 class AgentTools(ABC):
@@ -343,7 +340,6 @@ class AgentTools(ABC):
             messages,
         )
         print(system_prompt)
-        logger.info(f"Generated Queries: {llm_response.query}")
         return llm_response.query
 
     async def is_result_relevant(

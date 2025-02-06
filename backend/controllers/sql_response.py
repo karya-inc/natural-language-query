@@ -106,7 +106,6 @@ async def do_nlq(
             database_used=result.db_name,
             execution_log_id=result.execution_log.id,
         )
-        logger.info(f"Created turn for session '{session.session_id}' - {turn}")
         yield NLQResponseEvent(
             kind="RESPONSE",
             type="TABLE",

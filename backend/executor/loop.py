@@ -72,7 +72,6 @@ async def execute_query_with_healing(
                 is_background=False,
             )
 
-            logger.debug(f"Execution result: {execution_result}")
             # Query execution not in background, so expect a result
             assert not isinstance(
                 execution_result, ExecutionLog
@@ -129,7 +128,7 @@ async def execute_query_with_healing(
             "Failed to execute this query. You may not have the required permissions."
         )
 
-    # Unknow error
+    # Unknown error
     raise UnRecoverableError("Failed to execute this query")
 
 
