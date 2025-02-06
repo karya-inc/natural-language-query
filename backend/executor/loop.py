@@ -77,7 +77,6 @@ async def execute_query_with_healing(
                 execution_result, ExecutionLog
             ), "Expected Query Execution to return a result"
 
-            logger.debug(f"Execution result is not an ExecutionLog: {execution_result}")
             if isinstance(execution_result, QueryExecutionSuccessResult):
                 logger.debug(f"Query execution succeeded: {execution_result}")
                 return execution_result

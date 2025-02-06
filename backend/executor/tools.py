@@ -339,7 +339,6 @@ class AgentTools(ABC):
             GeneratedQuery,
             messages,
         )
-        print(system_prompt)
         return llm_response.query
 
     async def is_result_relevant(
