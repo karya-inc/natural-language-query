@@ -60,7 +60,7 @@ const RootLayout = () => {
             />
           )}
 
-          {savedId ? (
+          {savedId && savedQueryData.sql_query_id ? (
             <SavedQuery
               savedQueryData={savedQueryData}
               navOpen={navOpen}
