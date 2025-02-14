@@ -57,6 +57,9 @@ class ExecuteQueryOp(celery.Task):
             execution_log.notify_to,
         )
 
+        if self._db_session is not None:
+            self._db_session.close()
+
     def on_failure(self, exc, task_id, args, kwargs, einfo):
 
         if "execution_log_id" not in kwargs:
@@ -79,6 +82,9 @@ class ExecuteQueryOp(celery.Task):
             execution_log_id,
             execution_log.notify_to,
         )
+
+        if self._db_session is not None:
+            self._db_session.close()
 
 
 @app.task(base=ExecuteQueryOp, bind=True)
