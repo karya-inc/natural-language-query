@@ -78,3 +78,7 @@ class QueryExecutionPipeline:
         except Exception as e:
             logger.error(f"Failed to execute Query: {e}")
             return QueryExecutionFailureResult(reason=str(e), recoverable=True)
+
+    def clean(self):
+        if self._db_session is not None:
+            self._db_session.close()
