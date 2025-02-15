@@ -199,6 +199,9 @@ async def get_chat_history(
         )
         raise HTTPException(status_code=500, detail="Failed to stream chat history.")
 
+    finally:
+        db.close()
+
 
 @app.get("/fetch_session_history/{session_id}")
 async def get_session_history_for_user(
@@ -227,6 +230,8 @@ async def get_session_history_for_user(
             f"Error while retrieving session history for session_id: {session_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get session history.")
+    finally:
+        db.close()
 
 
 @app.get("/queries")
@@ -264,6 +269,8 @@ async def get_saved_queries(
         raise HTTPException(
             status_code=500, detail="Failed to return favorite queries."
         )
+    finally:
+        db.close()
 
 
 @app.get("/queries/{sqid}/execution")
@@ -327,6 +334,8 @@ async def execute_saved_query(
         )
         raise HTTPException(status_code=500, detail="Failed to execute saved query.")
 
+    finally:
+        db.close()
 
 @app.post("/save_favorite_query/{turn_id}/{sql_query_id}", deprecated=True)
 async def save_favorite_query(
@@ -359,6 +368,8 @@ async def save_favorite_query(
             f"Error while saving favorite query for user : {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to save favorite query.")
+    finally:
+        db.close()
 
 
 @app.get("/execution_result/{execution_id}")
@@ -438,6 +449,8 @@ async def save_query(
             f"Error while saving query for user : {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to save query.")
+    finally:
+        db.close()
 
 
 @app.get("/get_all_users_info/")
@@ -466,3 +479,5 @@ async def get_all_queries(
             f"Error while retrieving all users info for user: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get all users info.")
+    finally:
+        db.close()

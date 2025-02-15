@@ -89,6 +89,7 @@ async def get_authenticated_user_info(
         HTTPException: If the token is invalid (code: 401) or user information is missing (code: 403).
     """
     if not auth_result.is_valid or not auth_result.payload:
+        db.close()
         raise HTTPException(status_code=403, detail="Could not validate credentials")
 
     payload = auth_result.payload
@@ -96,6 +97,7 @@ async def get_authenticated_user_info(
     # Extract the user id from the token
     user_id = payload.get("sub")
     if not user_id:
+        db.close()
         raise HTTPException(
             status_code=403, detail="Invalid token: Missing user identification"
         )
@@ -111,6 +113,8 @@ async def get_authenticated_user_info(
             status_code=403,
             detail=f"Invalid Token: Missing or Invalid Role in token payload - {e}",
         )
+    finally:
+        db.close()
 
     scopes_json = payload.get("scopes", {})
     common_scopes = payload.get("common_scopes", [])

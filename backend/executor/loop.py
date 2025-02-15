@@ -108,6 +108,9 @@ async def execute_query_with_healing(
             logger.error(f"Error in execute_query_with_healing: {e}")
             continue
 
+    # closing db session
+    query_pipeline.clean()
+
     # Query execution not in background, so expect a result
     assert not isinstance(
         execution_result, ExecutionLog
@@ -186,6 +189,9 @@ async def agentic_loop(
             catalog=catalog,
             execute_query=query_pipeline.check_and_execute,
         )
+
+        # closing db session
+        query_pipeline.clean()
 
         if not isinstance(prev_turn_result, QueryExecutionSuccessResult):
             send_update(AgentStatus.TASK_FAILED)
