@@ -62,54 +62,55 @@ async def execute_query_with_healing(
 
     healing_attempts = 0
     execution_result: Optional[QueryExecutionResult] = None
-    while healing_attempts <= MAX_HEALING_ATTEMPTS:
-        try:
-            logger.debug(f"Executing query: {query_to_execute}")
-            execution_result = get_or_execute_query_result(
-                sql_query=query_to_execute,
-                catalog=state.relevant_catalog,
-                execute_query=query_pipeline.check_and_execute,
-                is_background=False,
-            )
-
-            # Query execution not in background, so expect a result
-            assert not isinstance(
-                execution_result, ExecutionLog
-            ), "Expected Query Execution to return a result"
-
-            if isinstance(execution_result, QueryExecutionSuccessResult):
-                logger.debug(f"Query execution succeeded: {execution_result}")
-                return execution_result
-
-            # If the query execution failed unrecoverably, raise an error
-            if not execution_result.recoverable:
-                logger.error(f"Unrecoverable error: {execution_result.reason}")
-                raise UnRecoverableError(execution_result.reason)
-
-            # Query execution failed, but is recoverable
-            # Attempt to heal the query
-            healing_attempts += 1
-            logger.debug(f"Healing attempts: {healing_attempts}")
-            if healing_attempts % 3 == 0:
-                # Couldn't fix after 2 times, try to regenerate the query
-                logger.debug("Attempting to regenerate the query")
-                query_to_execute = await tools.heal_fix_query(
-                    query_to_execute, state, execution_result
+    try:
+        while healing_attempts <= MAX_HEALING_ATTEMPTS:
+            try:
+                logger.debug(f"Executing query: {query_to_execute}")
+                execution_result = get_or_execute_query_result(
+                    sql_query=query_to_execute,
+                    catalog=state.relevant_catalog,
+                    execute_query=query_pipeline.check_and_execute,
+                    is_background=False,
                 )
-            else:
-                logger.debug("Attempting to heal the query")
-                query_to_execute = await tools.heal_regenerate_query(
-                    query_to_execute, state, execution_result
-                )
-        except UnRecoverableError as e:
-            raise e
 
-        except Exception as e:
-            logger.error(f"Error in execute_query_with_healing: {e}")
-            continue
+                # Query execution not in background, so expect a result
+                assert not isinstance(
+                    execution_result, ExecutionLog
+                ), "Expected Query Execution to return a result"
 
-    # closing db session
-    query_pipeline.clean()
+                if isinstance(execution_result, QueryExecutionSuccessResult):
+                    logger.debug(f"Query execution succeeded: {execution_result}")
+                    return execution_result
+
+                # If the query execution failed unrecoverably, raise an error
+                if not execution_result.recoverable:
+                    logger.error(f"Unrecoverable error: {execution_result.reason}")
+                    raise UnRecoverableError(execution_result.reason)
+
+                # Query execution failed, but is recoverable
+                # Attempt to heal the query
+                healing_attempts += 1
+                logger.debug(f"Healing attempts: {healing_attempts}")
+                if healing_attempts % 3 == 0:
+                    # Couldn't fix after 2 times, try to regenerate the query
+                    logger.debug("Attempting to regenerate the query")
+                    query_to_execute = await tools.heal_fix_query(
+                        query_to_execute, state, execution_result
+                    )
+                else:
+                    logger.debug("Attempting to heal the query")
+                    query_to_execute = await tools.heal_regenerate_query(
+                        query_to_execute, state, execution_result
+                    )
+            except UnRecoverableError as e:
+                raise e
+
+            except Exception as e:
+                logger.error(f"Error in execute_query_with_healing: {e}")
+                continue
+    finally:
+        # closing db session
+        query_pipeline.clean()
 
     # Query execution not in background, so expect a result
     assert not isinstance(

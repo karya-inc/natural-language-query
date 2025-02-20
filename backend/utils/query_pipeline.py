@@ -82,3 +82,4 @@ class QueryExecutionPipeline:
     def clean(self):
         if self._db_session is not None:
             self._db_session.close()
+            self._db_session = None
