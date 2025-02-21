@@ -17,6 +17,13 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
             except Exception as e:
                 print(f"Error converting column {column} to isoformat: {e}")
 
+        # Convert Decimal to float
+        if pd.api.types.is_float_dtype(df[column]):
+            try:
+                df[column] = df[column].astype(float)
+            except Exception as e:
+                print(f"Error converting column {column} to float: {e}")
+
     return df.to_dict(orient="records")
 
 
