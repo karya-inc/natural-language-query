@@ -1,6 +1,6 @@
 import { Text } from "@chakra-ui/react";
 import { AgGridReact } from "ag-grid-react";
-import { themeQuartz, colorSchemeDarkBlue } from "ag-grid-community";
+import { themeQuartz, colorSchemeDarkBlue, ColDef } from "ag-grid-community";
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -13,12 +13,12 @@ const ChatTable = ({
   isLoading?: boolean;
 }) => {
   const rowData = data;
-  const colDefs = Object.keys(rowData[0]).map((key) => ({
+  const colDefs: ColDef[] = Object.keys(rowData[0]).map((key) => ({
     field: key,
     filter: true,
   }));
-  const defaultColDef = {
-    flex: 1,
+  const defaultColDef: ColDef = {
+    maxWidth: 400,
   };
   const pagination = true;
   const paginationPageSize = 10;
@@ -36,6 +36,7 @@ const ChatTable = ({
       defaultColDef={defaultColDef}
       theme={myTheme}
       domLayout="autoHeight"
+      autoSizeStrategy={{ type: "fitCellContents" }}
       pagination={pagination}
       paginationPageSize={paginationPageSize}
       paginationPageSizeSelector={paginationPageSizeSelector}
