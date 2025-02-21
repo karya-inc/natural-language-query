@@ -22,7 +22,7 @@ from executor.models import QueryResults
 from executor.catalog import Catalog
 from utils.query_pipeline import QueryExecutionFailureResult, QueryExecutionResult
 from utils.parse_catalog import parsed_catalogs
-from utils.rows_to_json import json_serial
+from utils.rows_to_json import to_json_serializable
 from utils.table_to_markdown import get_table_markdown
 
 
@@ -167,7 +167,7 @@ class AgentTools(ABC):
 
             database_info.append(catalog_info)
 
-        database_info_json = json.dumps(database_info, default=json_serial)
+        database_info_json = json.dumps(database_info, default=to_json_serializable)
 
         system_prompt = """
         You are a highly experienced SQL Expert with over 10 years of expertise. You are provided with a catalog containing metadata about various databases, including descriptions, table names, and column names. Your task is to analyze user queries to understand their intent and determine whether the required data can be retrieved from a single database or if multiple databases are needed.
