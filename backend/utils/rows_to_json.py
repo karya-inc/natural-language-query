@@ -39,7 +39,7 @@ def to_json_serializable(obj):
     if isinstance(obj, Decimal):
         return float(obj)
 
-    raise TypeError("Type %s not serializable" % type(obj))
+    return obj
 
 
 def convert_rows_to_json(rows: Sequence[Row[Any]]) -> Optional[str]:
