@@ -57,7 +57,7 @@ const SavedQuery = ({
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
-    if (!executionResponse || !isFetching) {
+    if (!executionResponse) {
       return;
     }
 
@@ -89,7 +89,7 @@ const SavedQuery = ({
       console.error("Error executing query:", execution_log.logs);
       setIsFetching(false);
     }
-  }, [executionResponse, isFetching]);
+  }, [executionResponse]);
 
   /** Show Toast To User When Execution Fails */
   const toastExecutionFailure = () => {
@@ -195,7 +195,11 @@ const SavedQuery = ({
         )}
         {lastExecutedAt && (
           <Text fontSize="sm" color="gray.300" fontStyle="italic">
-            Last executed at: {lastExecutedAt}
+            <strong>Last Updated At: </strong>
+            {new Date(lastExecutedAt).toLocaleString(undefined, {
+              dateStyle: "long",
+              timeStyle: "short",
+            })}
           </Text>
         )}
         <Divider />
