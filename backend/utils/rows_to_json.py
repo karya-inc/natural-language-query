@@ -17,18 +17,14 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
             except Exception as e:
                 print(f"Error converting column {column} to isoformat: {e}")
 
-        first_index_with_value = df[column].first_valid_index()
-        if first_index_with_value is not None:
-            sample_value = df[column][first_index_with_value]
-            if isinstance(sample_value, Decimal):
-                df[column] = df[column].apply(lambda x: float(x))
+        df[column] = df[column].apply(to_json_serializable)
 
 
     df = df.apply(pd.to_numeric, downcast='float')
     return df.to_dict(orient="records") #type:ignore
 
 
-def json_serial(obj):
+def to_json_serializable(obj):
     """JSON serializer for objects not serializable by default json code"""
 
     if isinstance(obj, (datetime, date)):
@@ -37,14 +33,11 @@ def json_serial(obj):
     if isinstance(obj, (bytes, bytearray)):
         return obj.decode("utf-8")
 
-    if isinstance(
-        obj,
-        (
-            Decimal,
-            UUID,
-        ),
-    ):
+    if isinstance(obj, UUID):
         return str(obj)
+
+    if isinstance(obj, Decimal):
+        return float(obj)
 
     raise TypeError("Type %s not serializable" % type(obj))
 
@@ -55,4 +48,4 @@ def convert_rows_to_json(rows: Sequence[Row[Any]]) -> Optional[str]:
     """
 
     records = convert_rows_to_serializable(rows)
-    return json.dumps(records, default=json_serial)
+    return json.dumps(records)
