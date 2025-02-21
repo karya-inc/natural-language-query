@@ -17,7 +17,12 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
             except Exception as e:
                 print(f"Error converting column {column} to isoformat: {e}")
 
-        # Convert Decimal to float
+        first_index_with_value = df[column].first_valid_index()
+        if first_index_with_value is not None:
+            sample_value = df[column][first_index_with_value]
+            if isinstance(sample_value, Decimal):
+                df[column] = df[column].apply(lambda x: float(x))
+
 
     df = df.apply(pd.to_numeric, downcast='float')
     return df.to_dict(orient="records") #type:ignore
