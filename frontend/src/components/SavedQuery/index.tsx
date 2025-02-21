@@ -262,7 +262,7 @@ const SavedQuery = ({
           </Box>
         )}
         {savedQueryTableData.length > 0 && (
-          <Box maxWidth="100%">
+          <Box width="100%">
             <ChatTable data={savedQueryTableData} isLoading={isFetching} />
           </Box>
         )}
