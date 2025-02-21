@@ -226,7 +226,7 @@ const SavedQuery = ({
               _hover={{ bg: "gray.600", color: "gray.400" }}
               onClick={handleExecute}
               isDisabled={isFetching}
-              isLoading={isFetching && hasData}
+              isLoading={isFetching && !hasData}
             >
               Execute
               <Icon
