@@ -18,6 +18,8 @@ from typing import List, Literal, Optional
 from utils.logger import get_logger
 import enum
 
+from utils.rows_to_json import convert_rows_to_serializable
+
 logger = get_logger("[DATABASE_QUERIES]")
 
 
@@ -524,6 +526,7 @@ def save_execution_result(
     Save the execution result for a query.
     """
     try:
+        result = convert_rows_to_serializable(result)
         execution_result = ExecutionResult(execution_id=execution_id, result=result)
         db_session.add(execution_result)
         db_session.commit()
