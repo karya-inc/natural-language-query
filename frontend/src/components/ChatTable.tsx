@@ -5,7 +5,13 @@ import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
+const ChatTable = ({
+  data,
+  isLoading,
+}: {
+  data: Record<string, unknown>[];
+  isLoading?: boolean;
+}) => {
   const rowData = data;
   const colDefs = Object.keys(rowData[0]).map((key) => ({
     field: key,
@@ -24,6 +30,7 @@ const ChatTable = ({ data }: { data: Record<string, unknown>[] }) => {
 
   return rowData.length > 0 ? (
     <AgGridReact
+      loading={isLoading}
       rowData={rowData}
       columnDefs={colDefs}
       defaultColDef={defaultColDef}

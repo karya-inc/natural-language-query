@@ -220,6 +220,7 @@ const SavedQuery = ({
               bg="gray.700"
               _hover={{ bg: "gray.600", color: "gray.400" }}
               onClick={handleExecute}
+              isDisabled={isFetching}
             >
               Execute
               <Icon
@@ -254,12 +255,8 @@ const SavedQuery = ({
             </Button>
           </Box>
         )}
-        {isFetching ? (
-          <FetchingSkeleton />
-        ) : (
-          savedQueryTableData.length > 0 && (
-            <ChatTable data={savedQueryTableData} />
-          )
+        {savedQueryTableData.length > 0 && (
+          <ChatTable data={savedQueryTableData} isLoading={isFetching} />
         )}
       </VStack>
     </VStack>
