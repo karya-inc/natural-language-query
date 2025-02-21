@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, asc
 from db.models import (
     ExecutionLog,
@@ -492,6 +492,11 @@ def get_exeuction_log_result(
     try:
         execution_result_with_log = (
             db_session.query(ExecutionLog, ExecutionResult)
+            .options(
+                joinedload(ExecutionLog.query),
+                joinedload(ExecutionLog.user),
+                joinedload(ExecutionResult.execution_log),
+            )
             .outerjoin(
                 ExecutionResult,
                 ExecutionLog.id == ExecutionResult.execution_id,

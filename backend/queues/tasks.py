@@ -85,6 +85,7 @@ class ExecuteQueryOp(celery.Task):
 
         if self._db_session is not None:
             self._db_session.close()
+            self._db_session = None
 
 
 @app.task(base=ExecuteQueryOp, bind=True)

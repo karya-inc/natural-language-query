@@ -588,7 +588,7 @@ def check_query_privilages(
         if table_name in valid_query_aliases:
             continue
 
-        if table_name not in table_privilages_for_role:
+        if table_name not in table_privilages_for_role or active_role == "EXTERNAL_COORDINATOR":
             return PrivilageCheckResult(
                 query_allowed=False,
                 err_code=ErrorCode.ROLE_NO_TABLE_ACCESS,

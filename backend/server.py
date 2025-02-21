@@ -397,6 +397,8 @@ async def get_execution_result_for_id(
             f"Error while retrieving execution result for user: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get execution result.")
+    finally:
+        db.close()
 
     if not response:
         raise HTTPException(status_code=404, detail="Execution log not found.")

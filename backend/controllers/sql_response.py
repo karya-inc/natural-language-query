@@ -132,6 +132,7 @@ async def do_nlq(
             session_id=str(session.session_id),
         )
 
+    db_session.close()
     logger.info("NLQ Completed")
 
 

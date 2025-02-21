@@ -136,7 +136,7 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
-        {savedQueryTableData.length > 0 && (
+        {savedQueryTableData.length >= 0 && (
           <Box w="100%" display="flex" gap={4}>
             <Button
               justifyContent={"space-between"}
