@@ -417,6 +417,9 @@ def set_execution_status(
             return None
 
         execution_log.status = status
+        if status == "SUCCESS":
+            execution_log.completed_at = datetime.now()
+
         db_session.commit()
         return execution_log
     except Exception as e:
