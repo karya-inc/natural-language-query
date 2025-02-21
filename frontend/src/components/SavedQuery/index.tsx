@@ -11,7 +11,6 @@ import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
 import { useEffect, useState } from "react";
-import { FetchingSkeleton } from "../../pages/Chat";
 import {
   ExecutionLog,
   ExecutionResponse,
