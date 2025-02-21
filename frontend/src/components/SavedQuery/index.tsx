@@ -56,7 +56,7 @@ const SavedQuery = ({
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
-    if (!executionResponse) {
+    if (!executionResponse || !executionResponse.execution_log.id) {
       return;
     }
 
@@ -143,6 +143,9 @@ const SavedQuery = ({
         },
       );
       const execution_log: ExecutionLog = await response.json();
+      if (!execution_log.id) {
+        return;
+      }
       const executionResponse = await refetchExecutionResponse(
         execution_log.id,
       );
