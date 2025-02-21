@@ -41,7 +41,7 @@ const ChatTable = ({
       paginationPageSizeSelector={paginationPageSizeSelector}
     />
   ) : (
-    <Text py={2}>No results match your query. Please be specific</Text>
+    <Text py={2}>No data to show</Text>
   );
 };
 
