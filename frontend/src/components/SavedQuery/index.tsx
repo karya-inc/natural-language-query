@@ -166,6 +166,7 @@ const SavedQuery = ({
       h="100%"
       p={8}
       color="white"
+      overflowY="auto"
     >
       {!navOpen && (
         <Icon
