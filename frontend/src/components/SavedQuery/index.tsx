@@ -257,7 +257,9 @@ const SavedQuery = ({
           </Box>
         )}
         {savedQueryTableData.length > 0 && (
-          <ChatTable data={savedQueryTableData} isLoading={isFetching} />
+          <Box w="100%">
+            <ChatTable data={savedQueryTableData} isLoading={isFetching} />
+          </Box>
         )}
       </VStack>
     </VStack>
