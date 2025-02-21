@@ -50,7 +50,7 @@ const SavedQuery = ({
 
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
 
-  const toast = useToast();
+  const toast = useToast({ position: "bottom-right" });
 
   useEffect(() => {
     getSavedTableData();
@@ -87,6 +87,7 @@ const SavedQuery = ({
     // Log error if execution failed
     if (execution_log.status === "FAILED") {
       console.error("Error executing query:", execution_log.logs);
+      toastExecutionFailure();
       setIsFetching(false);
     }
   }, [executionResponse]);
