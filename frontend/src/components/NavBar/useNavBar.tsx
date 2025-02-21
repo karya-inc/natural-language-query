@@ -13,6 +13,21 @@ export interface SavedQueryDataInterface {
   description: string;
 }
 
+export type ExecutionLog = {
+  status: string;
+  id: string;
+  query_id: string;
+  query: string;
+  logs?: Record<string, unknown>[];
+  created_at: string;
+  completed_at: string;
+};
+
+export type ExecutionResponse = {
+  execution_log: ExecutionLog;
+  result?: Record<string, unknown>[];
+};
+
 const useNavBar = (name?: string, description?: string) => {
   const [navOpen, setNavOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -84,7 +99,9 @@ const useNavBar = (name?: string, description?: string) => {
     }
   }
 
-  async function postQueryToGetId(url: string) {
+  async function executeSavedQueryByQueryId(
+    url: string,
+  ): Promise<ExecutionLog | undefined> {
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -93,14 +110,15 @@ const useNavBar = (name?: string, description?: string) => {
         },
         credentials: "include",
       });
-      const { id } = await response.json();
-      return id;
+      return await response.json();
     } catch (error) {
       console.error(error);
     }
   }
 
-  async function getSavedQueryTableData(url: string) {
+  async function getExecutionResponseById(
+    url: string,
+  ): Promise<ExecutionResponse | undefined> {
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -127,8 +145,8 @@ const useNavBar = (name?: string, description?: string) => {
     setNavOpen,
     savedQueryData,
     setSavedQueryData,
-    getSavedQueryTableData,
-    postQueryToGetId,
+    getExecutionResponseById,
+    executeSavedQueryByQueryId,
     savedQueryTableData,
     setSavedQueryTableData,
     savedId,

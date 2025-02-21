@@ -28,8 +28,8 @@ const RootLayout = () => {
     setNavOpen,
     savedQueryData,
     setSavedQueryData,
-    getSavedQueryTableData,
-    postQueryToGetId,
+    getExecutionResponseById,
+    executeSavedQueryByQueryId,
     savedQueryTableData,
     setSavedQueryTableData,
     savedId,
@@ -65,8 +65,8 @@ const RootLayout = () => {
               savedQueryData={savedQueryData}
               navOpen={navOpen}
               setNavOpen={setNavOpen}
-              getSavedQueryTableData={getSavedQueryTableData}
-              postQueryToGetId={postQueryToGetId}
+              getExecutionResponseById={getExecutionResponseById}
+              executeSavedQueryByQueryId={executeSavedQueryByQueryId}
               savedQueryTableData={savedQueryTableData}
               setSavedQueryTableData={setSavedQueryTableData}
             />

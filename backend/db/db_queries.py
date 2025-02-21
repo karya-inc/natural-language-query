@@ -14,7 +14,7 @@ from db.models import (
 from datetime import datetime
 from pydantic import BaseModel
 from executor.models import QueryResults
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 from utils.logger import get_logger
 import enum
 
@@ -477,7 +477,7 @@ def get_recent_execution_for_query(
 
 
 class ExecutionLogResult(BaseModel):
-    execution_log: ExecutionLog
+    execution_log: dict[str, Any]
     result: Optional[QueryResults]
 
 
@@ -514,7 +514,7 @@ def get_exeuction_log_result(
         execution_log, execution_result = execution_result_with_log
 
         return ExecutionLogResult(
-            execution_log=execution_log,
+            execution_log=execution_log.to_dict(),
             result=execution_result.result if execution_result else None,
         )
 

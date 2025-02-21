@@ -1,10 +1,22 @@
-import { VStack, Text, Box, Button, Icon } from "@chakra-ui/react";
+import {
+  VStack,
+  Text,
+  Box,
+  Button,
+  Icon,
+  Divider,
+  useToast,
+} from "@chakra-ui/react";
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
 import { useEffect, useState } from "react";
 import { FetchingSkeleton } from "../../pages/Chat";
-import { SavedQueryDataInterface } from "../NavBar/useNavBar";
+import {
+  ExecutionLog,
+  ExecutionResponse,
+  SavedQueryDataInterface,
+} from "../NavBar/useNavBar";
 import { IoCloudDownloadOutline } from "react-icons/io5";
 import { RiLoopRightFill } from "react-icons/ri";
 import { handleDownload } from "../../pages/Chat/utils";
@@ -13,11 +25,12 @@ type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
   navOpen: boolean;
   setNavOpen: (arg: (prev: boolean) => boolean) => void;
-  getSavedQueryTableData: (arg: string) => Promise<{
-    execution_log: { status: string };
-    result: Record<string, unknown>[];
-  }>;
-  postQueryToGetId: (arg: string) => Promise<string>;
+  getExecutionResponseById: (
+    url: string,
+  ) => Promise<ExecutionResponse | undefined>;
+  executeSavedQueryByQueryId: (
+    sql_id: string,
+  ) => Promise<ExecutionLog | undefined>;
   savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
@@ -26,42 +39,99 @@ const SavedQuery = ({
   savedQueryData,
   navOpen,
   setNavOpen,
-  getSavedQueryTableData,
-  postQueryToGetId,
+  getExecutionResponseById,
+  executeSavedQueryByQueryId,
   savedQueryTableData,
   setSavedQueryTableData,
 }: SavedQueryProps) => {
   const [isFetching, setIsFetching] = useState(false);
+  const [executionResponse, setExecutionResponse] =
+    useState<ExecutionResponse | null>(null);
+
+  const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
+
+  const toast = useToast();
 
   useEffect(() => {
     getSavedTableData();
   }, [savedQueryData.sql_query_id]);
 
+  useEffect(() => {
+    if (!executionResponse || !isFetching) {
+      return;
+    }
+
+    // Poll the execution response if the status is running
+    if (
+      ["RUNNING", "PENDING"].includes(executionResponse.execution_log.status)
+    ) {
+      const timeoutHandler = setTimeout(() => {
+        refetchExecutionResponse(executionResponse.execution_log.id);
+      }, 2000);
+
+      return () => {
+        clearTimeout(timeoutHandler);
+      };
+    }
+
+    const { execution_log, result } = executionResponse;
+
+    // Update the table data and last executed time
+    if (execution_log.status === "SUCCESS") {
+      setSavedQueryTableData(result ?? []);
+      setLastExecutedAt(execution_log.completed_at);
+      setIsFetching(false);
+      return;
+    }
+
+    // Log error if execution failed
+    if (execution_log.status === "FAILED") {
+      console.error("Error executing query:", execution_log.logs);
+      setIsFetching(false);
+    }
+  }, [executionResponse, isFetching]);
+
+  /** Show Toast To User When Execution Fails */
+  const toastExecutionFailure = () => {
+    toast({
+      title: "Failed to execute query",
+      description:
+        "Something went wrong while executing the query. Please try again later.",
+      status: "error",
+    });
+  };
+
+  /** Refetch and update the execution response for an execution log*/
+  const refetchExecutionResponse = async (execution_id: string) => {
+    const updatedExecutionResponse = await getExecutionResponseById(
+      `${BACKEND_URL}/execution_result/${execution_id}`,
+    );
+    if (updatedExecutionResponse) {
+      setExecutionResponse(updatedExecutionResponse);
+    } else {
+      setIsFetching(false);
+    }
+    return updatedExecutionResponse;
+  };
+
+  /** Execute Handler - Refresh the report to get the latest data */
   const handleExecute = async () => {
     try {
       setIsFetching(true);
-      const id = await postQueryToGetId(
-        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`
+      const execution_log = await executeSavedQueryByQueryId(
+        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
       );
-      let executionStatus = "RUNNING";
-      let resultData: Record<string, unknown>[] = [];
-      while (executionStatus === "RUNNING") {
-        const { execution_log, result } = await getSavedQueryTableData(
-          `${BACKEND_URL}/execution_result/${id}`
-        );
-        executionStatus = execution_log?.status;
-        resultData = result;
+      if (!execution_log) {
+        toastExecutionFailure();
+        return;
       }
-      if (executionStatus === "SUCCESS") {
-        setSavedQueryTableData(resultData || []);
-      }
+      setExecutionResponse({ execution_log });
     } catch (error) {
       console.error("Error executing query:", error);
-    } finally {
-      setIsFetching(false);
     }
   };
 
+  /** Fetch the details of the last successful execution response */
   async function getSavedTableData() {
     try {
       setIsFetching(true);
@@ -70,20 +140,14 @@ const SavedQuery = ({
         {
           method: "GET",
           credentials: "include",
-        }
+        },
       );
-      const { id } = await response.json();
-      let executionStatus = "RUNNING";
-      let resultData: Record<string, unknown>[] = [];
-      while (executionStatus === "RUNNING") {
-        const { execution_log, result } = await getSavedQueryTableData(
-          `${BACKEND_URL}/execution_result/${id}`
-        );
-        executionStatus = execution_log?.status;
-        resultData = result;
-      }
-      if (executionStatus === "SUCCESS") {
-        setSavedQueryTableData(resultData || []);
+      const execution_log: ExecutionLog = await response.json();
+      const executionResponse = await refetchExecutionResponse(
+        execution_log.id,
+      );
+      if (executionResponse) {
+        setExecutionResponse(executionResponse);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -129,6 +193,12 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
+        {lastExecutedAt && (
+          <Text fontSize="sm" color="gray.300" fontStyle="italic">
+            Last executed at: {lastExecutedAt}
+          </Text>
+        )}
+        <Divider />
         {savedQueryData.description && (
           <Box w="100%">
             <Text fontSize="lg" color="gray.300">
@@ -144,7 +214,7 @@ const SavedQuery = ({
               color="gray.400"
               bg="gray.700"
               _hover={{ bg: "gray.600", color: "gray.400" }}
-              onClick={() => setTimeout(handleExecute)}
+              onClick={handleExecute}
             >
               Execute
               <Icon
@@ -164,7 +234,7 @@ const SavedQuery = ({
               onClick={() => {
                 if (Array.isArray(savedQueryTableData)) {
                   handleDownload(
-                    savedQueryTableData as unknown as Record<string, string>[]
+                    savedQueryTableData as unknown as Record<string, string>[],
                   );
                 }
               }}
