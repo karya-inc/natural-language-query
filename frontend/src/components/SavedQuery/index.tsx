@@ -199,15 +199,17 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
-        {lastExecutedAt && (
-          <Text fontSize="sm" color="gray.300" fontStyle="italic">
-            <strong>Last Updated At: </strong>
-            {new Date(lastExecutedAt).toLocaleString(undefined, {
-              dateStyle: "long",
-              timeStyle: "short",
-            })}
-          </Text>
-        )}
+        {
+          lastExecutedAt && (<span></span>)
+          //  <Text fontSize="sm" color="gray.300" fontStyle="italic">
+          //    <strong>Last Updated At: </strong>
+          //    {new Date(lastExecutedAt).toLocaleString(undefined, {
+          //      dateStyle: "long",
+          //      timeStyle: "short",
+          //    })}
+          //  </Text>
+          //)
+        }
         <Divider />
         {savedQueryData.description && (
           <Box w="100%">
