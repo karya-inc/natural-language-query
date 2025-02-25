@@ -314,7 +314,13 @@ async def execute_saved_query(
         raise HTTPException(status_code=404, detail="Execution log not found.")
 
     try:
-        # Returning the StreamingResponse with the proper media type for SSE
+
+        running_execution_log = get_recent_execution_for_query_id(db, sqid, "RUNNING")
+        if running_execution_log:
+            return running_execution_log.to_dict()
+
+
+        # No running execution found, create a new execution log
         execution_log = create_execution_entry(db, user_info.user_id, str(sqid))
 
         logger.info("Execution started successfully.")

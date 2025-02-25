@@ -447,7 +447,7 @@ def get_execution_log(db_session: Session, execution_id: int) -> Optional[Execut
 
 
 def get_recent_execution_for_query_id(
-    db_session: Session, sqid: str, status="SUCCESS"
+    db_session: Session, sqid: str, status: ExecutionStatus = "SUCCESS"
 ) -> ExecutionLog | None:
     """
     Get the most recent execution log for a query.
