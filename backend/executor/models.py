@@ -8,6 +8,7 @@ QueryTypeLiteral = Literal[
 
 QueryResults = list[dict[str, Any]]
 
+ColumnOrder = list[str]
 
 class QueryType(BaseModel):
     query_type: QueryTypeLiteral

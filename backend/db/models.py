@@ -10,7 +10,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from executor.models import QueryResults
+from executor.models import QueryResults, ColumnOrder
 
 
 def get_uuid_str(length: int = 32) -> str:
@@ -23,6 +23,7 @@ class Base(DeclarativeBase, MappedAsDataclass):
     type_annotation_map = {
         dict[str, Any]: JSONB,
         QueryResults: JSONB,
+        ColumnOrder: ARRAY(Text),
         list[str]: ARRAY(String),
     }
 
@@ -227,6 +228,7 @@ class ExecutionResult(Base):
         ForeignKey("execution_logs.id"), index=True
     )
     result: Mapped[QueryResults] = mapped_column()
+    column_order: Mapped[ColumnOrder] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(insert_default=func.now(), init=False)
 
     # Relationships

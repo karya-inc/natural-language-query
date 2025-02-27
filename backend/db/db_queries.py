@@ -13,8 +13,8 @@ from db.models import (
 )
 from datetime import datetime
 from pydantic import BaseModel
-from executor.models import QueryResults
-from typing import Any, List, Literal, Optional
+from executor.models import QueryResults, ColumnOrder
+from typing import Any, List, Literal, Optional, cast
 from utils.logger import get_logger
 import enum
 
@@ -482,6 +482,7 @@ def get_recent_execution_for_query(
 class ExecutionLogResult(BaseModel):
     execution_log: dict[str, Any]
     result: Optional[QueryResults]
+    column_order: Optional[ColumnOrder]
 
 
 def get_exeuction_log_result(
@@ -519,6 +520,7 @@ def get_exeuction_log_result(
         return ExecutionLogResult(
             execution_log=execution_log.to_dict(),
             result=execution_result.result if execution_result else None,
+            column_order=execution_result.column_order if execution_result else None,
         )
 
     except Exception as e:
@@ -535,7 +537,9 @@ def save_execution_result(
     """
     try:
         result = convert_rows_to_serializable(result)
-        execution_result = ExecutionResult(execution_id=execution_id, result=result)
+        column_order = cast(ColumnOrder, list(result[0].keys()) if result else [])
+        execution_result = ExecutionResult(execution_id=execution_id,
+                                           result=result, column_order=column_order)
         db_session.add(execution_result)
         db_session.commit()
         return execution_result
