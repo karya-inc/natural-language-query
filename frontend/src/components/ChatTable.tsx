@@ -2,21 +2,28 @@ import { Text } from "@chakra-ui/react";
 import { AgGridReact } from "ag-grid-react";
 import { themeQuartz, colorSchemeDarkBlue, ColDef } from "ag-grid-community";
 import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { useMemo } from "react";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const ChatTable = ({
-  data,
-  isLoading,
-}: {
+export type ChatTableProps = {
   data: Record<string, unknown>[];
   isLoading?: boolean;
-}) => {
+  columnOrder?: string[];
+};
+
+const ChatTable = (props: ChatTableProps) => {
+  const { data, isLoading, columnOrder = Object.keys(data[0]) } = props;
+
+  // Compute the column definitions based on the column order
+  const colDefs = useMemo(() => {
+    return columnOrder.map<ColDef>((columnName) => ({
+      field: columnName,
+      filter: true,
+    }));
+  }, [columnOrder]);
+
   const rowData = data;
-  const colDefs: ColDef[] = Object.keys(rowData[0]).map((key) => ({
-    field: key,
-    filter: true,
-  }));
   const defaultColDef: ColDef = {
     maxWidth: 400,
   };

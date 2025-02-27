@@ -200,7 +200,7 @@ const SavedQuery = ({
           </Box>
         )}
         {
-          lastExecutedAt && (<span></span>)
+          lastExecutedAt && <span></span>
           //  <Text fontSize="sm" color="gray.300" fontStyle="italic">
           //    <strong>Last Updated At: </strong>
           //    {new Date(lastExecutedAt).toLocaleString(undefined, {
@@ -265,7 +265,11 @@ const SavedQuery = ({
         )}
         {savedQueryTableData.length > 0 && (
           <Box width="100%">
-            <ChatTable data={savedQueryTableData} isLoading={isFetching} />
+            <ChatTable
+              data={savedQueryTableData}
+              isLoading={isFetching}
+              columnOrder={executionResponse?.column_order}
+            />
           </Box>
         )}
       </VStack>
