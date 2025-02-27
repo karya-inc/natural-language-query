@@ -95,14 +95,23 @@ const NavBar = ({
   };
 
   const handleSavedQuery = (query: SavedQuery) => {
-    setSavedQueryTableData([]);
+    const destination = `${baseUrl}/saved/${query.sql_query_id}`;
+    // Return if the current path is already the same
+    if (window.location.pathname === destination) {
+      return;
+    }
+
+    // Update the state with the saved query data
     setId(query.sql_query_id);
     setSavedQueryData({
       name: query.name,
       description: query.description,
       sql_query_id: query.sql_query_id,
     });
-    navigate(`${baseUrl}/saved/${query.sql_query_id}`);
+    setSavedQueryTableData([]);
+
+    // Navigate to the saved query page
+    navigate(destination);
   };
 
   return (
