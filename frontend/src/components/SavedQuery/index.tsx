@@ -73,11 +73,12 @@ const SavedQuery = ({
       };
     }
 
-    const { execution_log, result } = executionResponse;
+    const { execution_log, result, column_order } = executionResponse;
 
     // Update the table data and last executed time
     if (execution_log.status === "SUCCESS") {
-      setSavedQueryTableData(result ?? []);
+      const updatedResult = reorderColumns({result, column_order});
+      setSavedQueryTableData(updatedResult ?? []);
       setLastExecutedAt(execution_log.completed_at);
       setIsFetching(false);
       return;
@@ -90,6 +91,24 @@ const SavedQuery = ({
       setIsFetching(false);
     }
   }, [executionResponse]);
+
+  // reorder columns
+  const reorderColumns = (data: {
+    result?: Record<string, unknown>[];
+    column_order?: string[]
+  }) => {
+
+    if (!data.result) return [];
+    return data.result.map(item => {
+        let orderedItem: Record<string, unknown> = {};
+        const keys = data.column_order ?? Object.keys(item);
+        
+        keys.forEach(key => {
+            if (key in item) orderedItem[key] = item[key];
+        });
+        return orderedItem;
+    });
+  }
 
   /** Show Toast To User When Execution Fails */
   const toastExecutionFailure = () => {

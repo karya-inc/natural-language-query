@@ -26,6 +26,7 @@ export type ExecutionLog = {
 export type ExecutionResponse = {
   execution_log: ExecutionLog;
   result?: Record<string, unknown>[];
+  column_order?: string[];
 };
 
 const useNavBar = (name?: string, description?: string) => {
