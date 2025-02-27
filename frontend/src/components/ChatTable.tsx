@@ -16,8 +16,11 @@ const ChatTable = (props: ChatTableProps) => {
   const { data, isLoading, columnOrder = Object.keys(data) } = props;
 
   // Compute the column definitions based on the column order
-  const colDefs = useMemo<ColDef[]>(() => {
-    return columnOrder.map((columnName) => ({ field: columnName }));
+  const colDefs = useMemo(() => {
+    return columnOrder.map<ColDef>((columnName) => ({
+      field: columnName,
+      filter: true,
+    }));
   }, [columnOrder]);
 
   const rowData = data;
