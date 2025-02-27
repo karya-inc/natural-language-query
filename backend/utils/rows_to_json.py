@@ -20,7 +20,7 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
         df[column] = df[column].apply(to_json_serializable)
 
 
-    df = df.apply(pd.to_numeric, downcast='float')
+    df = df.apply(pd.to_numeric, downcast='float', errors='ignore')
     return df.to_dict(orient="records") #type:ignore
 
 
