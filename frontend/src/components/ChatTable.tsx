@@ -13,7 +13,8 @@ export type ChatTableProps = {
 };
 
 const ChatTable = (props: ChatTableProps) => {
-  const { data, isLoading, columnOrder = Object.keys(data[0]) } = props;
+  const { data, isLoading } = props;
+  const columnOrder = props.columnOrder ?? (data.length > 0 ? Object.keys(data[0]) : []);
 
   // Compute the column definitions based on the column order
   const colDefs = useMemo(() => {
