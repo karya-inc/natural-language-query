@@ -8,7 +8,8 @@ export function downloadObjectAs(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   exportObj: string | object | Array<any>,
   exportName: string,
-  type: "json" | "plain" | "csv"
+  type: "json" | "plain" | "csv",
+  columnOrder?: string[]
 ) {
   const downloadAnchorNode = document.createElement("a");
   let serializedData: string;
@@ -29,7 +30,7 @@ export function downloadObjectAs(
 
     case "csv":
       if (exportObj instanceof Array) {
-        serializedData = Papa.unparse(exportObj);
+        serializedData = Papa.unparse(exportObj, { columns: columnOrder });
       } else {
         throw new Error(
           "CSV download requires the exported object to be an array"
@@ -54,10 +55,10 @@ export const messageActionStyles = {
   },
 };
 
-export const handleDownload = (report: Record<string, string>[]) => {
+export const handleDownload = (report: Record<string, string>[], columnOrder?: string[]) => {
   const today = new Date();
   const date = today.getDate();
   const month = today.getMonth() + 1;
   const year = today.getFullYear();
-  downloadObjectAs(report, `Table-${year}-${month}-${date}.csv`, "csv");
+  downloadObjectAs(report, `Table-${year}-${month}-${date}.csv`, "csv", columnOrder);
 };
