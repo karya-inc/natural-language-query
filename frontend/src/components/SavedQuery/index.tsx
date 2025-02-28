@@ -249,6 +249,7 @@ const SavedQuery = ({
                 if (Array.isArray(savedQueryTableData)) {
                   handleDownload(
                     savedQueryTableData as unknown as Record<string, string>[],
+                    executionResponse?.column_order
                   );
                 }
               }}
