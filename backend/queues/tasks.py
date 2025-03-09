@@ -104,6 +104,7 @@ def execute_query_op(
 
     with engine.connect() as connection:
         stmt = text(execution_log.query.sqlquery)
-        result = connection.execute(stmt).fetchall()
+        params = execution_log.query_params
+        result = connection.execute(stmt, params).fetchall()
         serialized_result = convert_rows_to_serializable(result)
         return serialized_result

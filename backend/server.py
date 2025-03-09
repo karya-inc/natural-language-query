@@ -21,6 +21,7 @@ from dependencies.auth import (
 )
 from utils.logger import get_logger
 from controllers.sql_response import (
+    ExecuteQueryRequest,
     chat_history,
     get_saved_queries_user,
     save_query_for_user,
@@ -35,6 +36,8 @@ from db.db_queries import (
     UserSessionsResponse,
     ExecutionLogResult,
     create_execution_entry,
+    get_dynamic_query_params,
+    get_type_of_query,
     get_recent_execution_for_query,
     get_recent_execution_for_query_id,
 )
@@ -48,6 +51,7 @@ from db.db_queries import (
 from sqlalchemy.orm import Session
 from db.models import User
 from utils.parse_catalog import parsed_catalogs
+from executor.models import SqlQueryParams
 
 parsed_catalogs.database_privileges
 
@@ -280,6 +284,7 @@ async def execute_saved_query(
     db: Annotated[Session, Depends(get_db_session_from_request)],
     user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
     request: Request,
+    body: Optional[ExecuteQueryRequest] = None,
 ) -> dict[str, Any]:
     """
     Execute saved query
@@ -321,7 +326,9 @@ async def execute_saved_query(
 
 
         # No running execution found, create a new execution log
-        execution_log = create_execution_entry(db, user_info.user_id, str(sqid))
+        query_params = body.params if body and body.params is not None else {}
+        execution_log = create_execution_entry(db, user_info.user_id,
+                                               str(sqid), query_params)
 
         logger.info("Execution started successfully.")
 
@@ -487,5 +494,47 @@ async def get_all_queries(
             f"Error while retrieving all users info for user: {user_info.user_id}. Error: {str(e)}"
         )
         raise HTTPException(status_code=500, detail="Failed to get all users info.")
+    finally:
+        db.close()
+
+
+@app.get("/query_type/{query_id}")
+async def get_query_type(
+    query_id: str,
+    db: Annotated[Session, Depends(get_db_session_from_request)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
+    """
+    Endpoint to get the type of query (dynamic/static)
+    """
+    logger.info(f"Getting query type for user: {user_info.user_id}")
+    try:
+        response = get_type_of_query(db, query_id)
+        if response == None:
+            raise HTTPException(status_code=404, detail="Failed to get query type")
+        return response
+    except:
+        raise HTTPException(status_code=500, detail="Failed to get query type")
+    finally:
+        db.close()
+
+
+@app.get("/query_params/{query_id}")
+async def get_query_params(
+    query_id: str,
+    db: Annotated[Session, Depends(get_db_session_from_request)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
+    """
+    Endpoint to get query params for a dynamic query
+    """
+    logger.info(f"Getting query params for user: {user_info.user_id}")
+    try:
+        response = get_dynamic_query_params(db, query_id)
+        if response == {}:
+            raise HTTPException(status_code=404, detail="Failed to get query params")
+        return response
+    except:
+        raise HTTPException(status_code=500, detail="Faild to get query params")
     finally:
         db.close()

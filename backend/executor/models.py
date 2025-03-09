@@ -10,6 +10,8 @@ QueryResults = list[dict[str, Any]]
 
 ColumnOrder = list[str]
 
+SqlQueryParams = dict[str, Any]
+
 class QueryType(BaseModel):
     query_type: QueryTypeLiteral
 

@@ -29,6 +29,7 @@ type SavedQueryProps = {
   ) => Promise<ExecutionResponse | undefined>;
   executeSavedQueryByQueryId: (
     sql_id: string,
+    params: any,
   ) => Promise<ExecutionLog | undefined>;
   savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
@@ -46,6 +47,8 @@ const SavedQuery = ({
   const [isFetching, setIsFetching] = useState(false);
   const [executionResponse, setExecutionResponse] =
     useState<ExecutionResponse | null>(null);
+  const [queryType, setQueryType] = useState<String | null>(null);
+  const [queryParams, setQueryParams] = useState<any>(null);
 
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
 
@@ -53,6 +56,8 @@ const SavedQuery = ({
 
   useEffect(() => {
     getSavedTableData();
+    getQueryType();
+    getQueryParams();
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
@@ -118,8 +123,11 @@ const SavedQuery = ({
   const handleExecute = async () => {
     try {
       setIsFetching(true);
+      const params = queryType === "dynamic" && queryParams ? queryParams : {};
+      console.log("queryParams", queryParams);
       const execution_log = await executeSavedQueryByQueryId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
+        params,
       );
       if (!execution_log) {
         toastExecutionFailure();
@@ -156,6 +164,42 @@ const SavedQuery = ({
       console.error("Error fetching data:", error);
     } finally {
       setIsFetching(false);
+    }
+  }
+
+  async function getQueryType() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_type/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const type = await response.json();
+      if (type) {
+        setQueryType(type);
+      }
+    } catch (error) {
+      console.error("Error getting query type:", error);
+    }
+  }
+
+  async function getQueryParams() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_params/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const query_params = await response.json();
+      if (query_params) {
+        setQueryParams(query_params);
+      }
+    } catch (error) {
+      console.error("Error getting query params:", error);
     }
   }
 
