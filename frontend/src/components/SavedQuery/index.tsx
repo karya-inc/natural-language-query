@@ -10,7 +10,7 @@ import {
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ExecutionLog,
   ExecutionResponse,
@@ -19,6 +19,9 @@ import {
 import { IoCloudDownloadOutline } from "react-icons/io5";
 import { RiLoopRightFill } from "react-icons/ri";
 import { handleDownload } from "../../pages/Chat/utils";
+import { useForm } from "src/helpers/parameter-renderer/hooks";
+import { ChakraFormRenderer } from "src/helpers/parameter-renderer/backends";
+import { ParameterForm } from "utils/parameter-spec/dist/Index";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -35,6 +38,14 @@ type SavedQueryProps = {
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
 };
 
+type QueryParams = {
+  id: string;
+  name: string;
+  default: any;
+  list: [any];
+  [key: string]: any;
+};
+
 const SavedQuery = ({
   savedQueryData,
   navOpen,
@@ -48,16 +59,42 @@ const SavedQuery = ({
   const [executionResponse, setExecutionResponse] =
     useState<ExecutionResponse | null>(null);
   const [queryType, setQueryType] = useState<String | null>(null);
-  const [queryParams, setQueryParams] = useState<any>(null);
+  const [queryParams, setQueryParams] = useState<QueryParams[]>([]);
 
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
 
   const toast = useToast({ position: "bottom-right" });
 
+  const formParameters = useMemo((): ParameterForm<QueryParams> => {
+    if (queryType !== "dynamic" || !Array.isArray(queryParams) || queryParams.length === 0)
+      return [];
+    const parameters = queryParams.map((item) => ({
+      id: item.id,
+      label: item.name,
+      required: false,
+      type: item.type,
+      list: item.type === "enum_multi" || item.type === "enum" ?
+        item.list.reduce((acc, curr) => {
+          acc[curr] = curr
+          return acc
+        }, {}) : [],
+      initial: item.default,
+    }))
+
+    return [{
+      label: "Query Params",
+      required: false,
+      parameters,
+    }]
+  }, [queryType, queryParams])
+
+  const formControl = useForm({
+    parameters: formParameters,
+  });
+
   useEffect(() => {
     getSavedTableData();
     getQueryType();
-    getQueryParams();
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
@@ -123,8 +160,7 @@ const SavedQuery = ({
   const handleExecute = async () => {
     try {
       setIsFetching(true);
-      const params = queryType === "dynamic" && queryParams ? queryParams : {};
-      console.log("queryParams", queryParams);
+      const params = queryType === "dynamic" && formControl.ctx.form ? formControl.ctx.form : {};
       const execution_log = await executeSavedQueryByQueryId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
         params,
@@ -178,6 +214,9 @@ const SavedQuery = ({
       );
       const type = await response.json();
       if (type) {
+        if (type === 'dynamic') {
+          getQueryParams();
+        }
         setQueryType(type);
       }
     } catch (error) {
@@ -254,7 +293,6 @@ const SavedQuery = ({
           //  </Text>
           //)
         }
-        <Divider />
         {savedQueryData.description && (
           <Box w="100%">
             <Text fontSize="lg" color="gray.300">
@@ -262,6 +300,8 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
+        <Divider />
+        <ChakraFormRenderer ctx={formControl.ctx} />
         {savedQueryTableData.length >= 0 && (
           <Box w="100%" display="flex" gap={4}>
             <Button

@@ -1,0 +1,25 @@
+{
+  "name": "@karya/parameter-specs",
+  "version": "2.0.0",
+  "description": "This package helps with parameter specification and validation",
+  "private": true,
+  "main": "dist/Index.js",
+  "types": "dist/Index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run compile",
+    "clean": "rimraf ./dist && rimraf tsconfig.tsbuildinfo",
+    "compile": "tsc -b tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "joi": "^17.13",
+    "lodash": "^4.17.21"
+  }
+}
