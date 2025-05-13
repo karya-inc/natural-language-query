@@ -9,8 +9,8 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, JSON
-from executor.models import QueryResults, ColumnOrder, SqlQueryParams
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from executor.models import QueryResults, ColumnOrder, SqlQueryParams, QueryParameterForm
 
 
 def get_uuid_str(length: int = 32) -> str:
@@ -24,7 +24,8 @@ class Base(DeclarativeBase, MappedAsDataclass):
         dict[str, Any]: JSONB,
         QueryResults: JSONB,
         ColumnOrder: ARRAY(Text),
-        SqlQueryParams: JSON,
+        SqlQueryParams: JSONB,
+        QueryParameterForm: JSONB,
         list[str]: ARRAY(String),
     }
 
@@ -115,7 +116,7 @@ class SqlQuery(Base):
     # Fields with Default values
     sqid: Mapped[str] = mapped_column(primary_key=True, default_factory=get_uuid_str)
     query_type: Mapped[str] = mapped_column(default="static")
-    query_params: Mapped[SqlQueryParams] = mapped_column(default_factory=lambda: {})
+    query_params: Mapped[QueryParameterForm] = mapped_column(default_factory=lambda: {})
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )

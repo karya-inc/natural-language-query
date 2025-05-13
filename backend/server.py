@@ -531,7 +531,7 @@ async def get_query_params(
     logger.info(f"Getting query params for user: {user_info.user_id}")
     try:
         response = get_dynamic_query_params(db, query_id)
-        if response == {}:
+        if response == []:
             raise HTTPException(status_code=404, detail="Failed to get query params")
         return response
     except:

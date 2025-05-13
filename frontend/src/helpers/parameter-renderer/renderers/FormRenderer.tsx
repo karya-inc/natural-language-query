@@ -1,5 +1,5 @@
 import React from 'react';
-import { ParameterForm } from '@karya/parameter-specs';
+import { ParameterForm } from 'src/helpers/parameter-spec/src/Index';
 import { UseFormReturn } from '../hooks/useForm';
 import _ from 'lodash';
 import { DefinitionRendererConfig } from './ParameterDefinitionRenderer';

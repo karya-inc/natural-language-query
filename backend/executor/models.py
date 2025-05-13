@@ -12,6 +12,8 @@ ColumnOrder = list[str]
 
 SqlQueryParams = dict[str, Any]
 
+QueryParameterForm = list[dict[str, Any]]
+
 class QueryType(BaseModel):
     query_type: QueryTypeLiteral
 

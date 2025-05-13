@@ -1,4 +1,4 @@
-import { ParameterDefinition } from '@karya/parameter-specs';
+import { ParameterDefinition } from 'src/helpers/parameter-spec/src/Index';
 import {
   FileInputProps,
   ListInputProps,

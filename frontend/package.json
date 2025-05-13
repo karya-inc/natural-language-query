@@ -14,7 +14,6 @@
     "@chakra-ui/react": "^2.10.7",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
-    "@karya/parameter-specs": "file:./utils/parameter-spec",
     "ag-grid-react": "^33.0.2",
     "chakra-react-select": "^4.10.1",
     "framer-motion": "^11.11.17",

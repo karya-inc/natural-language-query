@@ -1,6 +1,6 @@
 import React from 'react';
 import { DefinitionRendererBuilder } from './ParameterDefinitionRenderer';
-import { ParameterDefinition, ParameterSection } from '@karya/parameter-specs';
+import { ParameterDefinition, ParameterSection } from 'src/helpers/parameter-spec/src/Index';
 import { UseFormReturn } from '../hooks';
 import _ from 'lodash';
 import { FormRendererConfig } from './FormRenderer';

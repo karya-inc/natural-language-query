@@ -6,7 +6,7 @@ import {
   parameterArrayFromGroups,
   ParameterForm,
   unflattenData,
-} from '@karya/parameter-specs';
+} from 'src/helpers/parameter-spec/src/Index';
 import Joi from 'joi';
 import { ChangeEventHandler, FormEventHandler, useCallback, useEffect, useMemo, useState } from 'react';
 import _ from 'lodash';

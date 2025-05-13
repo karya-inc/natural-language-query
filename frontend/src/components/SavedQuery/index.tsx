@@ -21,7 +21,7 @@ import { RiLoopRightFill } from "react-icons/ri";
 import { handleDownload } from "../../pages/Chat/utils";
 import { useForm } from "src/helpers/parameter-renderer/hooks";
 import { ChakraFormRenderer } from "src/helpers/parameter-renderer/backends";
-import { ParameterForm } from "utils/parameter-spec/dist/Index";
+import { ParameterArray, ParameterForm } from "src/helpers/parameter-spec/src/Index";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -32,18 +32,10 @@ type SavedQueryProps = {
   ) => Promise<ExecutionResponse | undefined>;
   executeSavedQueryByQueryId: (
     sql_id: string,
-    params: any,
+    params: Record<string, any>,
   ) => Promise<ExecutionLog | undefined>;
   savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
-};
-
-type QueryParams = {
-  id: string;
-  name: string;
-  default: any;
-  list: [any];
-  [key: string]: any;
 };
 
 const SavedQuery = ({
@@ -58,35 +50,27 @@ const SavedQuery = ({
   const [isFetching, setIsFetching] = useState(false);
   const [executionResponse, setExecutionResponse] =
     useState<ExecutionResponse | null>(null);
-  const [queryType, setQueryType] = useState<String | null>(null);
-  const [queryParams, setQueryParams] = useState<QueryParams[]>([]);
+  const [queryType, setQueryType] = useState<string | null>(null);
+  const [queryParamsArray, setQueryParamsArray] = useState<
+    ParameterArray<object | Record<string, any>>
+  >();
 
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
 
   const toast = useToast({ position: "bottom-right" });
 
-  const formParameters = useMemo((): ParameterForm<QueryParams> => {
-    if (queryType !== "dynamic" || !Array.isArray(queryParams) || queryParams.length === 0)
+  const formParameters = useMemo((): ParameterForm => {
+    if (queryType !== "dynamic" || !Array.isArray(queryParamsArray) ||
+      queryParamsArray.length === 0) {
       return [];
-    const parameters = queryParams.map((item) => ({
-      id: item.id,
-      label: item.name,
-      required: false,
-      type: item.type,
-      list: item.type === "enum_multi" || item.type === "enum" ?
-        item.list.reduce((acc, curr) => {
-          acc[curr] = curr
-          return acc
-        }, {}) : [],
-      initial: item.default,
-    }))
+    }
 
     return [{
-      label: "Query Params",
+      label: "Query Parameters",
       required: false,
-      parameters,
-    }]
-  }, [queryType, queryParams])
+      parameters: queryParamsArray,
+    }];
+  }, [queryType, queryParamsArray]);
 
   const formControl = useForm({
     parameters: formParameters,
@@ -235,7 +219,7 @@ const SavedQuery = ({
       );
       const query_params = await response.json();
       if (query_params) {
-        setQueryParams(query_params);
+        setQueryParamsArray(query_params);
       }
     } catch (error) {
       console.error("Error getting query params:", error);
@@ -293,6 +277,7 @@ const SavedQuery = ({
           //  </Text>
           //)
         }
+        <Divider />
         {savedQueryData.description && (
           <Box w="100%">
             <Text fontSize="lg" color="gray.300">
@@ -300,7 +285,6 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
-        <Divider />
         <ChakraFormRenderer ctx={formControl.ctx} />
         {savedQueryTableData.length >= 0 && (
           <Box w="100%" display="flex" gap={4}>

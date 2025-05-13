@@ -13,7 +13,7 @@ from db.models import (
 )
 from datetime import datetime
 from pydantic import BaseModel
-from executor.models import QueryResults, ColumnOrder, SqlQueryParams
+from executor.models import QueryParameterForm, QueryResults, ColumnOrder, SqlQueryParams
 from typing import Any, List, Literal, Optional, cast
 from utils.logger import get_logger
 import enum
@@ -626,7 +626,7 @@ def get_type_of_query(
 
 def get_dynamic_query_params(
     db_session: Session, query_id: str,
-) -> SqlQueryParams:
+) -> QueryParameterForm:
     try:
         result = (
             db_session.query(SqlQuery.query_params)
@@ -635,11 +635,11 @@ def get_dynamic_query_params(
         )
         if result is not None:
             params = result[0]
-            return params if params is not None else {}
-        return {}
+            return params if params is not None else []
+        return []
     except Exception as e:
         logger.error(f"Error getting query params: {e}")
-        return {}
+        return []
 
 def get_all_user_info(db_session: Session) -> List[User]:
     """
