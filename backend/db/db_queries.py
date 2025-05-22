@@ -13,7 +13,7 @@ from db.models import (
 )
 from datetime import datetime
 from pydantic import BaseModel
-from executor.models import QueryResults, ColumnOrder
+from executor.models import QueryResults, ColumnOrder, SqlQueryParams
 from typing import Any, List, Literal, Optional, cast
 from utils.logger import get_logger
 import enum
@@ -386,13 +386,14 @@ def create_execution_entry(
     db_session: Session,
     user_id: str,
     query_id: str,
+    query_params: SqlQueryParams = {},
     status: ExecutionStatus = "PENDING",
 ) -> ExecutionLog:
     """
     Save the execution log for a query.
     """
     try:
-        execution_log = ExecutionLog(status, query_id, user_id)
+        execution_log = ExecutionLog(status, query_id, user_id, query_params)
         db_session.add(execution_log)
         db_session.commit()
         return execution_log
@@ -608,6 +609,65 @@ def create_saved_query(
         db_session.rollback()
         return None
 
+
+def get_type_of_query(
+    db_session: Session, query_id: str,
+):
+    try:
+        result = (
+            db_session.query(SqlQuery.query_type)
+            .filter(SqlQuery.sqid == query_id)
+            .scalar()
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error getting query type: {e} ")
+        return None
+
+def get_dynamic_query_params(
+    db_session: Session, query_id: str,
+) -> SqlQueryParams:
+    try:
+        result = (
+            db_session.query(SqlQuery.query_params)
+            .filter(SqlQuery.sqid == query_id)
+            .first()
+        )
+        if result is not None:
+            params = result[0]
+            return params if params is not None else {}
+        return {}
+    except Exception as e:
+        logger.error(f"Error getting query params: {e}")
+        return {}
+
+def share_query_to_users(
+    db_session: Session, query_id: str, users: list[str]
+) -> Optional[SavedQuery]:
+    try:
+        saved_query = db_session.query(SavedQuery).filter_by(sqid=query_id).first()
+        if not saved_query:
+            raise Exception("Query not found")
+        
+        name = saved_query.name
+        description = saved_query.description
+
+        for user_id in users:
+            exists = db_session.query(SavedQuery).filter_by(
+                sqid=query_id, user_id=user_id).first()
+            if not exists:
+                db_session.add(SavedQuery(
+                    user_id = user_id,
+                    sqid = query_id,
+                    name = name,
+                    description = description,
+                ))
+
+        db_session.commit()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error adding saved queries: {e}")
+        raise
 
 def get_all_user_info(db_session: Session) -> List[User]:
     """

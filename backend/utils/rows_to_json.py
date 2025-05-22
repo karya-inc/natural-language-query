@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 import pandas as pd
+import numpy as np
 from typing import Any, Optional, Sequence
 from pandas.io.parquet import json
 from sqlalchemy import UUID
@@ -21,6 +22,7 @@ def convert_rows_to_serializable(rows: Sequence[Row[Any]]) -> list[dict[str, Any
 
 
     df = df.apply(pd.to_numeric, downcast='float', errors='ignore')
+    df = df.replace({np.nan: None})
     return df.to_dict(orient="records") #type:ignore
 
 

@@ -39,6 +39,10 @@ class NLQResponseEvent:
     turn_id: Optional[int] = None
 
 
+class ExecuteQueryRequest(BaseModel):
+    params: Optional[SqlQueryParams] = None
+
+
 async def nlq_sse_wrapper(
     user_info: AuthenticatedUserInfo,
     query: str,

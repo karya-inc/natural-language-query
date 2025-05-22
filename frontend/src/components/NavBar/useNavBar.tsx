@@ -101,7 +101,7 @@ const useNavBar = (name?: string, description?: string) => {
   }
 
   async function executeSavedQueryByQueryId(
-    url: string,
+    url: string, params: any,
   ): Promise<ExecutionLog | undefined> {
     try {
       const response = await fetch(url, {
@@ -109,6 +109,9 @@ const useNavBar = (name?: string, description?: string) => {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          "params": params,
+        }),
         credentials: "include",
       });
       return await response.json();

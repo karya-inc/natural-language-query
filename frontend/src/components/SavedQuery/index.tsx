@@ -6,19 +6,29 @@ import {
   Icon,
   Divider,
   useToast,
+  Input,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverBody,
 } from "@chakra-ui/react";
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   ExecutionLog,
   ExecutionResponse,
   SavedQueryDataInterface,
 } from "../NavBar/useNavBar";
-import { IoCloudDownloadOutline } from "react-icons/io5";
+import { IoCloudDownloadOutline, IoShareSocialOutline } from "react-icons/io5";
 import { RiLoopRightFill } from "react-icons/ri";
 import { handleDownload } from "../../pages/Chat/utils";
+import { useForm } from "src/helpers/parameter-renderer/hooks";
+import { ChakraFormRenderer } from "src/helpers/parameter-renderer/backends";
+import { ParameterForm } from "utils/parameter-spec/dist/Index";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -29,9 +39,18 @@ type SavedQueryProps = {
   ) => Promise<ExecutionResponse | undefined>;
   executeSavedQueryByQueryId: (
     sql_id: string,
+    params: any,
   ) => Promise<ExecutionLog | undefined>;
   savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
+};
+
+type QueryParams = {
+  id: string;
+  name: string;
+  default: any;
+  list: [any];
+  [key: string]: any;
 };
 
 const SavedQuery = ({
@@ -46,13 +65,45 @@ const SavedQuery = ({
   const [isFetching, setIsFetching] = useState(false);
   const [executionResponse, setExecutionResponse] =
     useState<ExecutionResponse | null>(null);
-
+  const [queryType, setQueryType] = useState<String | null>(null);
+  const [queryParams, setQueryParams] = useState<QueryParams[]>([]);
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
-
+  const [shareInputValue, setShareInputValue] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
+  
+  const initialFocusRef = useRef(null);
   const toast = useToast({ position: "bottom-right" });
+
+  const formParameters = useMemo((): ParameterForm<QueryParams> => {
+    if (queryType !== "dynamic" || !Array.isArray(queryParams) || queryParams.length === 0)
+      return [];
+    const parameters = queryParams.map((item) => ({
+      id: item.id,
+      label: item.name,
+      required: false,
+      type: item.type,
+      list: item.type === "enum_multi" || item.type === "enum" ?
+        item.list.reduce((acc, curr) => {
+          acc[curr] = curr
+          return acc
+        }, {}) : [],
+      initial: item.default,
+    }))
+
+    return [{
+      label: "Query Params",
+      required: false,
+      parameters,
+    }]
+  }, [queryType, queryParams])
+
+  const formControl = useForm({
+    parameters: formParameters,
+  });
 
   useEffect(() => {
     getSavedTableData();
+    getQueryType();
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
@@ -118,8 +169,10 @@ const SavedQuery = ({
   const handleExecute = async () => {
     try {
       setIsFetching(true);
+      const params = queryType === "dynamic" && formControl.ctx.form ? formControl.ctx.form : {};
       const execution_log = await executeSavedQueryByQueryId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
+        params,
       );
       if (!execution_log) {
         toastExecutionFailure();
@@ -158,6 +211,94 @@ const SavedQuery = ({
       setIsFetching(false);
     }
   }
+
+  async function getQueryType() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_type/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const type = await response.json();
+      if (type) {
+        if (type === 'dynamic') {
+          getQueryParams();
+        }
+        setQueryType(type);
+      }
+    } catch (error) {
+      console.error("Error getting query type:", error);
+    }
+  }
+
+  async function getQueryParams() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_params/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const query_params = await response.json();
+      if (query_params) {
+        setQueryParams(query_params);
+      }
+    } catch (error) {
+      console.error("Error getting query params:", error);
+    }
+  }
+
+  const handleShareQuery = async () => {
+    if (!shareInputValue.trim()) {
+      toast({
+        title: "No users specified",
+        description: "Please enter at least one user ID to share with.",
+        status: "warning",
+      });
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const userIds = shareInputValue.split(',').map(id => id.trim()).filter(id => id);
+      
+      const response = await fetch(
+        `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/share`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ users: userIds }),
+        }
+      );
+
+      if (response.ok) {
+        toast({
+          title: "Query shared successfully",
+          description: `The query has been shared with the specified users.`,
+          status: "success",
+        });
+        setShareInputValue("");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to share query");
+      }
+    } catch (error) {
+      console.error("Error sharing query:", error);
+      toast({
+        title: "Failed to share query",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        status: "error",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const hasData = savedQueryTableData.length > 0;
 
@@ -210,7 +351,6 @@ const SavedQuery = ({
           //  </Text>
           //)
         }
-        <Divider />
         {savedQueryData.description && (
           <Box w="100%">
             <Text fontSize="lg" color="gray.300">
@@ -218,6 +358,8 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
+        <Divider />
+        <ChakraFormRenderer ctx={formControl.ctx} />
         {savedQueryTableData.length >= 0 && (
           <Box w="100%" display="flex" gap={4}>
             <Button
@@ -262,6 +404,62 @@ const SavedQuery = ({
                 fontSize="md"
               />
             </Button>
+
+            <Popover
+              initialFocusRef={initialFocusRef}
+              placement="top"
+              closeOnBlur={true}
+            >
+              <PopoverTrigger>
+                <Button
+                  justifyContent={"space-between"}
+                  gap={2}
+                  cursor="pointer"
+                  color="gray.400"
+                  bg="gray.700"
+                  _hover={{ bg: "gray.600", color: "gray.400" }}
+                >
+                  <Text fontSize={"sm"}>Share</Text>
+                  <Icon
+                    as={IoShareSocialOutline}
+                    stroke="gray.400"
+                    strokeWidth={2}
+                    fontSize="md"
+                  />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent bg={"#2a2d3d"} borderColor="gray.700" width={400}>
+                <PopoverArrow bg={"gray.700"} />
+                <PopoverCloseButton />
+                <PopoverBody >
+                  <VStack spacing={4} px={4} py={4}>
+                    <Text color="gray.400">
+                      Enter user IDs (comma-separated) to share with:
+                    </Text>
+                    <Input
+                      ref={initialFocusRef}
+                      placeholder="user1, user2, user3"
+                      value={shareInputValue}
+                      onChange={(e) => setShareInputValue(e.target.value)}
+                      bg="gray.700"
+                      borderColor="gray.500"
+                      _focusVisible={{ boxShadow: "none", borderColor: "gray.500" }}
+                    />
+                    <Button
+                      colorScheme="gray"
+                      width="full"
+                      px={4}
+                      onClick={handleShareQuery}
+                      isLoading={isSharing}
+                      loadingText="Sharing..."
+                    >
+                      Share
+                    </Button>
+                  </VStack>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
           </Box>
         )}
         {savedQueryTableData.length > 0 && (
