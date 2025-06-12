@@ -144,7 +144,16 @@ const SavedQuery = ({
   const handleExecute = async () => {
     try {
       setIsFetching(true);
-      const params = queryType === "dynamic" && formControl.ctx.form ? formControl.ctx.form : {};
+      const isDynamic = queryType === "dynamic";
+      const params = isDynamic && formControl.ctx.form ? formControl.ctx.form : {};
+      if (isDynamic && queryParamsArray) {
+        queryParamsArray.forEach((x) => {
+          if (x['type'] === 'datetime-local') {
+            params[x['id']] = new Date(params[x['id']]).toISOString();
+          };
+        });
+      }
+
       const execution_log = await executeSavedQueryByQueryId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
         params,

@@ -15,6 +15,7 @@ export type ParameterType =
   | { type: 'list'; delimiters?: string[]; valid?: undefined }
   | { type: 'time' }
   | { type: 'date' }
+  | { type: 'datetime-local' }
   | { type: 'json_object'; valid?: undefined }
   | {
       type: 'json_array';
@@ -257,6 +258,11 @@ export function joiSchema<ParamsType, IsKeyPath extends boolean = boolean, Resul
       case 'date':
         base = Joi.string()
           .regex(/^\d\d\d\d-\d\d-\d\d$/)
+          .empty('');
+        break;
+      case 'datetime-local':
+        base = Joi.string()
+          .regex(/^\d\d\d\d-\d\d-\d\d(T|\s)([01]\d|2[0-3]):?([0-5]\d)$/)
           .empty('');
         break;
       case 'file':

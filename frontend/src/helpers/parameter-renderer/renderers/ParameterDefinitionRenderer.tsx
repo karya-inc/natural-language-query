@@ -154,6 +154,7 @@ export function DefinitionRendererBuilder(Components: DefinitionRendererConfig) 
         case 'float':
         case 'time':
         case 'date':
+        case 'datetime-local':
           // @ts-ignore
           return <Components.Input {...rendererParams} value={value ?? ''} type={type} onChange={handleChange} />;
         case 'boolean':
