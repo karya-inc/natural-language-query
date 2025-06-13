@@ -18,9 +18,18 @@ export const buttonTheme: KaryaButtonTheme = {
     backgroundColor: ColorMap.primaryDark,
     textColor: ColorMap.white,
   },
+  secondary_light: {
+    backgroundColor: ColorMap.white,
+    textColor: ColorMap.primaryDark,
+  },
   secondary_outlined: {
     borderColor: ColorMap.primaryDark,
     borderWidth: '1px',
     textColor: ColorMap.primaryDark,
+  },
+  secondary_outlined_light: {
+    borderColor: ColorMap.white,
+    borderWidth: '1px',
+    textColor: ColorMap.white,
   },
 };

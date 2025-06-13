@@ -10,7 +10,7 @@ import {
 import { BACKEND_URL } from "../../config";
 import ChatTable from "../ChatTable";
 import { GoSidebarCollapse } from "react-icons/go";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ExecutionLog,
   ExecutionResponse,
@@ -19,6 +19,9 @@ import {
 import { IoCloudDownloadOutline } from "react-icons/io5";
 import { RiLoopRightFill } from "react-icons/ri";
 import { handleDownload } from "../../pages/Chat/utils";
+import { useForm } from "src/helpers/parameter-renderer/hooks";
+import { ChakraFormRenderer } from "src/helpers/parameter-renderer/backends";
+import { ParameterArray, ParameterForm } from "src/helpers/parameter-spec/src/Index";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -29,6 +32,7 @@ type SavedQueryProps = {
   ) => Promise<ExecutionResponse | undefined>;
   executeSavedQueryByQueryId: (
     sql_id: string,
+    params: Record<string, any>,
   ) => Promise<ExecutionLog | undefined>;
   savedQueryTableData: Record<string, unknown>[];
   setSavedQueryTableData: (arg: Record<string, unknown>[]) => void;
@@ -46,13 +50,35 @@ const SavedQuery = ({
   const [isFetching, setIsFetching] = useState(false);
   const [executionResponse, setExecutionResponse] =
     useState<ExecutionResponse | null>(null);
+  const [queryType, setQueryType] = useState<string | null>(null);
+  const [queryParamsArray, setQueryParamsArray] = useState<
+    ParameterArray<object | Record<string, any>>
+  >();
 
   const [lastExecutedAt, setLastExecutedAt] = useState<string | null>(null);
 
   const toast = useToast({ position: "bottom-right" });
 
+  const formParameters = useMemo((): ParameterForm => {
+    if (queryType !== "dynamic" || !Array.isArray(queryParamsArray) ||
+      queryParamsArray.length === 0) {
+      return [];
+    }
+
+    return [{
+      label: "Query Parameters",
+      required: false,
+      parameters: queryParamsArray,
+    }];
+  }, [queryType, queryParamsArray]);
+
+  const formControl = useForm({
+    parameters: formParameters,
+  });
+
   useEffect(() => {
     getSavedTableData();
+    getQueryType();
   }, [savedQueryData.sql_query_id]);
 
   useEffect(() => {
@@ -118,8 +144,19 @@ const SavedQuery = ({
   const handleExecute = async () => {
     try {
       setIsFetching(true);
+      const isDynamic = queryType === "dynamic";
+      const params = isDynamic && formControl.ctx.form ? formControl.ctx.form : {};
+      if (isDynamic && queryParamsArray) {
+        queryParamsArray.forEach((x) => {
+          if (x['type'] === 'datetime-local') {
+            params[x['id']] = new Date(params[x['id']]).toISOString();
+          };
+        });
+      }
+
       const execution_log = await executeSavedQueryByQueryId(
         `${BACKEND_URL}/queries/${savedQueryData.sql_query_id}/execution`,
+        params,
       );
       if (!execution_log) {
         toastExecutionFailure();
@@ -156,6 +193,45 @@ const SavedQuery = ({
       console.error("Error fetching data:", error);
     } finally {
       setIsFetching(false);
+    }
+  }
+
+  async function getQueryType() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_type/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const type = await response.json();
+      if (type) {
+        if (type === 'dynamic') {
+          getQueryParams();
+        }
+        setQueryType(type);
+      }
+    } catch (error) {
+      console.error("Error getting query type:", error);
+    }
+  }
+
+  async function getQueryParams() {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/query_params/${savedQueryData.sql_query_id}`,
+        {
+          method: "GET",
+          credentials: "include",
+        },
+      );
+      const query_params = await response.json();
+      if (query_params) {
+        setQueryParamsArray(query_params);
+      }
+    } catch (error) {
+      console.error("Error getting query params:", error);
     }
   }
 
@@ -218,6 +294,7 @@ const SavedQuery = ({
             </Text>
           </Box>
         )}
+        <ChakraFormRenderer ctx={formControl.ctx} />
         {savedQueryTableData.length >= 0 && (
           <Box w="100%" display="flex" gap={4}>
             <Button

@@ -10,7 +10,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from executor.models import QueryResults, ColumnOrder
+from executor.models import QueryResults, ColumnOrder, SqlQueryParams, QueryParameterForm
 
 
 def get_uuid_str(length: int = 32) -> str:
@@ -24,6 +24,8 @@ class Base(DeclarativeBase, MappedAsDataclass):
         dict[str, Any]: JSONB,
         QueryResults: JSONB,
         ColumnOrder: ARRAY(Text),
+        SqlQueryParams: JSONB,
+        QueryParameterForm: JSONB,
         list[str]: ARRAY(String),
     }
 
@@ -113,6 +115,8 @@ class SqlQuery(Base):
 
     # Fields with Default values
     sqid: Mapped[str] = mapped_column(primary_key=True, default_factory=get_uuid_str)
+    query_type: Mapped[str] = mapped_column(default="static")
+    query_params: Mapped[QueryParameterForm] = mapped_column(default_factory=lambda: {})
     created_at: Mapped[datetime] = mapped_column(
         insert_default=func.now(), default=None
     )
@@ -174,6 +178,7 @@ class ExecutionLog(Base):
     status: Mapped[ExecutionStatus] = mapped_column()
     query_id: Mapped[str] = mapped_column(ForeignKey("sql_queries.sqid"), index=True)
     executed_by: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
+    query_params: Mapped[SqlQueryParams] = mapped_column()
 
     # Fields with Default values
     notify_to: Mapped[list[str]] = mapped_column(default_factory=list)
@@ -206,6 +211,7 @@ class ExecutionLog(Base):
             query_id=data["query_id"],
             executed_by=data["executed_by"],
             notify_to=data["notify_to"],
+            query_params=data["query_params"]
         )
 
         # Force init remaining fields

@@ -7,7 +7,7 @@ from executor.models import QueryResults
 from utils.logger import get_logger
 from utils.notify_user import notify_user_on_failure, notify_user_on_success
 from .celery import app
-from sqlalchemy import text
+from sqlalchemy import text, bindparam
 
 from db.db_queries import get_execution_log, save_execution_result, set_execution_status
 from dependencies.db import get_db_session
@@ -104,6 +104,15 @@ def execute_query_op(
 
     with engine.connect() as connection:
         stmt = text(execution_log.query.sqlquery)
-        result = connection.execute(stmt).fetchall()
+        params = execution_log.query_params
+
+        # binding values of a list in the query, directly passing lists is not supported
+        for key, value in params.items():
+            if isinstance(value, list):
+                if not value:
+                    value.append(None) # empty lists are not supported
+                stmt = stmt.bindparams(bindparam(key, expanding = True))
+
+        result = connection.execute(stmt, params).fetchall()
         serialized_result = convert_rows_to_serializable(result)
         return serialized_result
