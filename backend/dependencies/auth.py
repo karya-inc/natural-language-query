@@ -96,13 +96,15 @@ async def get_authenticated_user_info(
 
     # Extract the user id from the token
     user_id = payload.get("sub")
+    email = payload.get("email")
+    name = payload.get("name")
     if not user_id:
         db.close()
         raise HTTPException(
             status_code=403, detail="Invalid token: Missing user identification"
         )
 
-    user = get_or_create_user(db, user_id)
+    user = get_or_create_user(db, user_id, name, email)
 
     # Extract the role field from the token and ensure it is a valid supported field
     try:

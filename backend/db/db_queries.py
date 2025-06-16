@@ -641,6 +641,39 @@ def get_dynamic_query_params(
         logger.error(f"Error getting query params: {e}")
         return []
 
+def share_query_to_users(
+    db_session: Session, query_id: str, user_emails: list[str]
+) -> Optional[SavedQuery]:
+    try:
+        saved_query = db_session.query(SavedQuery).filter_by(sqid=query_id).first()
+        if not saved_query:
+            raise Exception("Query not found")
+        
+        name = saved_query.name
+        description = saved_query.description
+
+        for email in user_emails:
+            users = db_session.query(User).filter_by(
+                email=email).all()
+            if not users:
+                raise Exception("User not found")
+            for user in users:
+                exists = db_session.query(SavedQuery).filter_by(
+                    sqid=query_id, user_id=user.user_id).first()
+                if not exists:
+                    db_session.add(SavedQuery(
+                        user_id = user.user_id,
+                        sqid = query_id,
+                        name = name,
+                        description = description,
+                    ))
+
+        db_session.commit()
+        return saved_query
+    except Exception as e:
+        logger.error(f"Error adding saved queries: {e}")
+        raise
+
 def get_all_user_info(db_session: Session) -> List[User]:
     """
     Get all user information

@@ -22,6 +22,7 @@ import { handleDownload } from "../../pages/Chat/utils";
 import { useForm } from "src/helpers/parameter-renderer/hooks";
 import { ChakraFormRenderer } from "src/helpers/parameter-renderer/backends";
 import { ParameterArray, ParameterForm } from "src/helpers/parameter-spec/src/Index";
+import ShareQuery from "src/components/ShareQuery/index";
 
 type SavedQueryProps = {
   savedQueryData: SavedQueryDataInterface;
@@ -339,6 +340,7 @@ const SavedQuery = ({
                 fontSize="md"
               />
             </Button>
+            <ShareQuery savedQueryData={savedQueryData} />
           </Box>
         )}
         {savedQueryTableData.length > 0 && (

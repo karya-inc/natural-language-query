@@ -37,6 +37,7 @@ from db.db_queries import (
     ExecutionLogResult,
     create_execution_entry,
     get_dynamic_query_params,
+    share_query_to_users,
     get_type_of_query,
     get_recent_execution_for_query,
     get_recent_execution_for_query_id,
@@ -535,6 +536,31 @@ async def get_query_params(
             raise HTTPException(status_code=404, detail="Failed to get query params")
         return response
     except:
-        raise HTTPException(status_code=500, detail="Faild to get query params")
+        raise HTTPException(status_code=500, detail="Failed to get query params")
+    finally:
+        db.close()
+
+@app.post("/queries/{query_id}/share")
+async def share_query(
+    query_id: str,
+    db: Annotated[Session, Depends(get_db_session_from_request)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+    request: Request
+):
+    """
+    Endpoint to share a query with different users
+    """
+    logger.info(f"Share query {query_id} requested by: {user_info.user_id}")
+
+    if user_info.role != "SUPER_ADMIN" and user_info.role != "ADMIN":
+        raise HTTPException(status_code=403,
+                            detail="You are not authorized to share this query")
+    try:
+        body = await request.json()
+        user_emails = body.get("user_emails")
+        share_query_to_users(db, query_id, user_emails)
+        return {"detail": "Query shared successfully"}
+    except:
+        raise HTTPException(status_code=500, detail="Failed to share query")
     finally:
         db.close()
