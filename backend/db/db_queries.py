@@ -42,6 +42,9 @@ class ChatHistoryResponse(BaseModel):
     message: Optional[str] = None
     execution_id: Optional[int] = None
 
+class AddQueryError(Exception):
+    pass
+
 
 def get_or_create_user(
     db_session: Session,
@@ -672,6 +675,62 @@ def share_query_to_users(
         return saved_query
     except Exception as e:
         logger.error(f"Error adding saved queries: {e}")
+        raise
+
+def add_new_query(
+    db_session: Session, query_data: Any, user_id: str
+) -> str:
+    try:
+        sql_query = SqlQuery(
+            sqlquery=query_data['query'],
+            database_used='karya_db',
+            user_id=user_id,
+        )
+        if query_data['query_id']:
+            query_id = db_session.query(SqlQuery.sqid).filter_by(
+                sqid=sql_query.sqid).scalar()
+            if not query_id:
+                raise AddQueryError("Query ID already exists")
+            else:
+                sql_query.sqid = query_data['query_id']
+        else:
+            sql_query.sqid = get_uuid_str()
+
+        db_session.add(sql_query)
+
+        saved_query = SavedQuery(
+            user_id=user_id,
+            name=query_data['query_name'],
+            description=query_data['query_description'],
+            sqid=sql_query.sqid
+        )
+        db_session.add(saved_query)
+
+        for email in query_data['user_emails']:
+            user_ids = [row[0] for row in db_session.query(User.user_id)
+                .filter_by(email=email).all()]
+            if not user_ids:
+                raise AddQueryError("Users not found")
+            for user_id in user_ids:
+                saved_query = SavedQuery(
+                    user_id=user_id,
+                    name=query_data['query_name'],
+                    description=query_data['query_description'],
+                    sqid=sql_query.sqid
+                )
+                db_session.add(saved_query)
+
+        db_session.commit()
+        return sql_query.sqid
+
+    except AddQueryError as e:
+        db_session.rollback()
+        logger.error(f"Error adding new query: {e}")
+        raise
+
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Error adding new query: {e}")
         raise
 
 def get_all_user_info(db_session: Session) -> List[User]:

@@ -12,6 +12,7 @@ import {
   AccordionPanel,
   AccordionIcon,
 } from "@chakra-ui/react";
+import { IoIosAdd } from "react-icons/io";
 import { GoSidebarExpand } from "react-icons/go";
 import { useNavigate } from "react-router-dom";
 import CFImage from "../CloudflareImage";
@@ -114,6 +115,10 @@ const NavBar = ({
     navigate(destination);
   };
 
+  const handleAddQuery = () => {
+    navigate(`${baseUrl}/addquery`);
+  }
+
   return (
     <VStack
       bg="#2a2d3d"
@@ -153,6 +158,19 @@ const NavBar = ({
         />
       </HStack>
       <Accordion allowToggle w="full" color="gray.400" flex={1}>
+        <AccordionItem border={"none"}>
+          <AccordionButton onClick={() => handleAddQuery()}>
+            <Icon
+              as={IoIosAdd}
+              stroke="gray.400"
+              strokeWidth={4}
+              fontSize="xl"
+            />
+            <Box flex="1" textAlign="left" fontWeight="bold" pl={2}>
+              Add Query
+            </Box>
+          </AccordionButton>
+        </AccordionItem>
         <AccordionItem border={"none"}>
           <AccordionButton>
             <AccordionIcon />
