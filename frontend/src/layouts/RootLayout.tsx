@@ -7,6 +7,7 @@ import useNavBar from "../components/NavBar/useNavBar";
 import SavedQuery from "../components/SavedQuery";
 import { SavedQueryContext } from "../components/NavBar/utils";
 import Error from "../components/Error";
+import AddQuery from "src/components/AddQuery";
 
 const RootLayout = () => {
   const {
@@ -70,6 +71,8 @@ const RootLayout = () => {
               savedQueryTableData={savedQueryTableData}
               setSavedQueryTableData={setSavedQueryTableData}
             />
+          ) : window.location.pathname === "/nlq/addquery" ? (
+            <AddQuery navOpen={navOpen} setNavOpen={setNavOpen} />
           ) : (
             <ChatBot
               messages={messages}
