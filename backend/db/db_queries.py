@@ -680,7 +680,7 @@ def share_query_to_users(
         raise
 
 def add_new_query(
-    db_session: Session, query_data: Any, user_id: str
+    db_session: Session, query_data: Any, params_data: Any, user_id: str
 ) -> str:
     try:
         sql_query = SqlQuery(
@@ -697,6 +697,10 @@ def add_new_query(
                 raise AddQueryError("Query ID already exists")
         else:
             sql_query.sqid = get_uuid_str()
+
+        if query_data['query_type'] == 'dynamic':
+            sql_query.query_type = 'dynamic'
+            sql_query.query_params = params_data
 
         db_session.add(sql_query)
 

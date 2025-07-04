@@ -580,7 +580,7 @@ async def add_query(
     logger.info(f"Adding new query, requested by user: {user_info.user_id}")
     try:
         body = await request.json()
-        response = add_new_query(db, body['query_data'], user_info.user_id)
+        response = add_new_query(db, body['query_data'], body['params_data'], user_info.user_id)
         return response
     except AddQueryError as e:
         logger.error(f"Error adding new query: {e}")
