@@ -42,6 +42,9 @@ class ChatHistoryResponse(BaseModel):
     message: Optional[str] = None
     execution_id: Optional[int] = None
 
+class AddQueryError(Exception):
+    pass
+
 
 def get_or_create_user(
     db_session: Session,
@@ -624,6 +627,7 @@ def get_type_of_query(
         logger.error(f"Error getting query type: {e} ")
         return None
 
+
 def get_dynamic_query_params(
     db_session: Session, query_id: str,
 ) -> QueryParameterForm:
@@ -641,6 +645,7 @@ def get_dynamic_query_params(
         logger.error(f"Error getting query params: {e}")
         return []
 
+
 def share_query_to_users(
     db_session: Session, query_id: str, user_emails: list[str]
 ) -> Optional[SavedQuery]:
@@ -648,7 +653,7 @@ def share_query_to_users(
         saved_query = db_session.query(SavedQuery).filter_by(sqid=query_id).first()
         if not saved_query:
             raise Exception("Query not found")
-        
+
         name = saved_query.name
         description = saved_query.description
 
@@ -673,6 +678,67 @@ def share_query_to_users(
     except Exception as e:
         logger.error(f"Error adding saved queries: {e}")
         raise
+
+def add_new_query(
+    db_session: Session, query_data: Any, params_data: Any, user_id: str
+) -> str:
+    try:
+        sql_query = SqlQuery(
+            sqlquery=query_data['query'],
+            database_used='karya_db',
+            user_id=user_id,
+        )
+        if query_data['query_id']:
+            query_id = db_session.query(SqlQuery.sqid).filter_by(
+                sqid=query_data['query_id']).scalar()
+            if not query_id:
+                sql_query.sqid = query_data['query_id']
+            else:
+                raise AddQueryError("Query ID already exists")
+        else:
+            sql_query.sqid = get_uuid_str()
+
+        if query_data['query_type'] == 'dynamic':
+            sql_query.query_type = 'dynamic'
+            sql_query.query_params = params_data
+
+        db_session.add(sql_query)
+
+        saved_query = SavedQuery(
+            user_id=user_id,
+            name=query_data['query_name'],
+            description=query_data['query_description'],
+            sqid=sql_query.sqid
+        )
+        db_session.add(saved_query)
+
+        for email in query_data['user_emails']:
+            user_ids = [row[0] for row in db_session.query(User.user_id)
+                .filter_by(email=email).all()]
+            if not user_ids:
+                raise AddQueryError("Users not found")
+            for user_id in user_ids:
+                saved_query = SavedQuery(
+                    user_id=user_id,
+                    name=query_data['query_name'],
+                    description=query_data['query_description'],
+                    sqid=sql_query.sqid
+                )
+                db_session.add(saved_query)
+
+        db_session.commit()
+        return sql_query.sqid
+
+    except AddQueryError as e:
+        db_session.rollback()
+        logger.error(f"Error adding new query: {e}")
+        raise
+
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Error adding new query: {e}")
+        raise
+
 
 def get_all_user_info(db_session: Session) -> List[User]:
     """
