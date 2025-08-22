@@ -31,6 +31,7 @@ from controllers.sql_response import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from db.db_queries import (
+    AddQueryError,
     ChatHistoryResponse,
     SavedQueriesResponse,
     UserSessionsResponse,
@@ -41,6 +42,7 @@ from db.db_queries import (
     get_type_of_query,
     get_recent_execution_for_query,
     get_recent_execution_for_query_id,
+    add_new_query,
 )
 from db.db_queries import (
     get_all_user_info,
@@ -552,7 +554,7 @@ async def share_query(
     """
     logger.info(f"Share query {query_id} requested by: {user_info.user_id}")
 
-    if user_info.role != "SUPER_ADMIN" and user_info.role != "ADMIN":
+    if user_info.role not in ["SUPER_ADMIN", "ADMIN", "COORDINATOR"]:
         raise HTTPException(status_code=403,
                             detail="You are not authorized to share this query")
     try:
@@ -562,5 +564,29 @@ async def share_query(
         return {"detail": "Query shared successfully"}
     except:
         raise HTTPException(status_code=500, detail="Failed to share query")
+    finally:
+        db.close()
+
+
+@app.post("/add_query")
+async def add_query(
+    request: Request,
+    db: Annotated[Session, Depends(get_db_session_from_request)],
+    user_info: Annotated[AuthenticatedUserInfo, Depends(get_authenticated_user_info)],
+):
+    """
+    Endpoint to add a new query and save it for the user
+    """
+    logger.info(f"Adding new query, requested by user: {user_info.user_id}")
+    try:
+        body = await request.json()
+        response = add_new_query(db, body['query_data'], body['params_data'], user_info.user_id)
+        return response
+    except AddQueryError as e:
+        logger.error(f"Error adding new query: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add query: {e}")
+    except Exception as e:
+        logger.error(f"Error adding new query: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add query")
     finally:
         db.close()

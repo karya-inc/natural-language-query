@@ -28,6 +28,10 @@ function App() {
             path={`${baseUrl}/saved/:savedId`}
             element={<CheckUserAuth forComponent={<RootLayout />} />}
           />
+          <Route
+            path={`${baseUrl}/addquery`}
+            element={<CheckUserAuth forComponent={<RootLayout />} />}
+          />
         </Routes>
       </Router>
     </ErrorBoundary>
